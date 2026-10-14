@@ -155,7 +155,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmtD = s => new Date(s + "T00:00:00").toLocaleDateString("en-GB", {day:"2-digit", month:"short"});
 const title = s => s.charAt(0) + s.slice(1).toLowerCase();
-const seasonLed = m => m.basis === "Calendar only" || m.basis === "COT + calendar";
+const seasonLed = m => ["Calendar only", "COT + calendar", "Calendar over COT"].includes(m.basis);
 const cotLed = m => m.basis.startsWith("COT");
 const arrow = v => v === "BULLISH" ? "▲" : v === "BEARISH" ? "▼" : "◆";
 const pill = (v, txt) => `<span class="pill ${v === "BULLISH" || v === "BEARISH" ? v : "flat"}">${arrow(v)} ${esc(txt || title(v))}</span>`;
@@ -167,7 +167,7 @@ const ICON = {
   both:`<svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="5" cy="7" r="3.6" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="9" cy="7" r="3.6" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>`,
   none:`<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 7h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
 };
-const basisIcon = m => m.basis === "COT + calendar" ? ICON.both : m.basis === "Calendar only" ? ICON.cal : cotLed(m) ? ICON.cot : m.basis.startsWith("Conflict") ? ICON.both : ICON.none;
+const basisIcon = m => m.basis === "COT + calendar" ? ICON.both : (m.basis === "Calendar only" || m.basis === "Calendar over COT") ? ICON.cal : cotLed(m) ? ICON.cot : m.basis.startsWith("Conflict") ? ICON.both : ICON.none;
 const T = D.tested;
 const sgn = v => (v >= 0 ? "+" : "") + v;
 const warnLevel = t => !t ? null : (t.closing && t.flip) ? "hot" : (t.closing || t.flip) ? "warn" : "calm";
@@ -205,7 +205,7 @@ function boards() {
 /* ---------- hero ---------- */
 function dial(m) {
   const pos = {BULLISH: 1, BEARISH: -1}[m.verdict] || 0;
-  const mag = m.basis === "COT + calendar" ? 1 : m.basis === "Calendar only" ? .55 : m.groups === 2 ? .9 : .62;
+  const mag = m.basis === "COT + calendar" ? 1 : m.basis === "Calendar only" ? .55 : m.basis === "Calendar over COT" ? .45 : m.groups === 2 ? .9 : .62;
   const ang = pos * 70 * mag;
   return `<svg class="dial" viewBox="0 0 190 112" role="img" aria-label="Bias ${m.verdict}">
     <path d="M18 92 A77 77 0 0 1 95 15" fill="none" stroke="var(--bear-soft)" stroke-width="16"/>
@@ -231,7 +231,9 @@ function why(m) {
     case "COT only": return `COT carries the bias alone: ${g} at extremes. ${s.read === "SELF-CANCELLING" ? "The calendar cancels itself out." : "No seasonal window is in play."}`;
     case "Calendar only": return `The calendar carries the bias alone: ${win}. Positioning has no side.`;
   }
-  if (m.basis.startsWith("Conflict")) return `No bias. COT reads ${title(c.read)} (${g}) while the calendar says ${title(s.read)} (${win}). When the two contradict, neither has been reliable enough to overrule the other, so we wait.`;
+  const ag = (s.past && s.past.summary.against) || {n: 0, w: 0};
+  if (m.basis === "Calendar over COT") return `COT reads ${title(c.read)} (${g}), against the calendar: ${win}. In the past years when COT was against this window it still paid ${ag.w} of ${ag.n} times, so the calendar stands.`;
+  if (m.basis.startsWith("Conflict")) return `No bias. COT reads ${title(c.read)} (${g}) while the calendar says ${title(s.read)} (${win}). ${ag.n >= 3 ? `In past years with COT against it, this window paid only ${ag.w} of ${ag.n} times` : `This window has too few past years with COT against it (${ag.n}) to judge`}, so COT is relevant here and we wait.`;
   if (m.basis.includes("disagree")) return `No bias. Retail and commercials point opposite ways, and ${s.read === "SELF-CANCELLING" ? "the calendar cancels itself out" : "there is no seasonal window"}.`;
   return `No bias. Positioning has no extreme on two or more lookbacks of either group, and ${s.read === "SELF-CANCELLING" ? "the calendar cancels itself out" : "there is no seasonal window in play"}.`;
 }
@@ -413,12 +415,12 @@ function testedSection() {
     <h4 class="note" style="font-weight:600;color:var(--ink);margin-top:12px">The COT read, split by what the calendar said (${T.first_cot.slice(0, 4)}–${T.last.slice(0, 4)})</h4>
     <div class="tbl"><table>${hd}<tbody>${row("All COT trades", T.cot_all)}${row("Calendar agreed", cs.agree)}${row("Calendar against", cs.against)}${row("No seasonal window", cs.none)}
       ${row("Currencies, one group", cc["FX|1"])}${row("Currencies, both groups", cc["FX|2"])}${row("Commodities, one group", cc["Commodities|1"])}${row("Commodities, both groups", cc["Commodities|2"])}</tbody></table></div>
-    <p class="note">How the board uses this: each engine may carry the bias alone, and when they contradict each other the board shows no bias. In contradictions the calendar won about half the time and COT only slightly more, so neither earns the right to overrule the other. Both edges are small: the COT read wins about 54% over 8 weeks and is only clearly above zero pooled across all markets; the seasonal windows have not beaten a coin flip out of sample.</p></details>`;
+    <p class="note">How the board uses this: each engine may carry the bias alone. In a contradiction the calendar stands if the window already paid in at least 2 of 3 past years when COT was against it (at least 3 such years); otherwise there is no bias. Tested, that split made no difference: the calendar won 50.5% when the window had played out against COT and 50.0% when it had not. In contradictions the calendar won about half the time and COT only slightly more, so neither earns the right to overrule the other. Both edges are small: the COT read wins about 54% over 8 weeks and is only clearly above zero pooled across all markets; the seasonal windows have not beaten a coin flip out of sample.</p></details>`;
 }
 function render(k) {
   const m = M[k], P = $("#panel");
   const cEss = cotLed(m) || m.basis.startsWith("Conflict"), sEss = seasonLed(m) || m.basis.startsWith("Conflict");
-  const cards = m.basis === "Calendar only" ? [seasonCard(m, true), cotCard(m, false)] : [cotCard(m, cEss), seasonCard(m, sEss)];
+  const cards = (m.basis === "Calendar only" || m.basis === "Calendar over COT") ? [seasonCard(m, true), cotCard(m, m.basis !== "Calendar only")] : [cotCard(m, cEss), seasonCard(m, sEss)];
   const extra = [];
   P.style.animation = "none"; void P.offsetWidth; P.style.animation = "";
   P.innerHTML = `<div class="hero"><div><h1>${esc(m.name)}</h1><div class="sub">${k} · ${m.sector} · ${pill(m.verdict)} <span style="margin-left:6px">${m.basis}</span></div>

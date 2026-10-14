@@ -254,7 +254,9 @@ def tested_cells():
     B, A = r["trades_cot"], r["trades_seasonal"]
     cot = {f"{sec}|{g}": agg([x for x in B if sector2(x["m"]) == sec and x["groups"] == g])
            for sec in ("FX", "Commodities") for g in (1, 2)}
-    return {"first_cot": min(x["t"] for x in B), "first_seas": r["first"], "last": r["last"], "cot": cot,
+    rp = os.path.join(ROOT, "data", "research", "conflict_relevance.json")
+    rel = json.load(open(rp))["by_played_out"] if os.path.exists(rp) else {}
+    return {"relevance": rel, "first_cot": min(x["t"] for x in B), "first_seas": r["first"], "last": r["last"], "cot": cot,
             "cot_all": r["cot"]["all"], "cot_by_seasonal": r["cot"]["by_seasonal"],
             "seas_all": r["seasonal"]["all"], "seas_by_cot": r["seasonal"]["by_cot"],
             "seas_by_sector": r.get("seasonal_by_sector")}
@@ -269,7 +271,14 @@ def combine(k, reader, s):
     cd = v if v in ("BULLISH", "BEARISH") else None
     sd = s["read"] if s["read"] in ("BULLISH", "BEARISH") else None
     if cd and sd:
-        return (cd, "COT + calendar", g) if cd == sd else ("STAND ASIDE", "Conflict · COT vs calendar", g)
+        if cd == sd:
+            return cd, "COT + calendar", g
+        # user rule: the calendar stands if this window already paid in past years when COT was against it;
+        # otherwise COT is relevant here and there is no bias (tested: research/conflict_relevance.py)
+        ag = ((s.get("past") or {}).get("summary") or {}).get("against") or {"n": 0, "w": 0}
+        if ag["n"] >= 3 and ag["w"] / ag["n"] >= 2 / 3:
+            return sd, "Calendar over COT", g
+        return "STAND ASIDE", "Conflict · COT relevant", g
     if cd:
         return cd, "COT only", g
     if sd:
@@ -290,10 +299,11 @@ def tested_for(k, basis, groups, tested):
                    f"{sec} COT reads with {'both groups' if groups == 2 else 'one group'} won {{win}}% over 8 weeks")
     if basis == "Calendar only":
         return rec(tested["seas_by_cot"].get("neutral"), "seasonal windows with no COT side won {win}% to the window end")
+    rel = tested.get("relevance") or {}
+    if basis == "Calendar over COT":
+        return rec(rel.get("played out"), "contradictions where the window had already paid against COT: the calendar won {win}%")
     if basis.startswith("Conflict"):
-        a, b = tested["seas_by_cot"].get("against"), tested["cot_by_seasonal"].get("against")
-        return dict(a, label=f"in contradictions the calendar won {{win}}% ({a['n']} trades) and COT {b['win']}% ({b['n']}); "
-                             "neither is reliable enough to overrule the other") if a and b else None
+        return rec(rel.get("did not play out"), "contradictions where the window had not paid against COT: the calendar won {win}%")
     return None
 
 
@@ -620,7 +630,7 @@ svg .band.b {{ fill:var(--bull-bg) }} svg .band.s {{ fill:var(--bear-bg) }} svg 
 </header>
 <section class="pair">
   <div><h2>Combined bias</h2><div class="scroll"><table class="ledger" style="min-width:520px"><thead><tr><th>Market</th><th>COT</th><th>Lit R · C · F</th><th>Seasonality</th><th>Verdict</th></tr></thead><tbody>{over}</tbody></table></div>
-  <p class="cap">Each engine can carry the bias alone; when COT and the calendar contradict each other there is no bias. Under each verdict: what it rests on and, where a seasonal window is open, when it ends. Amber: the window ends within {CLOSING_DAYS} days or an opposite window follows within {FLIP_GAP} days; red: both. Lit R · C · F: how many of the five lookbacks are at an extreme for retail, commercials and funds.</p></div>
+  <p class="cap">Each engine can carry the bias alone. When COT and the calendar contradict each other, the calendar stands if the window already paid in past years when COT was against it; otherwise there is no bias. Under each verdict: what it rests on and, where a seasonal window is open, when it ends. Amber: the window ends within {CLOSING_DAYS} days or an opposite window follows within {FLIP_GAP} days; red: both. Lit R · C · F: how many of the five lookbacks are at an extreme for retail, commercials and funds.</p></div>
   <div><h2>Best seasonal windows in play</h2><div class="scroll"><table class="ledger" style="min-width:640px"><thead><tr><th>Market</th><th>Trade</th><th>Window</th><th>Length</th><th>Win</th><th>Cases</th><th>Strength</th><th>Shape scan</th></tr></thead><tbody>{best}</tbody></table></div>
   <p class="cap">Entry within −2 to +8 weeks, 15-year basis, windows of at least five days. Shape scan: how closely {TODAY.year} tracks the market's own seasonal path.</p></div>
 </section>
@@ -637,11 +647,11 @@ if __name__ == "__main__":
         p = R.load_px(k)
         c, s = cot_block(k, p), season_block(p)
         reader = R.CotReader(k)
+        s["past"] = past_years(k, s, reader, p)
         v, why, groups = combine(k, reader, s)
         cr = reader.read(TODAY)
         c["read"] = cr if cr in ("BULLISH", "BEARISH") else "STAND ASIDE"   # the tested read, not the untested tie-breaks
         c["conv"] = {2: "Both groups", 1: "One group"}.get(groups, "None") if c["read"] != "STAND ASIDE" else "None"
-        s["past"] = past_years(k, s, reader, p)
         res[k] = {"name": m[0], "sector": m[3], "cot": c, "seas": s, "verdict": v, "lineup": why,
                   "basis": why, "groups": groups, "timing": timing(s),
                   "tested": tested_for(k, why, groups, tested)}
