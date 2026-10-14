@@ -3,6 +3,8 @@ name: Weekly Bias Board
 on:
   schedule:
     - cron: "0 7 * * 6"        # Saturday 07:00 UTC, after the Friday COT release
+  push:
+    branches: [main]           # every push rebuilds and redeploys the site
   workflow_dispatch:
     inputs:
       outlook_date:
