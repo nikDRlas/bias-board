@@ -26,6 +26,8 @@ M = {
     "6J": ("Japanese Yen", "J6", 1, "FX"), "6S": ("Swiss Franc", "S6", 1, "FX"),
     "6A": ("Australian Dollar", "A6", 0, "FX"), "6C": ("Canadian Dollar", "D6", 1, "FX"),
     "6N": ("NZ Dollar", "N6", 0, "FX"),
+    "ES": ("S&P 500", "ES", 0, "Indices"), "NQ": ("Nasdaq 100", "NQ", 0, "Indices"),
+    "YM": ("Dow Jones", "YM", 0, "Indices"),
 }
 # LSE's CL and NG COT history is a different contract before 2026: use the CFTC series, append LSE after it
 CFTC_ONLY = {"CL", "NG"}

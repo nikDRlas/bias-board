@@ -153,9 +153,9 @@ if __name__ == "__main__":
            "seasonal": {"all": summary([dict(r, all="all") for r in A], "all")["all"], "by_cot": summary(A, "rel")},
            "cot": {"all": summary([dict(r, all="all") for r in B], "all")["all"], "by_seasonal": summary(B, "rel"),
                    "by_groups": summary(B, "groups"),
-                   "by_sector": summary([dict(r, sec="FX" if C.M[r["m"]][3] == "FX" else "Commodities") for r in B], "sec"),
-                   "by_sector_seasonal": summary([dict(r, ss=("FX" if C.M[r["m"]][3] == "FX" else "Commodities") + " · " + r["rel"]) for r in B], "ss")},
-           "seasonal_by_sector": summary([dict(r, sec="FX" if C.M[r["m"]][3] == "FX" else "Commodities") for r in A], "sec"),
+                   "by_sector": summary([dict(r, sec={"FX": "FX", "Indices": "Indices"}.get(C.M[r["m"]][3], "Commodities")) for r in B], "sec"),
+                   "by_sector_seasonal": summary([dict(r, ss={"FX": "FX", "Indices": "Indices"}.get(C.M[r["m"]][3], "Commodities") + " · " + r["rel"]) for r in B], "ss")},
+           "seasonal_by_sector": summary([dict(r, sec={"FX": "FX", "Indices": "Indices"}.get(C.M[r["m"]][3], "Commodities")) for r in A], "sec"),
            "per_market": {k: summary([r for r in A if r["m"] == k], "rel") for k in C.M},
            "trades_seasonal": A, "trades_cot": B}
     os.makedirs(os.path.join(HERE, "..", "data", "research"), exist_ok=True)

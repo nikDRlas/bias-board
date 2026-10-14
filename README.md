@@ -1,6 +1,6 @@
 # Bias Board
 
-Weekly directional bias for 15 commodity and currency futures, from two engines:
+Weekly directional bias for 18 futures markets (metals, energy, currencies and US stock indices), from two engines:
 
 - **COT positioning**: retail (non-reportables) faded and commercials followed at extremes of five nested lookbacks
   (6 months to 5 years, lit at the 80th/20th percentile), with the track record of past cases.

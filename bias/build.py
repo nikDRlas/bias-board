@@ -238,7 +238,7 @@ RESEARCH = os.path.join(ROOT, "data", "research", "conflict.json")
 
 
 def sector2(k):
-    return "FX" if M[k][3] == "FX" else "Commodities"
+    return {"FX": "FX", "Indices": "Indices"}.get(M[k][3], "Commodities")
 
 
 def tested_cells():
@@ -253,7 +253,7 @@ def tested_cells():
                 "t": round(float(z.mean() / z.std(ddof=1) * np.sqrt(len(z))), 2)} if len(rows) > 2 else None
     B, A = r["trades_cot"], r["trades_seasonal"]
     cot = {f"{sec}|{g}": agg([x for x in B if sector2(x["m"]) == sec and x["groups"] == g])
-           for sec in ("FX", "Commodities") for g in (1, 2)}
+           for sec in ("FX", "Commodities", "Indices") for g in (1, 2)}
     rp = os.path.join(ROOT, "data", "research", "conflict_relevance.json")
     rel = json.load(open(rp))["by_played_out"] if os.path.exists(rp) else {}
     return {"relevance": rel, "first_cot": min(x["t"] for x in B), "first_seas": r["first"], "last": r["last"], "cot": cot,
@@ -294,7 +294,7 @@ def tested_for(k, basis, groups, tested):
     if basis == "COT + calendar":
         return rec(tested["cot_by_seasonal"].get("agree"), "COT reads while the calendar agreed won {win}% over 8 weeks")
     if basis == "COT only":
-        sec = "currency" if sector2(k) == "FX" else "commodity"
+        sec = {"FX": "currency", "Indices": "index"}.get(sector2(k), "commodity")
         return rec(tested["cot"].get(f"{sector2(k)}|{groups}"),
                    f"{sec} COT reads with {'both groups' if groups == 2 else 'one group'} won {{win}}% over 8 weeks")
     if basis == "Calendar only":

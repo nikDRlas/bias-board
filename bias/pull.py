@@ -23,7 +23,8 @@ PRICES = {
     "6E": ("EUR/USD", "fx"), "6B": ("GBP/USD", "fx"), "6J": ("USD/JPY", "fx"),
     "6S": ("USD/CHF", "fx"), "6A": ("AUD/USD", "fx"), "6C": ("USD/CAD", "fx"),
     "6N": ("NZD/USD", "fx"),
-    "SEK": ("USD/SEK", "fx"),          # only needed to rebuild DXY from its legs
+    "SEK": ("USD/SEK", "fx"),
+    "ES": ("SPX500/USD", "index"), "NQ": ("NAS100/USD", "index"), "YM": ("US30/USD", "index"),          # only needed to rebuild DXY from its legs
 }
 
 
