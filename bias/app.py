@@ -110,7 +110,7 @@ tr.ok td,tr.ok th{background:var(--sun-soft)}
 .nbrs .bar{width:34px;border-radius:6px 6px 2px 2px;background:var(--flat-soft);position:relative;transition:height .6s cubic-bezier(.3,1.5,.5,1)}
 .nbrs .bar.c{background:var(--ink)}
 .tested{display:flex;align-items:center;gap:12px;margin-top:12px;padding:9px 12px;border:1px dashed var(--line);border-radius:12px;font-size:13px;color:var(--mute);max-width:62ch}
-.tested b{font:800 24px/1 var(--display);color:var(--ink)}
+.tested > b{font:800 24px/1 var(--display);color:var(--ink)} .tested b.tl{font-weight:600;color:var(--ink)}
 .card h3 .tag.ctx{background:var(--flat-soft);color:var(--mute)}
 .yrs{display:flex;flex-wrap:wrap;gap:6px}
 .yr{display:flex;flex-direction:column;align-items:center;gap:3px;font:11px var(--mono);color:var(--mute);padding:5px 4px 3px;border-radius:10px;border:2px solid transparent;min-width:38px}
@@ -240,7 +240,7 @@ function why(m) {
 function testedHero(m) {
   const t = m.tested;
   if (!t) return "";
-  return `<div class="tested"><b>${t.win}%</b><span>Tested walk-forward: ${t.label.replace("{win}", t.win)} · ${t.n} trades · avg ${sgn(t.avg)}% · t ${t.t.toFixed(1)}</span></div>`;
+  return `<div class="tested"><b>${t.win}%</b><span><b class="tl">How verdicts like this one did after the fact</b> (walk-forward, every past week, only data known then): ${t.label.replace("{win}", t.win)} · ${t.n} trades · average ${sgn(t.avg)}% in the trade direction · t ${t.t.toFixed(1)}. This is a different number from the window's own 15-year average below, which comes from the years it was picked from.</span></div>`;
 }
 function banner(m) {
   const t = m.timing; if (!t) return "";
@@ -357,8 +357,8 @@ function edge(m) {
 }
 function windowsTbl(m) {
   const s = m.seas; if (!s.windows.length) return `<p class="note">No seasonal window opens in the −2 to +8 week horizon.</p>`;
-  return `<div class="tbl"><table><thead><tr><th>Trade</th><th>Window</th><th>Length</th><th>Win</th><th>Avg</th><th>Last 4</th></tr></thead><tbody>` +
-    s.windows.map((w, i) => `<tr><td>${pill(sideV(w.side), title(w.side))}${i === 0 ? ' <span class="st live">driver</span>' : ""}</td><td>${fmtD(w.start)} – ${fmtD(w.end)}</td><td class="n">${w.len}d</td><td class="n">${w.wins} of 15</td><td class="n">${w.avg >= 0 ? "+" : ""}${w.avg.toFixed(1)}%</td><td class="n">${w.rec}/4</td></tr>`).join("") + `</tbody></table></div>`;
+  return `<div class="tbl"><table><thead><tr><th>Trade</th><th>Window</th><th>Length</th><th>Won (trend removed)</th><th>Avg price move, 15 yrs</th><th>Last 4</th></tr></thead><tbody>` +
+    s.windows.map((w, i) => `<tr><td>${pill(sideV(w.side), title(w.side))}${i === 0 ? ' <span class="st live">driver</span>' : ""}</td><td>${fmtD(w.start)} – ${fmtD(w.end)}</td><td class="n">${w.len}d</td><td class="n">${w.wins} of 15</td><td class="n">${w.avg >= 0 ? "+" : ""}${w.avg.toFixed(1)}%</td><td class="n">${w.rec}/4</td></tr>`).join("") + `</tbody></table></div><p class="note">Average price move over the 15 past years: negative is good for a sell window. Wins are counted after removing each year's trend, so a window can win 12 of 15 years with an average move close to zero or even against it.</p>`;
 }
 function nbrs(m) {
   const s = m.seas; if (!s.neigh) return "";
