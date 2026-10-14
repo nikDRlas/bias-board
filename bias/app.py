@@ -119,6 +119,13 @@ tr.ok td,tr.ok th{background:var(--sun-soft)}
 .yr .dot.w{background:var(--bull)} .yr .dot.l{background:var(--bear)}
 .legend .lg{width:14px;height:10px;border-radius:3px;border:2px solid var(--ink);background:transparent}
 .legend .lg.against{border-color:var(--bear);border-style:dashed} .legend .lg.none{border-color:var(--line)}
+.evg{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:8px}
+.ev{border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.ev.on{border-color:var(--sun);box-shadow:inset 0 0 0 1px var(--sun)}
+.evh{display:flex;justify-content:space-between;align-items:center;gap:8px} .evh b{font:700 15px var(--display)}
+.evw{font-size:12.5px;color:var(--mute)} .evs{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mute)} .evs b{font:600 14px var(--mono);color:var(--ink)}
+.ev .note{margin:0}
+.tile .evb{font:600 10.5px/1 var(--body);padding:3px 6px;border-radius:999px;background:var(--sun-soft);color:var(--sun)}
 .foot{color:var(--mute);font-size:12px;margin-top:28px;max-width:80ch}
 .kbd{font:11px var(--mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 5px}
 @media (max-width:640px){.hero{grid-template-columns:1fr}.dial{width:160px}.board{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -141,7 +148,7 @@ tr.ok td,tr.ok th{background:var(--sun-soft)}
 <div class="wrap">
   <div id="boards"></div>
   <section class="panel" id="panel" aria-live="polite"></section>
-  <p class="foot">COT: CFTC legacy report via LSE (CFTC history for WTI and natural gas). Prices: LSE daily spot, yen, franc and Canadian dollar in futures direction, dollar index rebuilt from its legs. Seasonal windows: true-seasonality scoring (each year's trend removed), 15 prior years, at least five days long. Move between markets with <span class="kbd">←</span> <span class="kbd">→</span>. A bias is not a trade. Educational, not advice.</p>
+  <p class="foot">COT: CFTC legacy report via LSE (CFTC history for WTI and natural gas). Prices: LSE daily spot, yen, franc and Canadian dollar in futures direction, dollar index rebuilt from its legs. Seasonal windows: Seasonax-style scan in trading days, 15 prior years, at least five trading days long, win ratio 12 of 15 or better. Move between markets with <span class="kbd">←</span> <span class="kbd">→</span>. A bias is not a trade. Educational, not advice.</p>
 </div>
 
 <script>
@@ -178,7 +185,7 @@ function ring(m) {
   const d = m.seas.driver, frac = Math.max(0, Math.min(1, t.left / d.len));
   const lvl = warnLevel(t), col = lvl === "hot" ? "var(--bear)" : lvl === "warn" ? "var(--sun)" : "var(--flat)";
   const C = 2 * Math.PI * 13;
-  return `<svg class="ring" viewBox="0 0 34 34" role="img" aria-label="${t.left} days left in window">
+  return `<svg class="ring" viewBox="0 0 34 34" role="img" aria-label="${t.left} trading days left in window">
     <circle cx="17" cy="17" r="13" fill="none" stroke="var(--line)" stroke-width="4"/>
     <circle cx="17" cy="17" r="13" fill="none" stroke="${col}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${C * frac} ${C}" transform="rotate(-90 17 17)"/>
     <text x="17" y="21" text-anchor="middle" style="font:700 11px var(--mono);fill:var(--ink)">${t.left}</text></svg>`;
@@ -189,6 +196,13 @@ function spark(m) {
   const col = m.verdict === "BULLISH" ? "var(--bull)" : m.verdict === "BEARISH" ? "var(--bear)" : "var(--flat)";
   return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`;
 }
+function evBadge(m) {
+  if (!m.events) return "";
+  const on = m.events.filter(e => e.active), soon = m.events.filter(e => !e.active && e.days_to <= 5);
+  if (on.length) return `<div class="row"><span class="evb">● ${esc(on.map(e => e.name.split(" (")[0]).join(", "))}</span></div>`;
+  if (soon.length) return `<div class="row"><span class="evb">○ ${esc(soon.map(e => e.name.split(" (")[0]).join(", "))} in ${Math.min(...soon.map(e => e.days_to))}d</span></div>`;
+  return "";
+}
 function boards() {
   const secs = {};
   KEYS.forEach(k => (secs[M[k].sector] ||= []).push(k));
@@ -197,7 +211,7 @@ function boards() {
     return `<button class="tile" id="t-${k}" data-k="${k}" aria-current="false">${ring(m)}
       <div><div class="nm">${esc(m.name)}</div><div class="tk">${k}</div></div>
       <div class="row">${pill(m.verdict)}</div>
-      <div class="basis">${basisIcon(m)}${esc(m.basis)}</div>${spark(m)}</button>`;
+      <div class="basis">${basisIcon(m)}${esc(m.basis)}</div>${evBadge(m)}${spark(m)}</button>`;
   }).join("") + `</div>`).join("");
   document.querySelectorAll(".tile").forEach(b => b.addEventListener("click", () => select(b.dataset.k, true)));
 }
@@ -245,7 +259,7 @@ function testedHero(m) {
 function banner(m) {
   const t = m.timing; if (!t) return "";
   const lvl = warnLevel(t);
-  let txt = `<b>Seasonal context: window ends ${fmtD(t.end)}, ${t.left} days left.</b>`;
+  let txt = `<b>Seasonal window ends ${fmtD(t.end)}, ${t.left} trading days left.</b>`;
   if (t.flip) txt += ` Then a ${t.flip.side.toLowerCase()} window opens ${fmtD(t.flip.start)} (${t.flip.wins} of 15 years).`;
   if (lvl === "hot") txt += ` The window is about to close and the calendar then turns the other way.`;
   return `<div class="banner ${lvl}"><svg class="clock" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 6v5l3.5 2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><div>${txt}</div></div>`;
@@ -264,7 +278,7 @@ function seasonChart(m) {
   const XD = d => { const t = new Date(d + "T00:00:00"); const yy = t.getFullYear() > TODAY.getFullYear() ? 365 : 0; return X(Math.min(n - 1, (doy(d) + yy) / 365 * (n - 1))); };
   let bands = "";
   s.windows.forEach((w, i) => {
-    const x0 = XD(w.start), x1 = XD(w.end), main = i === 0, col = w.side === "BUY" ? "var(--bull)" : "var(--bear)";
+    const x0 = XD(w.start), x1 = XD(w.end), main = !!(s.driver && w.start === s.driver.start && w.side === s.driver.side), col = w.side === "BUY" ? "var(--bull)" : "var(--bear)";
     const flip = m.timing && m.timing.flip && m.timing.flip.start === w.start;
     if (!main && !flip) return;
     bands += `<rect x="${x0}" y="${T}" width="${Math.max(2, x1 - x0)}" height="${H - T - B}" fill="${col}" opacity="${main ? .13 : .07}" ${flip ? 'stroke="' + col + '" stroke-dasharray="4 4" stroke-opacity=".6"' : ""} rx="4"/>
@@ -357,8 +371,23 @@ function edge(m) {
 }
 function windowsTbl(m) {
   const s = m.seas; if (!s.windows.length) return `<p class="note">No seasonal window opens in the −2 to +8 week horizon.</p>`;
-  return `<div class="tbl"><table><thead><tr><th>Trade</th><th>Window</th><th>Length</th><th>Won (trend removed)</th><th>Avg price move, 15 yrs</th><th>Last 4</th></tr></thead><tbody>` +
-    s.windows.map((w, i) => `<tr><td>${pill(sideV(w.side), title(w.side))}${i === 0 ? ' <span class="st live">driver</span>' : ""}</td><td>${fmtD(w.start)} – ${fmtD(w.end)}</td><td class="n">${w.len}d</td><td class="n">${w.wins} of 15</td><td class="n">${w.avg >= 0 ? "+" : ""}${w.avg.toFixed(1)}%</td><td class="n">${w.rec}/4</td></tr>`).join("") + `</tbody></table></div><p class="note">Average price move over the 15 past years: negative is good for a sell window. Wins are counted after removing each year's trend, so a window can win 12 of 15 years with an average move close to zero or even against it.</p>`;
+  const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+  return `<div class="tbl"><table><thead><tr><th>Trade</th><th>Window</th><th>Trading days</th><th>Win ratio</th><th>Avg</th><th>Median</th><th>Annualised</th><th>Best / worst</th><th>Trend removed</th><th>Last 4</th></tr></thead><tbody>` +
+    s.windows.map(w => `<tr><td>${pill(sideV(w.side), title(w.side))}${s.driver && w.start === s.driver.start ? ' <span class="st live">driver</span>' : ""}</td><td>${fmtD(w.start)} – ${fmtD(w.end)}</td><td class="n">${w.len}</td><td class="n">${w.wins} of 15</td><td class="n">${pc(w.avg)}</td><td class="n">${pc(w.median)}</td><td class="n">${w.annual >= 0 ? "+" : ""}${w.annual}%</td><td class="n">${pc(w.best)} / ${pc(w.worst)}</td><td class="n">${w.wins_true} of 15</td><td class="n">${w.rec}/4</td></tr>`).join("") +
+    `</tbody></table></div><p class="note">Seasonax-style statistics over the last 15 years, counted in trading days. Win ratio: years in which price moved the trade's way over the window. Avg, median and annualised are price moves (negative is good for a sell window); best and worst are in the trade's direction. Trend removed: the same count after taking out each year's trend.</p>`;
+}
+function eventsCard(m) {
+  const ev = m.events; if (!ev) return "";
+  const card = e => {
+    const when = e.active ? `<span class="st live">active now</span> until ${fmtD(e.exit)}` : e.entry ? `next: ${fmtD(e.entry)} → ${fmtD(e.exit)} · in ${e.days_to} trading days` : "";
+    return `<div class="ev ${e.active ? "on" : ""}"><div class="evh"><b>${esc(e.name)}</b>${pill("BULLISH", "Buy")}</div>
+      <div class="evw">${when}</div>
+      <div class="evs"><span><b>${e.win}%</b> won</span><span><b>${e.avg >= 0 ? "+" : ""}${e.avg}%</b> avg</span><span><b>${e.n}</b> times, 15 yrs</span></div>
+      <p class="note">${esc(e.why)}. Tested: ${esc(e.test)}.</p></div>`;
+  };
+  return `<div class="card"><h3>Calendar events <span class="tag ctx">fixed in advance, with a cause</span></h3>
+    <p class="note">Seasonal effects defined before testing and validated in our July 2026 test on 20 years after their publication. Shown as information; they do not change the verdict.</p>
+    <div class="evg">${ev.map(card).join("")}</div></div>`;
 }
 function nbrs(m) {
   const s = m.seas; if (!s.neigh) return "";
@@ -420,7 +449,8 @@ function testedSection() {
 function render(k) {
   const m = M[k], P = $("#panel");
   const cEss = cotLed(m) || m.basis.startsWith("Conflict"), sEss = seasonLed(m) || m.basis.startsWith("Conflict");
-  const cards = (m.basis === "Calendar only" || m.basis === "Calendar over COT") ? [seasonCard(m, true), cotCard(m, m.basis !== "Calendar only")] : [cotCard(m, cEss), seasonCard(m, sEss)];
+  const evc = eventsCard(m);
+  const cards = (m.basis === "Calendar only" || m.basis === "Calendar over COT") ? [seasonCard(m, true), evc, cotCard(m, m.basis !== "Calendar only")] : [cotCard(m, cEss), seasonCard(m, sEss), evc];
   const extra = [];
   P.style.animation = "none"; void P.offsetWidth; P.style.animation = "";
   P.innerHTML = `<div class="hero"><div><h1>${esc(m.name)}</h1><div class="sub">${k} · ${m.sector} · ${pill(m.verdict)} <span style="margin-left:6px">${m.basis}</span></div>

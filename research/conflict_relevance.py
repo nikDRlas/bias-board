@@ -23,22 +23,10 @@ from conflict_test import Seas, ret, summary           # noqa: E402
 MIN_YEARS, SHARE = 3, 2 / 3
 
 
-def past_against(p, reader, d, t):
+def past_against(S, reader, d, t):
     """the driver window in its 15 past years: (years COT was against at the start, of which the window paid)"""
-    side = "BULLISH" if d["side"] == "BUY" else "BEARISH"
-    sg = 1 if side == "BULLISH" else -1
-    n = w = 0
-    for k in range(1, 16):
-        a = d["start"] - pd.DateOffset(years=k)
-        b = a + pd.Timedelta(days=d["len"])
-        i, j = p.index.searchsorted(a), p.index.searchsorted(b)
-        if j >= len(p) or p.index[j] > t:
-            continue
-        c = reader.read(a)
-        if c in ("BULLISH", "BEARISH") and c != side:
-            n += 1
-            w += sg * (p.iloc[j] - p.iloc[i]) > 0
-    return n, w
+    a = S.past(t.year, d, reader)["summary"]["against"]
+    return a["n"], a["w"]
 
 
 if __name__ == "__main__":
@@ -63,7 +51,7 @@ if __name__ == "__main__":
             busy = pd.Timestamp(x["exit"])
             if cr not in ("BULLISH", "BEARISH") or cr == sd:
                 continue                                         # only contradictions
-            n, w = past_against(p, Q, d, t)
+            n, w = past_against(S, Q, d, t)
             played = n >= MIN_YEARS and w / n >= SHARE
             rows.append({"m": k, "t": str(t.date()), "side": d["side"], "groups": groups, "past_n": n, "past_w": int(w),
                          "played_out": "played out" if played else ("too few years" if n < MIN_YEARS else "did not play out"),

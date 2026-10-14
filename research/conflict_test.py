@@ -22,71 +22,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "bias"))
 import core as C                                     # noqa: E402
 
-STARTS = np.arange(-14, 57)
-LENS = np.arange(5, 91)
-GATE, NY = 12, 15
+import seasonal as SS                                 # noqa: E402
+
 COT_HOLD = 8
-
-
-class Seas:
-    def __init__(self, p):
-        self.p = p
-        self.dv = p.index.values.astype("datetime64[D]")
-        lr = np.log(p).diff().fillna(0.0)
-        self.cum = lr.cumsum().to_numpy()
-        self.drift = lr.rolling(C.DRIFT_N).mean().shift(1).to_numpy()
-        self.n = len(p)
-
-    def driver(self, t):
-        """the board's driver window as of day t, or None / 'cancel'"""
-        starts = pd.DatetimeIndex(t + pd.to_timedelta(STARTS, "D"))
-        up = np.zeros((len(STARTS), len(LENS)))
-        mean = np.zeros_like(up)
-        sq = np.zeros_like(up)
-        for k in range(1, NY + 1):
-            s = (starts - pd.DateOffset(years=k)).values.astype("datetime64[D]")
-            a = np.searchsorted(self.dv, s)
-            b = np.searchsorted(self.dv, s[:, None] + LENS[None, :].astype("timedelta64[D]"))
-            if a.min() < C.DRIFT_N + 1 or b.max() >= self.n:
-                return None
-            d = self.drift[a]
-            if not np.isfinite(d).all():
-                return None
-            res = (self.cum[b] - self.cum[a][:, None]) - d[:, None] * (b - a[:, None])
-            up += res > 0
-            mean += res
-            sq += res ** 2
-        wins = np.maximum(up, NY - up)
-        mu = mean / NY
-        sd = np.sqrt(np.maximum(sq / NY - mu ** 2, 1e-18) * NY / (NY - 1))
-        tt = np.abs(mu) / sd * np.sqrt(NY)
-        end = starts.values[:, None] + LENS[None, :].astype("timedelta64[D]")
-        ok = (wins >= GATE) & (end > np.datetime64(t + pd.Timedelta(days=3)))
-        if not ok.any():
-            return None
-        ii, jj = np.nonzero(ok)
-        cand = sorted(({"side": "BUY" if up[i, j] >= 8 else "SELL", "wins": int(wins[i, j]), "t": float(tt[i, j]),
-                        "start": starts[i], "end": starts[i] + pd.Timedelta(days=int(LENS[j])), "len": int(LENS[j])}
-                       for i, j in zip(ii, jj)), key=lambda w: (-w["wins"], -w["t"]))
-        near = [w for w in cand if w["start"] <= t] or [w for w in cand if w["start"] <= t + pd.Timedelta(days=14)]
-        picks = near[:1]
-        for w in cand:                                   # same greedy pick as the board
-            clash = False
-            for q in picks:
-                ov = (min(w["end"], q["end"]) - max(w["start"], q["start"])).days
-                if ov > 0 and (q["side"] == w["side"] or ov > 0.5 * min(w["len"], q["len"])):
-                    clash = True
-            if not clash:
-                picks.append(w)
-            if len(picks) == 4:
-                break
-        if not near:
-            return None
-        d = picks[0]
-        if any(w["side"] != d["side"] and w["wins"] >= d["wins"] - 1 and abs((w["start"] - d["start"]).days) <= 14
-               for w in picks[1:]):
-            return "cancel"
-        return d
+Seas = SS.Calendar          # the board's own trading-day window engine
 
 
 Cot = C.CotReader
@@ -138,7 +77,7 @@ if __name__ == "__main__":
             if d not in (None, "cancel") and t > busy_s:
                 x = ret(p, max(t, d["start"]), d["end"], d["side"])
                 if x and pd.Timestamp(x["exit"]) <= end:
-                    A.append({"m": k, "t": str(t.date()), "side": d["side"], "wins": d["wins"], "len": d["len"],
+                    A.append({"m": k, "t": str(t.date()), "side": d["side"], "wins": d["wins"], "len": d["len"], "s": d["s"],
                               "start": str(d["start"].date()), "end": str(d["end"].date()), "cot": cr,
                               "rel": rel(cr, sd), **x})
                     busy_s = pd.Timestamp(x["exit"])

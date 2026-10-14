@@ -14,12 +14,13 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import core as R                                   # noqa: E402
 from core import DRIFT_N                           # noqa: E402
+import seasonal as SS                              # noqa: E402
+import events as EV                                # noqa: E402
 
 ASOF, TODAY, M = R.ASOF, R.TODAY, R.M
 LB, HIST = R.LB, R.HIST
 HZ = {4: "4 weeks", 8: "8 weeks", 13: "3 months", 26: "6 months", 52: "1 year"}
 YEARS = list(range(TODAY.year - 15, TODAY.year))
-MINLEN, MAXLEN, GATE = 5, 90, 12                   # window length in days; wins needed out of 15
 G = {"retail": "Retail", "comm": "Commercials", "fund": "Funds"}
 
 
@@ -112,125 +113,56 @@ def cot_block(k, p):
 
 
 # ------------------------------------------------------------------ seasonality
-class Season:
-    def __init__(self, p):
-        self.p = p
-        self.dv = p.index.values.astype("datetime64[D]")
-        lr = np.log(p).diff().fillna(0.0)
-        self.cum = lr.cumsum().to_numpy()
-        self.drift = lr.rolling(DRIFT_N).mean().shift(1).to_numpy()
-
-    def years(self, start, length):
-        """start = Timestamp in the report year; returns per-year (raw %, drift-removed) for 15 prior years"""
-        raw, res = [], []
-        for y in YEARS:
-            s = np.datetime64(start.replace(year=y).date())
-            a = np.searchsorted(self.dv, s)
-            b = np.searchsorted(self.dv, s + np.timedelta64(int(length), "D"))
-            r = self.cum[b] - self.cum[a]
-            raw.append(100 * (np.exp(r) - 1))
-            res.append(r - self.drift[a] * (b - a))
-        return np.array(raw), np.array(res)
-
-    def score(self, start, length):
-        raw, res = self.years(start, length)
-        up = int((res > 0).sum())
-        sgn = 1 if up >= 8 else -1
-        wins = up if sgn > 0 else 15 - up
-        sd = res.std(ddof=1)
-        return {"side": "BUY" if sgn > 0 else "SELL", "wins": wins, "n": 15, "avg": round(float(raw.mean()), 2),
-                "rec": int((sgn * res[-4:] > 0).sum()), "t": float(abs(res.mean()) / sd * 15 ** .5) if sd else 0.0,
-                "start": str(start.date()), "end": str((start + pd.Timedelta(days=int(length))).date()), "len": int(length)}
-
-    def windows(self):
-        cand = []
-        for off in range(-14, 57):
-            st = TODAY + pd.Timedelta(days=off)
-            for L in range(MINLEN, MAXLEN + 1):
-                w = self.score(st, L)
-                if w["wins"] >= GATE and pd.Timestamp(w["end"]) > TODAY + pd.Timedelta(days=3):
-                    cand.append(w)
-        cand.sort(key=lambda w: (-w["wins"], -w["t"]))
-        # the driver is the best window already open, else the best opening within two weeks; later ones follow
-        near = ([w for w in cand if pd.Timestamp(w["start"]) <= TODAY]                       # open now first
-                or [w for w in cand if pd.Timestamp(w["start"]) <= TODAY + pd.Timedelta(days=14)])
-        picks = near[:1]
-        for w in cand:
-            a, b = pd.Timestamp(w["start"]), pd.Timestamp(w["end"])
-            clash = False
-            for q in picks:
-                ov = (min(b, pd.Timestamp(q["end"])) - max(a, pd.Timestamp(q["start"]))).days
-                if ov > 0 and (q["side"] == w["side"] or ov > 0.5 * min(w["len"], q["len"])):
-                    clash = True
-            if not clash:
-                picks.append(w)
-            if len(picks) == 4:
-                break
-        return picks[:1] + sorted(picks[1:], key=lambda w: w["start"])
-
-    def neighbours(self, w):
-        st, L = pd.Timestamp(w["start"]), w["len"]
-        s1, s2 = max(2, round(L / 4)), min(10, max(4, round(L / 2)))
-        sg = 1 if w["side"] == "BUY" else -1
-        out = []
-        for sh in (-s2, -s1, s1, s2):
-            _, res = self.years(st + pd.Timedelta(days=sh), L)
-            out.append({"shift": sh, "win": round(100 * float((sg * res > 0).mean()))})
-        return out
-
-    def paths(self):
-        """average cumulative % path by trading-day index for the last 5/10/15 years, this year, analog years"""
-        p = self.p
-        by = {y: g.to_numpy() for y, g in p[p.index <= TODAY].groupby(p[p.index <= TODAY].index.year)}
-        n = 250
-        def path(y):
-            v = by[y]
-            base = by[y - 1][-1] if y - 1 in by else v[0]
-            return 100 * (v / base - 1)
-        avg = {}
-        for span in (5, 10, 15):
-            ys = [path(y)[:n] for y in YEARS[-span:] if len(by[y]) >= n]
-            avg[span] = np.mean(ys, axis=0)
-        cur = path(TODAY.year)
-        m = len(cur)
-        def detr(v):
-            t = np.arange(len(v))
-            return v - np.polyval(np.polyfit(t, v, 1), t)
-        shape = float(np.corrcoef(detr(cur), detr(avg[15][:m]))[0, 1])
-        an = []
-        for y in by:
-            if y == TODAY.year or y - 1 not in by or len(by[y]) < n:
-                continue
-            py = path(y)
-            an.append({"y": int(y), "match": round(float(np.corrcoef(detr(cur), detr(py[:m]))[0, 1]), 2),
-                       "todate": round(float(py[m - 1]), 1),
-                       "rest": round(float(100 * ((1 + py[-1] / 100) / (1 + py[m - 1] / 100) - 1)), 1)})
-        an.sort(key=lambda a: -a["match"])
-        return {"avg": {str(s): [round(float(v), 2) for v in a[::2]] for s, a in avg.items()},
-                "cur": [round(float(v), 2) for v in cur[::2]], "m": m, "n": n, "shape": round(shape, 2), "analogs": an[:4]}
+def paths(p):
+    """average cumulative % path by trading-day index for the last 5/10/15 years, this year, analog years"""
+    by = {y: g.to_numpy() for y, g in p[p.index <= TODAY].groupby(p[p.index <= TODAY].index.year)}
+    n = 250
+    def path(y):
+        v = by[y]
+        base = by[y - 1][-1] if y - 1 in by else v[0]
+        return 100 * (v / base - 1)
+    avg = {}
+    for span in (5, 10, 15):
+        ys = [path(y)[:n] for y in YEARS[-span:] if len(by[y]) >= n]
+        avg[span] = np.mean(ys, axis=0)
+    cur = path(TODAY.year)
+    m = len(cur)
+    def detr(v):
+        t = np.arange(len(v))
+        return v - np.polyval(np.polyfit(t, v, 1), t)
+    shape = float(np.corrcoef(detr(cur), detr(avg[15][:m]))[0, 1])
+    an = []
+    for y in by:
+        if y == TODAY.year or y - 1 not in by or len(by[y]) < n:
+            continue
+        py = path(y)
+        an.append({"y": int(y), "match": round(float(np.corrcoef(detr(cur), detr(py[:m]))[0, 1]), 2),
+                   "todate": round(float(py[m - 1]), 1),
+                   "rest": round(float(100 * ((1 + py[-1] / 100) / (1 + py[m - 1] / 100) - 1)), 1)})
+    an.sort(key=lambda a: -a["match"])
+    return {"avg": {str(s): [round(float(v), 2) for v in a[::2]] for s, a in avg.items()},
+            "cur": [round(float(v), 2) for v in cur[::2]], "m": m, "n": n, "shape": round(shape, 2), "analogs": an[:4]}
 
 
 def season_block(p):
-    S = Season(p)
-    wins = S.windows()
-    out = {"windows": wins, **S.paths()}
+    cal = SS.Calendar(p)
+    wins, status = cal.windows(TODAY)
+    out = {"windows": wins, **paths(p), "_cal": cal}
     sh = out["shape"]
     out["shape_read"] = ("tracking closely" if sh >= .5 else "loosely tracking" if sh >= .3 else
                          "off-pattern" if sh >= 0 else "counter-seasonal")
-    if not wins:
+    if status == "none":
         out.update(read="NO READ", strength=None)
         return out
     d = wins[0]
-    nb = S.neighbours(d)
+    nb = cal.neighbours(TODAY.year, d)
     na = float(np.mean([x["win"] for x in nb]))
     score = round(0.5 * 100 * d["wins"] / 15 + 0.2 * 25 * d["rec"] + 0.3 * na)
-    kind = "sharp" if d["len"] <= 21 else "mid-length" if d["len"] <= 45 else "broad"
+    kind = "sharp" if d["len"] <= 15 else "mid-length" if d["len"] <= 32 else "broad"
     timing = ("forgiving" if na >= 75 else "fairly forgiving" if na >= 65 else "tight" if na >= 58 else "very tight")
-    opp = [w for w in wins[1:] if w["side"] != d["side"] and w["wins"] >= d["wins"] - 1
-           and abs((pd.Timestamp(w["start"]) - pd.Timestamp(d["start"])).days) <= 14]
     out.update(driver=d, neigh=nb, neigh_avg=round(na), score=score, kind=kind, timing=timing,
                strength="STRONG" if score >= 80 else "MODERATE" if score >= 70 else "WEAK",
-               read="SELF-CANCELLING" if opp else ("BULLISH" if d["side"] == "BUY" else "BEARISH"))
+               read="SELF-CANCELLING" if status == "cancel" else ("BULLISH" if d["side"] == "BUY" else "BEARISH"))
     return out
 
 
@@ -311,7 +243,7 @@ def basis(why):
     return why
 
 
-CLOSING_DAYS, FLIP_GAP = 10, 21
+CLOSING_DAYS, FLIP_GAP = 7, 15          # trading days
 
 
 def timing(s):
@@ -320,9 +252,9 @@ def timing(s):
         return None
     d = s["driver"]
     end = pd.Timestamp(d["end"])
-    left = (end - TODAY).days
+    left = int(np.busday_count(TODAY.date(), end.date()))
     opp = sorted((w for w in s["windows"][1:] if w["side"] != d["side"]
-                  and pd.Timestamp(w["start"]) <= end + pd.Timedelta(days=FLIP_GAP)), key=lambda w: w["start"])
+                  and w["s"] <= d["s"] + d["len"] + FLIP_GAP), key=lambda w: w["start"])
     nxt = opp[0] if opp else None
     return {"end": d["end"], "left": left, "closing": left <= CLOSING_DAYS,
             "flip": {"side": nxt["side"], "start": nxt["start"], "end": nxt["end"], "wins": nxt["wins"]} if nxt else None,
@@ -330,28 +262,12 @@ def timing(s):
 
 
 def past_years(k, s, reader, p):
-    """for the current driver window: in each of its 15 past years, what COT said at the window start and
-    whether the window paid (raw move in the trade direction). These are the years the window was picked from."""
+    """for the current driver window: each of its 15 past years, COT at its start and whether it paid.
+    These are the years the window was picked from."""
     d = s.get("driver")
     if not d:
         return None
-    st, L = pd.Timestamp(d["start"]), d["len"]
-    side = "BULLISH" if d["side"] == "BUY" else "BEARISH"
-    out = []
-    for y in R_YEARS():
-        a = st.replace(year=y)
-        i, j = p.index.searchsorted(a), p.index.searchsorted(a + pd.Timedelta(days=L))
-        if j >= len(p):
-            continue
-        r = (p.iloc[j] / p.iloc[i] - 1) * (1 if side == "BULLISH" else -1)
-        c = reader.read(a)
-        rel = "agree" if c == side else "against" if c in ("BULLISH", "BEARISH") else "none"
-        out.append({"y": y, "cot": c, "rel": rel, "r": round(100 * float(r), 2), "win": bool(r > 0)})
-    summ = {}
-    for rel in ("agree", "against", "none"):
-        rr = [x for x in out if x["rel"] == rel]
-        summ[rel] = {"n": len(rr), "w": sum(x["win"] for x in rr)}
-    return {"years": out, "summary": summ}
+    return s["_cal"].past(TODAY.year, d, reader)
 
 
 def R_YEARS():
@@ -489,13 +405,13 @@ def season_html(m):
     analog = ('<h4>The years most like this one</h4><div class="scroll"><table class="track"><thead><tr><th>Year</th><th>Match</th>'
               f'<th>To date</th><th>Rest of year</th></tr></thead><tbody>{an}</tbody></table></div>'
               f'<p class="cap">{up} of {len(s["analogs"])} went higher from here, averaging {avg:+.1f}%. A cross-check on a small sample, not a forecast.</p>')
-    if not s["windows"]:
+    if not s.get("driver"):
         return (f'<div class="step">{head}<p>No seasonal window opens in the −2 to +8 week horizon. Seasonality adds nothing this week, '
                 f'the COT read carries the bias alone.</p>{svg_map(s)}<p class="cap">{shape}</p>{analog}</div>')
     d = s["driver"]
     rows = "".join(
         f'<tr><th scope="row">{dm(w["start"])}{" <span class=\"st live\">driver</span>" if i == 0 else ""}</th><td>{tag(w["side"])}</td>'
-        f'<td>{dm(w["start"])} – {dm(w["end"])}</td><td class="num">{w["len"]}d</td><td class="num">{round(100 * w["wins"] / 15)}%</td>'
+        f'<td>{dm(w["start"])} – {dm(w["end"])}</td><td class="num">{w["len"]} td</td><td class="num">{round(100 * w["wins"] / 15)}%</td>'
         f'<td class="num">{w["wins"]} of 15</td><td class="num">{w["avg"]:+.1f}%</td><td class="num">{w["rec"]}/4</td></tr>'
         for i, w in enumerate(s["windows"]))
     nb = "".join(f'<div><b>{x["win"]}%</b><span>{x["shift"]:+d}d</span></div>' for x in s["neigh"])
@@ -537,9 +453,9 @@ def render(res):
     order = sorted(res, key=lambda k: -(res[k]["seas"].get("score") or 0))
     best = "".join(
         (lambda m, d: f'<tr><th scope="row">{m["name"]}</th><td>{tag(d["side"])}</td><td>{dm(d["start"])} – {dm(d["end"])}</td>'
-                      f'<td class="num">{d["len"]}d · {m["seas"]["kind"]}</td><td class="num">{round(100 * d["wins"] / 15)}%</td>'
+                      f'<td class="num">{d["len"]} td · {m["seas"]["kind"]}</td><td class="num">{round(100 * d["wins"] / 15)}%</td>'
                       f'<td class="num">{d["wins"]} of 15</td><td>{m["seas"]["strength"].title()}</td><td class="num">{m["seas"]["shape"]:+.2f} <span class="mute">{m["seas"]["shape_read"]}</span></td></tr>')(res[k], res[k]["seas"]["driver"])
-        if res[k]["seas"]["windows"] else
+        if res[k]["seas"].get("driver") else
         f'<tr><th scope="row">{res[k]["name"]}</th><td colspan="6" class="mute">no window in the −2/+8 week horizon</td>'
         f'<td class="num">{res[k]["seas"]["shape"]:+.2f} <span class="mute">{res[k]["seas"]["shape_read"]}</span></td></tr>' for k in order)
     over = "".join(
@@ -630,7 +546,7 @@ svg .band.b {{ fill:var(--bull-bg) }} svg .band.s {{ fill:var(--bear-bg) }} svg 
 </header>
 <section class="pair">
   <div><h2>Combined bias</h2><div class="scroll"><table class="ledger" style="min-width:520px"><thead><tr><th>Market</th><th>COT</th><th>Lit R · C · F</th><th>Seasonality</th><th>Verdict</th></tr></thead><tbody>{over}</tbody></table></div>
-  <p class="cap">Each engine can carry the bias alone. When COT and the calendar contradict each other, the calendar stands if the window already paid in past years when COT was against it; otherwise there is no bias. Under each verdict: what it rests on and, where a seasonal window is open, when it ends. Amber: the window ends within {CLOSING_DAYS} days or an opposite window follows within {FLIP_GAP} days; red: both. Lit R · C · F: how many of the five lookbacks are at an extreme for retail, commercials and funds.</p></div>
+  <p class="cap">Each engine can carry the bias alone. When COT and the calendar contradict each other, the calendar stands if the window already paid in past years when COT was against it; otherwise there is no bias. Under each verdict: what it rests on and, where a seasonal window is open, when it ends. Amber: the window ends within {CLOSING_DAYS} trading days or an opposite window follows within {FLIP_GAP} trading days; red: both. Lit R · C · F: how many of the five lookbacks are at an extreme for retail, commercials and funds.</p></div>
   <div><h2>Best seasonal windows in play</h2><div class="scroll"><table class="ledger" style="min-width:640px"><thead><tr><th>Market</th><th>Trade</th><th>Window</th><th>Length</th><th>Win</th><th>Cases</th><th>Strength</th><th>Shape scan</th></tr></thead><tbody>{best}</tbody></table></div>
   <p class="cap">Entry within −2 to +8 weeks, 15-year basis, windows of at least five days. Shape scan: how closely {TODAY.year} tracks the market's own seasonal path.</p></div>
 </section>
@@ -652,7 +568,9 @@ if __name__ == "__main__":
         cr = reader.read(TODAY)
         c["read"] = cr if cr in ("BULLISH", "BEARISH") else "STAND ASIDE"   # the tested read, not the untested tie-breaks
         c["conv"] = {2: "Both groups", 1: "One group"}.get(groups, "None") if c["read"] != "STAND ASIDE" else "None"
+        s.pop("_cal", None)
         res[k] = {"name": m[0], "sector": m[3], "cot": c, "seas": s, "verdict": v, "lineup": why,
+                  "events": EV.event_block(p, TODAY) if m[3] == "Indices" else None,
                   "basis": why, "groups": groups, "timing": timing(s),
                   "tested": tested_for(k, why, groups, tested)}
         d = s.get("driver")

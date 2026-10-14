@@ -4,8 +4,10 @@ Weekly directional bias for 18 futures markets (metals, energy, currencies and U
 
 - **COT positioning**: retail (non-reportables) faded and commercials followed at extremes of five nested lookbacks
   (6 months to 5 years, lit at the 80th/20th percentile), with the track record of past cases.
-- **Seasonality**: true-seasonality windows (each year's trend removed, 15 prior years, at least five days long)
-  whose entry falls within −2 to +8 weeks.
+- **Seasonality**: Seasonax-style windows counted in trading days (`bias/seasonal.py`): win ratio over the
+  15 prior years, at least 12 of 15, 5–63 trading days long, entry within −2 to +8 weeks; trend-removed count shown too.
+- **Calendar events** for the stock indices (`bias/events.py`): turn of the month, first trading day, Halloween,
+  FOMC window. Fixed in advance with a known cause; shown as information. FOMC dates in `data/fomc_dates.csv`.
 
 **The verdict is the COT read.** Seasonality is shown as context only, because the walk-forward test in
 `research/conflict_test.py` (results in `data/research/conflict.json`) found that the board's seasonal windows won
