@@ -260,14 +260,41 @@ def tested_cells():
             "seas_by_sector": r.get("seasonal_by_sector")}
 
 
-def combine(k, reader):
-    """the verdict is the tested COT read; seasonality is shown but never sets or overrules it
-    (walk-forward: the seasonal window won 50% out of sample, and 50% when COT was against it)"""
+def combine(k, reader, s):
+    """two engines, each allowed to carry the bias alone; if they contradict, there is no bias.
+    Walk-forward (research/conflict_test.py): in a contradiction the calendar won 50% and COT 53%,
+    neither reliable enough to overrule the other."""
     v = reader.read(TODAY)
     g = reader.last_groups
-    if v in ("BULLISH", "BEARISH"):
-        return v, ("COT · both groups" if g == 2 else "COT · one group"), g
+    cd = v if v in ("BULLISH", "BEARISH") else None
+    sd = s["read"] if s["read"] in ("BULLISH", "BEARISH") else None
+    if cd and sd:
+        return (cd, "COT + calendar", g) if cd == sd else ("STAND ASIDE", "Conflict · COT vs calendar", g)
+    if cd:
+        return cd, "COT only", g
+    if sd:
+        return sd, "Calendar only", g
     return "STAND ASIDE", ("No side · groups disagree" if v == "MIXED" else "No side"), g
+
+
+def tested_for(k, basis, groups, tested):
+    """the walk-forward record of this kind of verdict"""
+    if not tested:
+        return None
+    rec = lambda o, label: dict(o, label=label) if o else None
+    if basis == "COT + calendar":
+        return rec(tested["cot_by_seasonal"].get("agree"), "COT reads while the calendar agreed won {win}% over 8 weeks")
+    if basis == "COT only":
+        sec = "currency" if sector2(k) == "FX" else "commodity"
+        return rec(tested["cot"].get(f"{sector2(k)}|{groups}"),
+                   f"{sec} COT reads with {'both groups' if groups == 2 else 'one group'} won {{win}}% over 8 weeks")
+    if basis == "Calendar only":
+        return rec(tested["seas_by_cot"].get("neutral"), "seasonal windows with no COT side won {win}% to the window end")
+    if basis.startswith("Conflict"):
+        a, b = tested["seas_by_cot"].get("against"), tested["cot_by_seasonal"].get("against")
+        return dict(a, label=f"in contradictions the calendar won {{win}}% ({a['n']} trades) and COT {b['win']}% ({b['n']}); "
+                             "neither is reliable enough to overrule the other") if a and b else None
+    return None
 
 
 def basis(why):
@@ -482,8 +509,8 @@ def combined_html(m):
     act = {"BULLISH": "We look to buy in Demand only, and only when price reaches a fresh zone.",
            "BEARISH": "We look to sell in Supply only, and only when price reaches a fresh zone.",
            "STAND ASIDE": "No side this week. Wait."}[m["verdict"]]
-    return (f'<div class="comb"><div class="eng"><div><small>COT positioning, sets the verdict</small>{tag("NEUTRAL" if c["read"] == "STAND ASIDE" else c["read"])}'
-            f'<small>Conviction: {c["conv"]}</small></div><div><small>Seasonality, context only</small>{tag(s["read"])}<small>Conviction: {sc}</small></div>'
+    return (f'<div class="comb"><div class="eng"><div><small>COT positioning</small>{tag("NEUTRAL" if c["read"] == "STAND ASIDE" else c["read"])}'
+            f'<small>Conviction: {c["conv"]}</small></div><div><small>Seasonality</small>{tag(s["read"])}<small>Conviction: {sc}</small></div>'
             f'<div class="v"><small>Combined verdict</small>{tag(m["verdict"], True)}<small>{m["basis"]}</small></div></div>'
             f'<p>{act} A bias is not a trade.</p>{tested_line(m)}</div>')
 
@@ -492,9 +519,8 @@ def tested_line(m):
     t = m.get("tested")
     if not t:
         return '<p class="cap">No side, so there is no tested record to quote.</p>'
-    sec = "currency" if m["sector"] == "FX" else "commodity"
-    return (f'<p class="cap">Tested walk-forward 2016–2026: {sec} COT reads with {m["basis"].split("· ")[1]} won '
-            f'{t["win"]}% over 8 weeks, {t["n"]} trades, average {t["avg"]:+.2f}% (t {t["t"]:.1f}).</p>')
+    return (f'<p class="cap">Tested walk-forward: {t["label"].format(win=t["win"])}, {t["n"]} trades, '
+            f'average {t["avg"]:+.2f}% (t {t["t"]:.1f}).</p>')
 
 
 def render(res):
@@ -594,7 +620,7 @@ svg .band.b {{ fill:var(--bull-bg) }} svg .band.s {{ fill:var(--bear-bg) }} svg 
 </header>
 <section class="pair">
   <div><h2>Combined bias</h2><div class="scroll"><table class="ledger" style="min-width:520px"><thead><tr><th>Market</th><th>COT</th><th>Lit R · C · F</th><th>Seasonality</th><th>Verdict</th></tr></thead><tbody>{over}</tbody></table></div>
-  <p class="cap">The verdict is the COT read, the only engine that held up in the walk-forward test; seasonality is shown as context. Under each verdict: what it rests on and, where a seasonal window is open, when it ends. Amber: the window ends within {CLOSING_DAYS} days or an opposite window follows within {FLIP_GAP} days; red: both. Lit R · C · F: how many of the five lookbacks are at an extreme for retail, commercials and funds.</p></div>
+  <p class="cap">Each engine can carry the bias alone; when COT and the calendar contradict each other there is no bias. Under each verdict: what it rests on and, where a seasonal window is open, when it ends. Amber: the window ends within {CLOSING_DAYS} days or an opposite window follows within {FLIP_GAP} days; red: both. Lit R · C · F: how many of the five lookbacks are at an extreme for retail, commercials and funds.</p></div>
   <div><h2>Best seasonal windows in play</h2><div class="scroll"><table class="ledger" style="min-width:640px"><thead><tr><th>Market</th><th>Trade</th><th>Window</th><th>Length</th><th>Win</th><th>Cases</th><th>Strength</th><th>Shape scan</th></tr></thead><tbody>{best}</tbody></table></div>
   <p class="cap">Entry within −2 to +8 weeks, 15-year basis, windows of at least five days. Shape scan: how closely {TODAY.year} tracks the market's own seasonal path.</p></div>
 </section>
@@ -611,13 +637,14 @@ if __name__ == "__main__":
         p = R.load_px(k)
         c, s = cot_block(k, p), season_block(p)
         reader = R.CotReader(k)
-        v, why, groups = combine(k, reader)
-        c["read"] = v                                   # display the tested read, not the untested tie-breaks
-        c["conv"] = {2: "Both groups", 1: "One group"}.get(groups, "None") if v != "STAND ASIDE" else "None"
+        v, why, groups = combine(k, reader, s)
+        cr = reader.read(TODAY)
+        c["read"] = cr if cr in ("BULLISH", "BEARISH") else "STAND ASIDE"   # the tested read, not the untested tie-breaks
+        c["conv"] = {2: "Both groups", 1: "One group"}.get(groups, "None") if c["read"] != "STAND ASIDE" else "None"
         s["past"] = past_years(k, s, reader, p)
         res[k] = {"name": m[0], "sector": m[3], "cot": c, "seas": s, "verdict": v, "lineup": why,
                   "basis": why, "groups": groups, "timing": timing(s),
-                  "tested": tested["cot"].get(f"{sector2(k)}|{groups}") if tested and v != "STAND ASIDE" else None}
+                  "tested": tested_for(k, why, groups, tested)}
         d = s.get("driver")
         print(f"{k:3s} COT {c['read']:11s} {c['conv']:8s} | seas {s['read']:15s} "
               + (f"{d['side']} {d['start'][5:]}..{d['end'][5:]} {d['wins']}/15 {d['avg']:+.1f}% {s['strength']} nb{s['neigh_avg']}" if d else "")
