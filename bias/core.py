@@ -87,3 +87,33 @@ def load_cot(k):
 def pctile(s, L):
     """share of the last L weekly nets (current included) strictly below the current one"""
     return s.rolling(L).apply(lambda w: (w[:-1] < w[-1]).sum() / L * 100.0, raw=True)
+
+
+class CotReader:
+    """The tested COT read: a group counts when >= 2 of its 5 lookbacks sit at the same extreme;
+    retail is faded, commercials followed; if the two groups point opposite ways there is no side.
+    Uses the latest report RELEASED (Friday) by the given day."""
+
+    def __init__(self, k):
+        x = load_cot(k)
+        self.dates = x.index
+        self.P = {g: {lb: pctile(x[g], L).to_numpy() for lb, L in LB.items()} for g in ("retail", "comm")}
+        self.last_groups = 0
+
+    def read(self, t):
+        i = self.dates.searchsorted(t - pd.Timedelta(days=3), "right") - 1
+        self.last_groups = 0
+        if i < 0:
+            return "NEUTRAL"
+        dirs = {}
+        for g, follow in (("retail", -1), ("comm", 1)):
+            sides = [("hi" if v >= HI else "lo") for v in (self.P[g][lb][i] for lb in LB)
+                     if np.isfinite(v) and (v >= HI or v <= LO)]
+            if len(sides) >= 2 and len(set(sides)) == 1:
+                dirs[g] = "BULLISH" if follow * (1 if sides[0] == "hi" else -1) > 0 else "BEARISH"
+        self.last_groups = len(dirs)
+        if not dirs:
+            return "NEUTRAL"
+        if len(set(dirs.values())) > 1:
+            return "MIXED"
+        return next(iter(dirs.values()))

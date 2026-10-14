@@ -234,42 +234,52 @@ def season_block(p):
     return out
 
 
-def combine(c, s):
-    cd = c["read"] if c["read"] != "STAND ASIDE" else None
-    sd = s["read"] if s["read"] in ("BULLISH", "BEARISH") else None
-    cr = {"High": 3, "Moderate": 2, "Weak": 1, "None": 0}[c["conv"]]
-    sr = {"STRONG": 3, "MODERATE": 2, "WEAK": 1, None: 0}[s.get("strength")] if sd else 0
-    if cd and sd:
-        if cd == sd:
-            return cd, "they agree"
-        if cr == sr:
-            return "STAND ASIDE", "they conflict at equal weight"
-        return (cd, "they conflict, positioning carries more weight") if cr > sr else \
-               (sd, "they conflict, the seasonal window carries more weight")
-    if cd:
-        return cd, "seasonality has no side, positioning carries the bias alone"
-    if sd:
-        return sd, "positioning has no side, seasonality is the only read"
-    return "STAND ASIDE", "neither engine has a side"
+RESEARCH = os.path.join(ROOT, "data", "research", "conflict.json")
 
 
-BASIS = {"they agree": "COT + seasonality",
-         "positioning has no side, seasonality is the only read": "Seasonality only",
-         "they conflict, the seasonal window carries more weight": "Seasonality over COT",
-         "seasonality has no side, positioning carries the bias alone": "COT only",
-         "they conflict, positioning carries more weight": "COT over seasonality"}
+def sector2(k):
+    return "FX" if M[k][3] == "FX" else "Commodities"
+
+
+def tested_cells():
+    """walk-forward records (research/conflict_test.py) the verdicts are graded with"""
+    if not os.path.exists(RESEARCH):
+        return None
+    r = json.load(open(RESEARCH))
+    def agg(rows):
+        z = np.array([x["z"] for x in rows])
+        return {"n": len(rows), "win": round(100 * float(np.mean([x["r"] > 0 for x in rows])), 1),
+                "avg": round(float(np.mean([x["r"] for x in rows])), 2),
+                "t": round(float(z.mean() / z.std(ddof=1) * np.sqrt(len(z))), 2)} if len(rows) > 2 else None
+    B, A = r["trades_cot"], r["trades_seasonal"]
+    cot = {f"{sec}|{g}": agg([x for x in B if sector2(x["m"]) == sec and x["groups"] == g])
+           for sec in ("FX", "Commodities") for g in (1, 2)}
+    return {"first_cot": min(x["t"] for x in B), "first_seas": r["first"], "last": r["last"], "cot": cot,
+            "cot_all": r["cot"]["all"], "cot_by_seasonal": r["cot"]["by_seasonal"],
+            "seas_all": r["seasonal"]["all"], "seas_by_cot": r["seasonal"]["by_cot"],
+            "seas_by_sector": r.get("seasonal_by_sector")}
+
+
+def combine(k, reader):
+    """the verdict is the tested COT read; seasonality is shown but never sets or overrules it
+    (walk-forward: the seasonal window won 50% out of sample, and 50% when COT was against it)"""
+    v = reader.read(TODAY)
+    g = reader.last_groups
+    if v in ("BULLISH", "BEARISH"):
+        return v, ("COT · both groups" if g == 2 else "COT · one group"), g
+    return "STAND ASIDE", ("No side · groups disagree" if v == "MIXED" else "No side"), g
 
 
 def basis(why):
-    return BASIS.get(why, "No side")
+    return why
 
 
 CLOSING_DAYS, FLIP_GAP = 10, 21
 
 
-def timing(v, why, s):
-    """how long the seasonal window behind the verdict still runs, and whether an opposite one follows"""
-    if "season" not in basis(why).lower() or "over seasonality" in basis(why) or not s.get("driver"):
+def timing(s):
+    """how long the seasonal driver window still runs, and whether an opposite one follows"""
+    if not s.get("driver") or s["read"] not in ("BULLISH", "BEARISH"):
         return None
     d = s["driver"]
     end = pd.Timestamp(d["end"])
@@ -279,7 +289,36 @@ def timing(v, why, s):
     nxt = opp[0] if opp else None
     return {"end": d["end"], "left": left, "closing": left <= CLOSING_DAYS,
             "flip": {"side": nxt["side"], "start": nxt["start"], "end": nxt["end"], "wins": nxt["wins"]} if nxt else None,
-            "only": basis(why) != "COT + seasonality"}
+            "only": False}
+
+
+def past_years(k, s, reader, p):
+    """for the current driver window: in each of its 15 past years, what COT said at the window start and
+    whether the window paid (raw move in the trade direction). These are the years the window was picked from."""
+    d = s.get("driver")
+    if not d:
+        return None
+    st, L = pd.Timestamp(d["start"]), d["len"]
+    side = "BULLISH" if d["side"] == "BUY" else "BEARISH"
+    out = []
+    for y in R_YEARS():
+        a = st.replace(year=y)
+        i, j = p.index.searchsorted(a), p.index.searchsorted(a + pd.Timedelta(days=L))
+        if j >= len(p):
+            continue
+        r = (p.iloc[j] / p.iloc[i] - 1) * (1 if side == "BULLISH" else -1)
+        c = reader.read(a)
+        rel = "agree" if c == side else "against" if c in ("BULLISH", "BEARISH") else "none"
+        out.append({"y": y, "cot": c, "rel": rel, "r": round(100 * float(r), 2), "win": bool(r > 0)})
+    summ = {}
+    for rel in ("agree", "against", "none"):
+        rr = [x for x in out if x["rel"] == rel]
+        summ[rel] = {"n": len(rr), "w": sum(x["win"] for x in rr)}
+    return {"years": out, "summary": summ}
+
+
+def R_YEARS():
+    return YEARS
 
 
 def timing_html(t, long=False):
@@ -291,9 +330,9 @@ def timing_html(t, long=False):
         txt += f'; {f["side"].lower()} window from {dm(f["start"])} ({f["wins"]} of 15)'
     cls = "warn hot" if t["closing"] and t["flip"] else "warn" if (t["closing"] or t["flip"]) else "warn calm"
     if long:
-        msg = ("The verdict rests on the calendar" + (" alone" if t["only"] else "") + ". " + txt + ".")
+        msg = "Seasonal context: " + txt + "."
         if t["closing"] and t["flip"]:
-            msg += " The bias expires within days and the calendar then turns against it: work it only until the window ends."
+            msg += " The window is about to close and the calendar then turns the other way."
         elif t["flip"]:
             msg += " An opposite window follows, so diarise the turn."
         elif t["closing"]:
@@ -443,10 +482,19 @@ def combined_html(m):
     act = {"BULLISH": "We look to buy in Demand only, and only when price reaches a fresh zone.",
            "BEARISH": "We look to sell in Supply only, and only when price reaches a fresh zone.",
            "STAND ASIDE": "No side this week. Wait."}[m["verdict"]]
-    return (f'<div class="comb"><div class="eng"><div><small>COT positioning, the driver</small>{tag("NEUTRAL" if c["read"] == "STAND ASIDE" else c["read"])}'
-            f'<small>Conviction: {c["conv"]}</small></div><div><small>Seasonality, the add-on</small>{tag(s["read"])}<small>Conviction: {sc}</small></div>'
-            f'<div class="v"><small>Combined verdict</small>{tag(m["verdict"], True)}<small>{m["basis"]} · {m["lineup"]}</small></div></div>'
-            f'<p>{act} A bias is not a trade.</p></div>')
+    return (f'<div class="comb"><div class="eng"><div><small>COT positioning, sets the verdict</small>{tag("NEUTRAL" if c["read"] == "STAND ASIDE" else c["read"])}'
+            f'<small>Conviction: {c["conv"]}</small></div><div><small>Seasonality, context only</small>{tag(s["read"])}<small>Conviction: {sc}</small></div>'
+            f'<div class="v"><small>Combined verdict</small>{tag(m["verdict"], True)}<small>{m["basis"]}</small></div></div>'
+            f'<p>{act} A bias is not a trade.</p>{tested_line(m)}</div>')
+
+
+def tested_line(m):
+    t = m.get("tested")
+    if not t:
+        return '<p class="cap">No side, so there is no tested record to quote.</p>'
+    sec = "currency" if m["sector"] == "FX" else "commodity"
+    return (f'<p class="cap">Tested walk-forward 2016–2026: {sec} COT reads with {m["basis"].split("· ")[1]} won '
+            f'{t["win"]}% over 8 weeks, {t["n"]} trades, average {t["avg"]:+.2f}% (t {t["t"]:.1f}).</p>')
 
 
 def render(res):
@@ -546,7 +594,7 @@ svg .band.b {{ fill:var(--bull-bg) }} svg .band.s {{ fill:var(--bear-bg) }} svg 
 </header>
 <section class="pair">
   <div><h2>Combined bias</h2><div class="scroll"><table class="ledger" style="min-width:520px"><thead><tr><th>Market</th><th>COT</th><th>Lit R · C · F</th><th>Seasonality</th><th>Verdict</th></tr></thead><tbody>{over}</tbody></table></div>
-  <p class="cap">Under each verdict: what it rests on, and for calendar-led verdicts when the window ends. Amber: the window ends within {CLOSING_DAYS} days or an opposite window follows within {FLIP_GAP} days; red: both. Lit R · C · F: how many of the five lookbacks are at an extreme for retail, commercials and funds.</p></div>
+  <p class="cap">The verdict is the COT read, the only engine that held up in the walk-forward test; seasonality is shown as context. Under each verdict: what it rests on and, where a seasonal window is open, when it ends. Amber: the window ends within {CLOSING_DAYS} days or an opposite window follows within {FLIP_GAP} days; red: both. Lit R · C · F: how many of the five lookbacks are at an extreme for retail, commercials and funds.</p></div>
   <div><h2>Best seasonal windows in play</h2><div class="scroll"><table class="ledger" style="min-width:640px"><thead><tr><th>Market</th><th>Trade</th><th>Window</th><th>Length</th><th>Win</th><th>Cases</th><th>Strength</th><th>Shape scan</th></tr></thead><tbody>{best}</tbody></table></div>
   <p class="cap">Entry within −2 to +8 weeks, 15-year basis, windows of at least five days. Shape scan: how closely {TODAY.year} tracks the market's own seasonal path.</p></div>
 </section>
@@ -558,17 +606,23 @@ svg .band.b {{ fill:var(--bull-bg) }} svg .band.s {{ fill:var(--bear-bg) }} svg 
 
 if __name__ == "__main__":
     res = {}
+    tested = tested_cells()
     for k, m in M.items():
         p = R.load_px(k)
         c, s = cot_block(k, p), season_block(p)
-        v, why = combine(c, s)
+        reader = R.CotReader(k)
+        v, why, groups = combine(k, reader)
+        c["read"] = v                                   # display the tested read, not the untested tie-breaks
+        c["conv"] = {2: "Both groups", 1: "One group"}.get(groups, "None") if v != "STAND ASIDE" else "None"
+        s["past"] = past_years(k, s, reader, p)
         res[k] = {"name": m[0], "sector": m[3], "cot": c, "seas": s, "verdict": v, "lineup": why,
-                  "basis": basis(why), "timing": timing(v, why, s)}
+                  "basis": why, "groups": groups, "timing": timing(s),
+                  "tested": tested["cot"].get(f"{sector2(k)}|{groups}") if tested and v != "STAND ASIDE" else None}
         d = s.get("driver")
         print(f"{k:3s} COT {c['read']:11s} {c['conv']:8s} | seas {s['read']:15s} "
               + (f"{d['side']} {d['start'][5:]}..{d['end'][5:]} {d['wins']}/15 {d['avg']:+.1f}% {s['strength']} nb{s['neigh_avg']}" if d else "")
               + f" shape {s['shape']:+.2f} | {v}")
-    json.dump({"asof": str(ASOF.date()), "today": str(TODAY.date()), "markets": res},
+    json.dump({"asof": str(ASOF.date()), "today": str(TODAY.date()), "tested": tested, "markets": res},
               open(f"{ROOT}/data/live/outlook.json", "w"), indent=1, default=float)
     os.makedirs(f"{ROOT}/site", exist_ok=True)
     out = f"{ROOT}/site/outlook.html"

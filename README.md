@@ -7,6 +7,11 @@ Weekly directional bias for 15 commodity and currency futures, from two engines:
 - **Seasonality**: true-seasonality windows (each year's trend removed, 15 prior years, at least five days long)
   whose entry falls within −2 to +8 weeks.
 
+**The verdict is the COT read.** Seasonality is shown as context only, because the walk-forward test in
+`research/conflict_test.py` (results in `data/research/conflict.json`) found that the board's seasonal windows won
+50% out of sample (2019–2026, 1,161 trades), the same whether COT agreed or not, while the COT read won about 54% over
+8 weeks and kept that when the calendar pointed the other way. Rerun the test with `python research/conflict_test.py`.
+
 The site has two pages: `index.html`, the interactive board, and `outlook.html`, the full written outlook.
 
 ## How it updates

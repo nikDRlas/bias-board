@@ -109,6 +109,16 @@ tr.ok td,tr.ok th{background:var(--sun-soft)}
 .nbrs div{display:flex;flex-direction:column;align-items:center;gap:4px;font:11px var(--mono);color:var(--mute)}
 .nbrs .bar{width:34px;border-radius:6px 6px 2px 2px;background:var(--flat-soft);position:relative;transition:height .6s cubic-bezier(.3,1.5,.5,1)}
 .nbrs .bar.c{background:var(--ink)}
+.tested{display:flex;align-items:center;gap:12px;margin-top:12px;padding:9px 12px;border:1px dashed var(--line);border-radius:12px;font-size:13px;color:var(--mute);max-width:62ch}
+.tested b{font:800 24px/1 var(--display);color:var(--ink)}
+.card h3 .tag.ctx{background:var(--flat-soft);color:var(--mute)}
+.yrs{display:flex;flex-wrap:wrap;gap:6px}
+.yr{display:flex;flex-direction:column;align-items:center;gap:3px;font:11px var(--mono);color:var(--mute);padding:5px 4px 3px;border-radius:10px;border:2px solid transparent;min-width:38px}
+.yr.agree{border-color:var(--ink)} .yr.against{border-color:var(--bear);border-style:dashed} .yr.none{border-color:var(--line)}
+.yr .dot{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font:700 12px var(--body);color:var(--card)}
+.yr .dot.w{background:var(--bull)} .yr .dot.l{background:var(--bear)}
+.legend .lg{width:14px;height:10px;border-radius:3px;border:2px solid var(--ink);background:transparent}
+.legend .lg.against{border-color:var(--bear);border-style:dashed} .legend .lg.none{border-color:var(--line)}
 .foot{color:var(--mute);font-size:12px;margin-top:28px;max-width:80ch}
 .kbd{font:11px var(--mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 5px}
 @media (max-width:640px){.hero{grid-template-columns:1fr}.dial{width:160px}.board{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -145,7 +155,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmtD = s => new Date(s + "T00:00:00").toLocaleDateString("en-GB", {day:"2-digit", month:"short"});
 const title = s => s.charAt(0) + s.slice(1).toLowerCase();
-const seasonLed = m => m.basis.startsWith("Seasonality");
+const seasonLed = m => false;                  // tested: the calendar never sets the verdict
 const cotLed = m => m.basis.startsWith("COT");
 const arrow = v => v === "BULLISH" ? "▲" : v === "BEARISH" ? "▼" : "◆";
 const pill = (v, txt) => `<span class="pill ${v === "BULLISH" || v === "BEARISH" ? v : "flat"}">${arrow(v)} ${esc(txt || title(v))}</span>`;
@@ -157,7 +167,9 @@ const ICON = {
   both:`<svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="5" cy="7" r="3.6" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="9" cy="7" r="3.6" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>`,
   none:`<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 7h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
 };
-const basisIcon = m => m.basis === "COT + seasonality" ? ICON.both : seasonLed(m) ? ICON.cal : cotLed(m) ? ICON.cot : ICON.none;
+const basisIcon = m => cotLed(m) ? ICON.cot : ICON.none;
+const T = D.tested;
+const sgn = v => (v >= 0 ? "+" : "") + v;
 const warnLevel = t => !t ? null : (t.closing && t.flip) ? "hot" : (t.closing || t.flip) ? "warn" : "calm";
 
 /* ---------- tiles ---------- */
@@ -193,9 +205,7 @@ function boards() {
 /* ---------- hero ---------- */
 function dial(m) {
   const pos = {BULLISH: 1, BEARISH: -1}[m.verdict] || 0;
-  const w = {High: 1, Moderate: .75, Weak: .5, None: .4}[m.cot.conv];
-  const sw = {STRONG: 1, MODERATE: .75, WEAK: .5}[m.seas.strength] || .4;
-  const mag = cotLed(m) ? w : seasonLed(m) ? sw : (w + sw) / 2;
+  const mag = m.groups === 2 ? 1 : .62;
   const ang = pos * 70 * mag;
   return `<svg class="dial" viewBox="0 0 190 112" role="img" aria-label="Bias ${m.verdict}">
     <path d="M18 92 A77 77 0 0 1 95 15" fill="none" stroke="var(--bear-soft)" stroke-width="16"/>
@@ -206,28 +216,33 @@ function dial(m) {
       <path d="M95 92 L95 26" stroke="var(--ink)" stroke-width="4" stroke-linecap="round"/></g>
     <circle cx="95" cy="92" r="8" fill="var(--ink)"/><circle cx="95" cy="92" r="3" fill="var(--card)"/></svg>`;
 }
+function seasStance(m) {
+  const s = m.seas;
+  if (s.read !== "BULLISH" && s.read !== "BEARISH") return s.read === "SELF-CANCELLING" ? "the calendar cancels itself out" : "there is no seasonal window in play";
+  if (m.verdict === "STAND ASIDE") return `the calendar leans ${s.read.toLowerCase()}`;
+  return s.read === m.verdict ? "the calendar points the same way" : "the calendar points the other way";
+}
 function why(m) {
-  const c = m.cot, s = m.seas, d = s.driver;
-  const win = d ? `${title(d.side)} window ${fmtD(d.start)}–${fmtD(d.end)}, ${d.wins} of 15 years` : "";
-  switch (m.basis) {
-    case "Seasonality only": return `Positioning gives no side, so the calendar carries it alone: ${win}.`;
-    case "Seasonality over COT": return `COT reads ${title(c.read)} (${c.conv.toLowerCase()}), but the ${s.strength.toLowerCase()} seasonal window outranks it: ${win}.`;
-    case "COT + seasonality": return `Both engines point the same way: COT at ${c.conv.toLowerCase()} conviction, the calendar ${s.strength.toLowerCase()} (${win}).`;
-    case "COT only": return `COT carries it alone at ${c.conv.toLowerCase()} conviction; the calendar has no side this week.`;
-    case "COT over seasonality": return `COT at ${c.conv.toLowerCase()} conviction outranks a ${(s.strength || "").toLowerCase()} seasonal window pointing the other way.`;
+  const g = m.groups === 2 ? "Retail and commercials both" : m.cot.info.comm.lit >= 2 ? "Commercials" : "Retail";
+  const sa = T ? ` Tested, that changes nothing: seasonal windows won ${T.seas_all.win}% out of sample.` : "";
+  if (m.verdict === "STAND ASIDE") {
+    if (m.basis.includes("disagree")) return `No side. Retail and commercials point opposite ways, and ${seasStance(m)}.` + sa;
+    return `No side. Positioning has no extreme on two or more lookbacks of either group, and ${seasStance(m)}.` + sa;
   }
-  if (c.read !== "STAND ASIDE" && s.read !== "BULLISH" && s.read !== "BEARISH") return `No side. ${s.read === "SELF-CANCELLING" ? "Two opposite seasonal windows open close together and cancel," : "The calendar adds nothing,"} and positioning alone is not enough to override that.`;
-  if (c.read !== "STAND ASIDE") return `No side. COT and the calendar point opposite ways with equal weight.`;
-  return `No side. Positioning has no extreme to read${s.read === "SELF-CANCELLING" ? " and the calendar cancels itself out" : ""}.`;
+  return `${g} point ${m.verdict.toLowerCase()} at extremes, so COT sets the bias; ${seasStance(m)}.` + sa;
+}
+function testedHero(m) {
+  const t = m.tested;
+  if (!t) return "";
+  const sec = m.sector === "FX" ? "currency" : "commodity";
+  return `<div class="tested"><b>${t.win}%</b><span>Tested ${T.first_cot.slice(0, 4)}–${T.last.slice(0, 4)}: ${sec} COT reads with ${m.groups === 2 ? "both groups" : "one group"} won ${t.win}% over 8 weeks · ${t.n} trades · avg ${sgn(t.avg)}% · t ${t.t.toFixed(1)}</span></div>`;
 }
 function banner(m) {
   const t = m.timing; if (!t) return "";
   const lvl = warnLevel(t);
-  let txt = `<b>Window ends ${fmtD(t.end)}, ${t.left} days left.</b>`;
+  let txt = `<b>Seasonal context: window ends ${fmtD(t.end)}, ${t.left} days left.</b>`;
   if (t.flip) txt += ` Then a ${t.flip.side.toLowerCase()} window opens ${fmtD(t.flip.start)} (${t.flip.wins} of 15 years).`;
-  if (lvl === "hot") txt += ` The bias expires within days and the calendar turns against it, so work it only until the window ends.`;
-  else if (t.flip) txt += ` Diarise the turn.`;
-  else if (t.closing) txt += ` Little time left.`;
+  if (lvl === "hot") txt += ` The window is about to close and the calendar then turns the other way.`;
   return `<div class="banner ${lvl}"><svg class="clock" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 6v5l3.5 2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><div>${txt}</div></div>`;
 }
 
@@ -367,29 +382,50 @@ function cotCard(m, essential) {
     <div class="ctl" role="group" aria-label="Lookback">${LBS.map(l => { const r = c.groups[state.grp].find(x => x.lb === l); return `<button class="chip" data-lb="${l}" aria-pressed="${l === state.lb}">${l} · ${r.pct.toFixed(0)}${r.side ? " ●" : ""}</button>`; }).join("")}</div>
     <div id="cotchart">${cotChart(m, state.grp, state.lb)}</div>${heat(m)}</div>`;
 }
-function seasonCard(m, essential) {
+function pastYears(m) {
+  const P = m.seas.past; if (!P || !P.years.length) return "";
+  const side = m.seas.driver.side === "BUY" ? "BULLISH" : "BEARISH";
+  const cells = P.years.map(x => `<div class="yr ${x.rel}" title="${x.y}: COT ${title(x.cot)} · window ${x.win ? "paid" : "failed"} ${sgn(x.r)}%">
+      <span class="dot ${x.win ? "w" : "l"}">${x.win ? "✓" : "✗"}</span><span>${String(x.y).slice(2)}</span></div>`).join("");
+  const S = P.summary, f = (o) => o.n ? `${o.w} of ${o.n}` : "none";
+  return `<h4 class="note" style="margin:14px 0 6px;font-weight:600;color:var(--ink)">This window in its past years, and what COT said at its start</h4>
+    <div class="yrs">${cells}</div>
+    <div class="legend"><span><i class="lg agree"></i>COT agreed: paid ${f(S.agree)}</span><span><i class="lg against"></i>COT against: paid ${f(S.against)}</span><span><i class="lg none"></i>COT no side: paid ${f(S.none)}</span></div>
+    <p class="note">These are the same years the window was picked from, so every column looks good. The out-of-sample answer is in "How the board is tested" below.</p>`;
+}
+function seasonCard(m) {
   const s = m.seas;
-  return `<div class="card"><h3>Seasonality ${essential ? '<span class="tag">drives the bias</span>' : ""} ${pill(s.read === "BULLISH" || s.read === "BEARISH" ? s.read : "flat", title(s.read))}${s.strength ? ` <span class="st">${title(s.strength)} · ${s.kind}</span>` : ""}</h3>
-    <p class="note">Average path of the last 5, 10 and 15 years and ${TODAY.getFullYear()} so far. Shape match ${s.shape >= 0 ? "+" : ""}${s.shape.toFixed(2)}, ${s.shape_read}.</p>${seasonChart(m)}</div>`;
+  return `<div class="card"><h3>Seasonality <span class="tag ctx">context only</span> ${pill(s.read === "BULLISH" || s.read === "BEARISH" ? s.read : "flat", title(s.read))}${s.strength ? ` <span class="st">${title(s.strength)} · ${s.kind}</span>` : ""}</h3>
+    <p class="note">Average path of the last 5, 10 and 15 years and ${TODAY.getFullYear()} so far. Shape match ${s.shape >= 0 ? "+" : ""}${s.shape.toFixed(2)}, ${s.shape_read}.</p>${seasonChart(m)}${pastYears(m)}</div>`;
+}
+function testedSection() {
+  if (!T) return "";
+  const row = (lab, o) => o ? `<tr><th>${lab}</th><td class="n">${o.n}</td><td class="n">${o.win}%</td><td class="n">${sgn(o.avg)}%</td><td class="n">${o.t == null ? "–" : o.t.toFixed(1)}</td></tr>` : "";
+  const hd = `<thead><tr><th></th><th>Trades</th><th>Won</th><th>Avg</th><th>t</th></tr></thead>`;
+  const sc = T.seas_by_cot, cs = T.cot_by_seasonal, cc = T.cot;
+  return `<details><summary>How the board is tested<small>walk-forward, no hindsight</small></summary>
+    <p class="note">Every Saturday since the data allows, the board's own rules were run with only what was known that day: the COT report released by then and the seasonal windows picked from the 15 years before. One trade per market at a time. Seasonal trades run from the window start (or that Saturday) to the window end; COT trades are held 8 weeks.</p>
+    <h4 class="note" style="font-weight:600;color:var(--ink)">The seasonal window, split by what COT said (${T.first_seas.slice(0, 4)}–${T.last.slice(0, 4)})</h4>
+    <div class="tbl"><table>${hd}<tbody>${row("All seasonal trades", T.seas_all)}${row("COT agreed", sc.agree)}${row("COT against", sc.against)}${row("COT no side", sc.neutral)}${row("COT groups disagreed", sc.mixed)}</tbody></table></div>
+    <h4 class="note" style="font-weight:600;color:var(--ink);margin-top:12px">The COT read, split by what the calendar said (${T.first_cot.slice(0, 4)}–${T.last.slice(0, 4)})</h4>
+    <div class="tbl"><table>${hd}<tbody>${row("All COT trades", T.cot_all)}${row("Calendar agreed", cs.agree)}${row("Calendar against", cs.against)}${row("No seasonal window", cs.none)}
+      ${row("Currencies, one group", cc["FX|1"])}${row("Currencies, both groups", cc["FX|2"])}${row("Commodities, one group", cc["Commodities|1"])}${row("Commodities, both groups", cc["Commodities|2"])}</tbody></table></div>
+    <p class="note">So the verdict is the COT read. The seasonal window won about half the time whether COT agreed or not, and the COT read kept its edge when the calendar was against it. The COT edge is small (about 54% over 8 weeks) and only clearly above zero pooled across all markets; no single cell is significant on its own.</p></details>`;
 }
 function render(k) {
   const m = M[k], P = $("#panel");
-  const sEss = seasonLed(m) || m.basis === "COT + seasonality", cEss = cotLed(m) || m.basis === "COT + seasonality";
-  const showS = sEss || (!cEss && m.seas.windows.length), showC = cEss || (!sEss && m.cot.read !== "STAND ASIDE") || (!sEss && !cEss);
-  const first = cotLed(m) ? "cot" : "season";
-  const cards = first === "cot" ? [showC && cotCard(m, cEss), showS && seasonCard(m, sEss)] : [showS && seasonCard(m, sEss), showC && cotCard(m, cEss)];
+  const cEss = cotLed(m), sEss = false;
+  const cards = [cotCard(m, cEss), seasonCard(m)];
   const extra = [];
-  if (!showS) extra.push(`<details><summary>Seasonal map<small>not part of this week's verdict</small></summary>${seasonCard(m, false)}</details>`);
-  if (!showC) extra.push(`<details><summary>Positioning chart<small>not part of this week's verdict</small></summary>${cotCard(m, false)}</details>`);
   P.style.animation = "none"; void P.offsetWidth; P.style.animation = "";
   P.innerHTML = `<div class="hero"><div><h1>${esc(m.name)}</h1><div class="sub">${k} · ${m.sector} · ${pill(m.verdict)} <span style="margin-left:6px">${m.basis}</span></div>
-      <p class="why">${why(m)}</p></div>${dial(m)}</div>${banner(m)}
+      <p class="why">${why(m)}</p>${testedHero(m)}</div>${dial(m)}</div>${banner(m)}
     <div class="engines"><div class="eng ${cEss ? "lead" : ""}">${ICON.cot.replace("<svg", '<svg width="16" height="16"')}<span class="k">COT</span><b>${c_read(m)}</b>${m.cot.conv}</div>
-      <div class="eng ${sEss ? "lead" : ""}">${ICON.cal.replace("<svg", '<svg width="16" height="16"')}<span class="k">Seasonality</span><b>${title(m.seas.read)}</b>${m.seas.strength ? title(m.seas.strength) : "–"}</div></div>
+      <div class="eng ${sEss ? "lead" : ""}">${ICON.cal.replace("<svg", '<svg width="16" height="16"')}<span class="k">Seasonality · context</span><b>${title(m.seas.read)}</b>${m.seas.strength ? title(m.seas.strength) : "–"}</div></div>
     <div class="charts">${cards.filter(Boolean).join("")}</div>${extra.join("")}
     <details><summary>Track record<small>what the live extremes did before</small></summary><p class="note">${edge(m)}</p>${track(m, 4)}${track(m, 8)}</details>
     ${m.seas.windows.length ? `<details><summary>Windows in play<small>entry −2 to +8 weeks</small></summary>${windowsTbl(m)}<h4 class="note" style="margin-top:12px">Neighbour test</h4>${nbrs(m)}</details>` : ""}
-    <details><summary>Years most like this one<small>analog cross-check</small></summary>${analogs(m)}</details>`;
+    <details><summary>Years most like this one<small>analog cross-check</small></summary>${analogs(m)}</details>${testedSection()}`;
   requestAnimationFrame(() => requestAnimationFrame(() => { const n = $("#needle"); if (n) n.style.transform = `rotate(${n.dataset.a}deg)`; }));
   hookTips(P, m); hookCot(m);
 }
