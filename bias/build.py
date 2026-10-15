@@ -300,6 +300,27 @@ def cot_record(reader, p, side, hold=8):
             "rec": int((r[-4:] > 0).sum()), "first": cases[0]["d"][:4], "hold": hold, "cases": cases}
 
 
+def cot_speed(k, reader, side):
+    """how fast the commercials moved into their extreme: their 4-week net change before the latest released report,
+    in units of a typical 4-week change (3-year standard deviation), with the tested record of that speed third
+    (research/cot_speed_test.py)"""
+    sp = os.path.join(ROOT, "data", "research", "cot_speed.json")
+    if side not in ("BULLISH", "BEARISH") or not os.path.exists(sp):
+        return None
+    r = json.load(open(sp))["move4w"]
+    x = R.load_cot(k)
+    i = reader.dates.searchsorted(TODAY - pd.Timedelta(days=3), "right") - 1
+    d4 = x["comm"].diff(4)
+    sd = d4.rolling(156, min_periods=52).std().shift(1).iloc[i]
+    if not np.isfinite(sd) or sd <= 0:
+        return None
+    mv = (1 if side == "BULLISH" else -1) * float(d4.iloc[i] / sd)
+    lo, hi = r["cutoffs"]
+    speed = "fast" if mv > hi else "slow" if mv <= lo else "medium"
+    return {"move": round(mv, 2), "speed": speed, "all": r["2003-26"][speed], "recent": r["2016-26"][speed],
+            "slow_all": r["2003-26"]["slow"], "fast_all": r["2003-26"]["fast"]}
+
+
 def past_years(k, s, reader, p):
     """for the current driver window: each of its 15 past years, COT at its start and whether it paid.
     These are the years the window was picked from."""
@@ -607,6 +628,7 @@ if __name__ == "__main__":
         cr = reader.read(TODAY)
         c["read"] = cr if cr in ("BULLISH", "BEARISH") else "STAND ASIDE"   # the tested read, not the untested tie-breaks
         c["record"] = cot_record(reader, p, cr)
+        c["speed"] = cot_speed(k, reader, cr)
         c["conv"] = {2: "vs retail & funds", 1: "vs one group"}.get(groups, "None") if c["read"] != "STAND ASIDE" else "None"
         s.pop("_cal", None)
         res[k] = {"name": m[0], "sector": m[3], "cot": c, "seas": s, "verdict": v, "lineup": why,
