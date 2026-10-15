@@ -321,14 +321,20 @@ function seasStance(m) {
   if (m.verdict === "STAND ASIDE") return `the calendar leans ${s.read.toLowerCase()}`;
   return s.read === m.verdict ? "the calendar points the same way" : "the calendar points the other way";
 }
+function turnNote(d) {
+  if (!d) return "";
+  if (d.turn) return ` This part runs until the calendar turns: a ${d.turn.side.toLowerCase()} window (${d.turn.wins} of ${d.turn.ny} years) starts ${fmtD(d.turn.start)} and takes over.`;
+  if (d.after_turn) return ` It took over from a ${d.after_turn.side.toLowerCase()} window that started ${fmtD(d.after_turn.start)}.`;
+  return "";
+}
 function why(m) {
   const c = m.cot, s = m.seas, d = s.driver;
   const win = d ? `${title(d.side)} window ${fmtD(d.start)}–${fmtD(d.end)}, ${d.wins} of 15 years` : "";
   const g = m.groups === 2 ? "commercials, with retail and funds on the other side" : "commercials, with retail or funds on the other side";
   switch (m.basis) {
-    case "COT + calendar": return `Both engines point ${m.verdict.toLowerCase()}: ${g} at extremes, and the calendar agrees (${win}).`;
+    case "COT + calendar": return `Both engines point ${m.verdict.toLowerCase()}: ${g} at extremes, and the calendar agrees (${win}).${turnNote(d)}`;
     case "COT only": return `COT carries the bias alone: ${g} at extremes. ${s.read === "SELF-CANCELLING" ? "The calendar cancels itself out." : "No seasonal window is in play."}`;
-    case "Calendar only": return `The calendar carries the bias alone: ${win}. Positioning has no side.`;
+    case "Calendar only": return `The calendar carries the bias alone: ${win}.${turnNote(d)} Positioning has no side.`;
   }
   const ag = (s.past && s.past.summary.against) || {n: 0, w: 0};
   if (m.basis === "Calendar over COT") return `COT reads ${title(c.read)} (${g}), against the calendar: ${win}. In the past years when COT was against this window it still paid ${ag.w} of ${ag.n} times, so the calendar stands.`;

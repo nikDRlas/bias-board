@@ -144,9 +144,27 @@ class Calendar:
         if not near:                                     # windows later in the horizon, none to lead with
             return sorted(out, key=lambda w: w["s"]), "none"
         drv = out[0]
-        cancel = any(w["side"] != drv["side"] and w["share"] >= drv["share"] - 0.07 and abs(w["s"] - drv["s"]) <= OPEN_AHEAD
-                     for w in out[1:])
-        return [drv] + sorted(out[1:], key=lambda w: w["s"]), ("cancel" if cancel else "driver")
+        opp = [w for w in out[1:] if w["side"] != drv["side"] and w["share"] >= drv["share"] - 0.07
+               and abs(w["s"] - drv["s"]) <= OPEN_AHEAD]
+        rest = sorted(out[1:], key=lambda w: w["s"])
+        if opp:
+            # two valid windows that turn: trade them in sequence (research/cancel_test.py). Before the turn the leading
+            # window runs until the opposite one starts; from the turn on, the opposite window leads.
+            o = opp[0]
+            first, second = (drv, o) if drv["s"] <= o["s"] else (o, drv)
+            others = sorted([w for w in out if w is not first and w is not second], key=lambda w: w["s"])
+            if now < second["s"] - 1 and second["s"] > first["s"]:
+                cut = second["s"] - first["s"]
+                st = self.stats(Y, first["s"], cut, first["side"], first["ny"])
+                part = {**first, **{k: v for k, v in st.items() if k != "wins"}, "wins": st["wins"], "len": cut,
+                        "end": str(self.date(Y, second["s"]).date()), "full_end": first["end"], "full_wins": first["wins"],
+                        "turn": {"side": second["side"], "start": second["start"], "end": second["end"],
+                                 "wins": second["wins"], "ny": second["ny"]}}
+                return [part, second] + others, "driver"
+            lead = {**second, "after_turn": {"side": first["side"], "start": first["start"], "end": first["end"],
+                                             "wins": first["wins"]}}
+            return [lead, first] + others, "driver"
+        return [drv] + rest, "driver"
 
     def driver(self, t):
         """for the tests: the driver window as of t, 'cancel', or None"""
