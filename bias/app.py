@@ -109,7 +109,9 @@ tr.ok td,tr.ok th{background:var(--sun-soft)}
 .nbrs div{display:flex;flex-direction:column;align-items:center;gap:4px;font:11px var(--mono);color:var(--mute)}
 .nbrs .bar{width:34px;border-radius:6px 6px 2px 2px;background:var(--flat-soft);position:relative;transition:height .6s cubic-bezier(.3,1.5,.5,1)}
 .nbrs .bar.c{background:var(--ink)}
-.tested{display:flex;align-items:center;gap:12px;margin-top:12px;padding:9px 12px;border:1px dashed var(--line);border-radius:12px;font-size:13px;color:var(--mute);max-width:62ch}
+.tested{display:flex;flex-direction:column;gap:8px;margin-top:12px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;font-size:13px;color:var(--mute);max-width:66ch}
+.iscs{display:flex;flex-wrap:wrap;gap:10px 22px} .isc{display:flex;align-items:center;gap:10px;min-width:0;flex:1 1 230px}
+.isc > b{font:800 30px/1 var(--display);color:var(--ink)} .wf{margin:0;font-size:11.5px;color:var(--mute)}
 .tested > b{font:800 24px/1 var(--display);color:var(--ink)} .tested b.tl{font-weight:600;color:var(--ink)}
 .card h3 .tag.ctx{background:var(--flat-soft);color:var(--mute)}
 .yrs{display:flex;flex-wrap:wrap;gap:6px}
@@ -251,10 +253,32 @@ function why(m) {
   if (m.basis.includes("disagree")) return `No bias. Retail and commercials point opposite ways, and ${s.read === "SELF-CANCELLING" ? "the calendar cancels itself out" : "there is no seasonal window"}.`;
   return `No bias. Positioning has no extreme on two or more lookbacks of either group, and ${s.read === "SELF-CANCELLING" ? "the calendar cancels itself out" : "there is no seasonal window in play"}.`;
 }
+function bestCotRow(m) {
+  const e = m.cot.edge;
+  if (e) return {...e, bar: true};
+  let best = null;
+  ["retail", "comm"].forEach(g => m.cot.groups[g].forEach(r => {
+    if (!r.dir || r.dir !== m.cot.read) return;
+    [4, 8].forEach(h => { const c = r.h[h]; if (c && c.n >= 3 && (!best || c.w / c.n > best.w / best.n)) best = {...c, group: g, lb: r.lb, h, bar: false}; });
+  }));
+  return best;
+}
 function testedHero(m) {
-  const t = m.tested;
-  if (!t) return "";
-  return `<div class="tested"><b>${t.win}%</b><span><b class="tl">How verdicts like this one did after the fact</b> (walk-forward, every past week, only data known then): ${t.label.replace("{win}", t.win)} · ${t.n} trades · average ${sgn(t.avg)}% in the trade direction · t ${t.t.toFixed(1)}. This is a different number from the window's own 15-year average below, which comes from the years it was picked from.</span></div>`;
+  const t = m.tested, d = m.seas.driver, cards = [];
+  const usesCal = ["Calendar only", "Calendar over COT", "COT + calendar"].includes(m.basis) || m.basis.startsWith("Conflict");
+  const usesCot = m.basis.startsWith("COT") || m.basis === "Calendar over COT" || m.basis.startsWith("Conflict");
+  if (usesCal && d) {
+    const dirAvg = d.side === "BUY" ? d.avg : -d.avg;
+    cards.push(`<div class="isc"><b>${Math.round(100 * d.wins / 15)}%</b><span><b class="tl">Seasonal window</b> ${d.wins} of 15 years · avg ${sgn(+dirAvg.toFixed(2))}% · last 4: ${d.rec}/4</span></div>`);
+  }
+  const c = usesCot && m.cot.read !== "STAND ASIDE" ? bestCotRow(m) : null;
+  if (c) {
+    const H = {4: "4 weeks", 8: "8 weeks", 13: "3 months", 26: "6 months", 52: "1 year"};
+    cards.push(`<div class="isc"><b>${Math.round(100 * c.w / c.n)}%</b><span><b class="tl">COT ${GN[c.group].toLowerCase()} · ${c.lb}</b> ${c.w} of ${c.n} past cases · avg ${sgn(c.avg)}% over ${H[c.h]}${c.bar ? "" : " · below the 6-case bar"}</span></div>`);
+  }
+  if (!cards.length && !t) return "";
+  const wf = t ? `<p class="wf">Walk-forward check: ${t.label.replace("{win}", t.win)} · ${t.n} trades · avg ${sgn(t.avg)}% in the trade direction. The big numbers are each signal's own history; this line is how this kind of verdict did when traded week by week afterwards.</p>` : "";
+  return `<div class="tested">${cards.length ? `<div class="iscs">${cards.join("")}</div>` : ""}${wf}</div>`;
 }
 function banner(m) {
   const t = m.timing; if (!t) return "";
