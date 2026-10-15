@@ -222,16 +222,10 @@ def confidence(k, basis, speed=None):
     Falls back to the verdict type across all markets when the asset-class cell has fewer than 40 trades."""
     if basis not in ("COT + calendar", "COT only", "Calendar only", "Calendar over COT") or not os.path.exists(VERDICT):
         return None
+    # graded by the verdict type across all markets: finer cells (by asset class or COT speed) did not keep their
+    # ranking out of sample (graded on 2019-21, scored on 2022-26), the verdict types did
     r = json.load(open(VERDICT))
-    cell, scope = None, ""
-    if speed and basis != "Calendar only":                       # verdicts with a COT side: graded by its speed
-        cell = r.get("by_basis_speed", {}).get(f"{basis} | {speed}")
-        scope = f"{basis} verdicts with a {speed} COT signal"
-    if not cell or cell["n"] < MIN_CELL:
-        cell = r["by_cell"].get(f"{basis} | {SECTOR_V(k)}")
-        scope = f"{basis} verdicts in {SECTOR_V(k).lower()}"
-    if not cell or cell["n"] < MIN_CELL:
-        cell, scope = r["by_basis"].get(basis), f"{basis} verdicts across all markets"
+    cell, scope = r["by_basis"].get(basis), f"{basis} verdicts across all markets"
     if not cell:
         return None
     t = cell["t"]

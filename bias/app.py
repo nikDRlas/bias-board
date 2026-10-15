@@ -192,6 +192,7 @@ body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border
     <button class="chip" id="f-BULLISH" aria-pressed="false">Bullish</button>
     <button class="chip" id="f-BEARISH" aria-pressed="false">Bearish</button>
     <button class="chip" id="f-STAND ASIDE" aria-pressed="false">Stand aside</button>
+    <button class="chip" id="f-both" aria-pressed="false">Both engines agree</button>
     <button class="chip" id="f-hot" aria-pressed="false">Window ending</button>
     <a class="chip" href="outlook.html" style="text-decoration:none">Full report</a>
   </div>
@@ -589,7 +590,7 @@ function testedSection() {
       ${row("Currencies, vs one group", cc["FX|1"])}${row("Currencies, vs retail & funds", cc["FX|2"])}${row("Metals & energy, vs one group", cc["Commodities|1"])}${row("Metals & energy, vs retail & funds", cc["Commodities|2"])}${row("Indices, vs one group", cc["Indices|1"])}${row("Indices, vs retail & funds", cc["Indices|2"])}${row("Agriculture, vs one group", cc["Agriculture|1"])}${row("Agriculture, vs retail & funds", cc["Agriculture|2"])}</tbody></table></div>
     ${D.verdict_test ? `<h4 class="note" style="font-weight:600;color:var(--ink);margin-top:12px">The board's final verdict (${D.verdict_test.first.slice(0, 4)}–${D.verdict_test.last.slice(0, 4)}), the basis of the confidence dots</h4>
     <div class="tbl"><table>${hd}<tbody>${row("All verdicts", D.verdict_test.all)}${Object.entries(D.verdict_test.by_basis).map(([k, o]) => row(k, o)).join("")}${Object.entries(D.verdict_test.by_cell).map(([k, o]) => row("· " + k.replace(" | ", ", "), o)).join("")}</tbody></table></div>
-    <p class="note">Dots: t below 0 = 1, 0–1 = 2, 1–2 = 3, 2–3 = 4, 3 or more = 5. Verdicts with a COT side are graded by the verdict type and the COT signal's speed; calendar-only verdicts by the verdict type in the market's asset class; a cell with fewer than 40 trades falls back to the verdict type across all markets. COT signals the commercials crept into slowly are skipped.</p>` : ""}
+    <p class="note">Dots: t below 0 = 1, 0–1 = 2, 1–2 = 3, 2–3 = 4, 3 or more = 5, from the verdict type across all markets. Finer grades (by asset class or COT speed) were tried and dropped: graded on 2019–21 they did not pick the better trades in 2022–26. "COT + calendar" was the only verdict type clearly ahead in both halves (61% and 58%). COT signals the commercials crept into slowly are skipped.</p>` : ""}
     <h4 class="note" style="font-weight:600;color:var(--ink);margin-top:12px">Per asset: each market tested on its own data</h4>
     <div class="tbl"><table><thead><tr><th>Market</th><th>Seasonal trades</th><th>Won</th><th>Avg</th><th>COT trades</th><th>Won</th><th>Avg</th></tr></thead><tbody>${KEYS.map(k => { const pa = (T.per_asset || {})[k] || {}, a = pa.seas, b = pa.cot;
       const c = o => o ? `<td class="n">${o.n}</td><td class="n">${o.win}%</td><td class="n">${sgn(o.avg)}%</td>` : `<td class="n">–</td><td class="n">–</td><td class="n">–</td>`;
@@ -711,7 +712,7 @@ $("#v-quant").addEventListener("click", () => setView("quant", true));
 function filt(f) {
   document.querySelectorAll(".filters .chip").forEach(b => b.setAttribute("aria-pressed", b.id === "f-" + f));
   document.querySelectorAll(".tile").forEach(t => {
-    const m = M[t.dataset.k], on = f === "all" || m.verdict === f || (f === "hot" && m.timing && (m.timing.closing || m.timing.flip));
+    const m = M[t.dataset.k], on = f === "all" || m.verdict === f || (f === "hot" && m.timing && (m.timing.closing || m.timing.flip)) || (f === "both" && m.basis === "COT + calendar");
     t.classList.toggle("dim", !on);
   });
 }
