@@ -111,33 +111,35 @@ def pctile(s, L):
 
 
 class CotReader:
-    """The tested COT read: a group counts when >= 2 of its 5 lookbacks sit at the same extreme;
-    retail is faded, commercials followed; if the two groups point opposite ways there is no side.
-    Uses the latest report RELEASED (Friday) by the given day."""
+    """The COT read: commercials at an extreme (>= 2 of their 5 lookbacks at the same extreme) are followed, but only
+    when retail or the funds (non-commercials) sit at the OPPOSITE extreme (also >= 2 of 5). Otherwise no side.
+    last_groups = how many speculator groups oppose the commercials (1 or 2).
+    Uses the latest report RELEASED (Friday) by the given day. Tested in research/opposite_test.py."""
 
     def __init__(self, k):
         x = load_cot(k)
         self.dates = x.index
-        self.P = {g: {lb: pctile(x[g], L).to_numpy() for lb, L in LB.items()} for g in ("retail", "comm")}
+        self.P = {g: {lb: pctile(x[g], L).to_numpy() for lb, L in LB.items()} for g in ("retail", "comm", "fund")}
         self.last_groups = 0
 
     def read(self, t):
         return self.read_at(self.dates.searchsorted(t - pd.Timedelta(days=3), "right") - 1)
+
+    def side(self, g, i):
+        s = [("hi" if v >= HI else "lo") for v in (self.P[g][lb][i] for lb in LB) if np.isfinite(v) and (v >= HI or v <= LO)]
+        return s[0] if len(s) >= 2 and len(set(s)) == 1 else None
 
     def read_at(self, i):
         """the read on the i-th weekly report"""
         self.last_groups = 0
         if i < 0:
             return "NEUTRAL"
-        dirs = {}
-        for g, follow in (("retail", -1), ("comm", 1)):
-            sides = [("hi" if v >= HI else "lo") for v in (self.P[g][lb][i] for lb in LB)
-                     if np.isfinite(v) and (v >= HI or v <= LO)]
-            if len(sides) >= 2 and len(set(sides)) == 1:
-                dirs[g] = "BULLISH" if follow * (1 if sides[0] == "hi" else -1) > 0 else "BEARISH"
-        self.last_groups = len(dirs)
-        if not dirs:
+        c = self.side("comm", i)
+        if not c:
             return "NEUTRAL"
-        if len(set(dirs.values())) > 1:
-            return "MIXED"
-        return next(iter(dirs.values()))
+        opp = "lo" if c == "hi" else "hi"
+        n = (self.side("retail", i) == opp) + (self.side("fund", i) == opp)
+        if not n:
+            return "NEUTRAL"
+        self.last_groups = int(n)
+        return "BULLISH" if c == "hi" else "BEARISH"

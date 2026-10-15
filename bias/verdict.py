@@ -24,7 +24,7 @@ def decide(cot, seas, past_against=None):
         return cd, "COT only"
     if sd:
         return sd, "Calendar only"
-    return "STAND ASIDE", ("No side · groups disagree" if cot == "MIXED" else "No side")
+    return "STAND ASIDE", "No side"
 
 
 def horizon(basis):

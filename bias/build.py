@@ -242,7 +242,7 @@ def tested_for(k, basis, groups, tested):
     if basis == "COT only":
         sec = {"FX": "currency", "Indices": "index", "Agriculture": "agricultural"}.get(sector2(k), "metal and energy")
         return rec(tested["cot"].get(f"{sector2(k)}|{groups}"),
-                   f"{sec} COT reads with {'both groups' if groups == 2 else 'one group'} won {{win}}% over 8 weeks")
+                   f"{sec} COT reads with {'retail and funds' if groups == 2 else 'one group'} against the commercials won {{win}}% over 8 weeks")
     if basis == "Calendar only":
         return rec(tested["seas_by_cot"].get("neutral"), "seasonal windows with no COT side won {win}% to the window end")
     rel = tested.get("relevance") or {}
@@ -392,9 +392,9 @@ def cot_html(m):
                 "Positioning is stretched on one lookback only. One lit lookback is not a read. No side from positioning.")
         ef = "The positioning read is neutral this week, so there is no direction to test."
     else:
-        who = " and ".join(G[g].lower() for g in c["lead"])
+        who = "commercials, with " + ("retail and funds" if m.get("groups") == 2 else "retail or funds") + " at the opposite extreme"
         act = "buy" if c["read"] == "BULLISH" else "sell"
-        lead = (f'The read rests on {who}: {", ".join(str(I[g]["lit"]) + " of 5 " + G[g].lower() + " lookbacks lit" for g in c["lead"])}. '
+        lead = (f'The read rests on {who}. '
                 f'We are looking to {act}. Conviction: {c["conv"].lower()}.')
         ef = (f'The strongest read is the {e["lb"].lower()} lookback on {G[e["group"]].lower()}: {round(100 * e["w"] / e["n"])}% over '
               f'{HZ[e["h"]]}, {e["w"]} of {e["n"]} cases, {e["avg"]:+.2f}% average move.' if e else
@@ -607,7 +607,7 @@ if __name__ == "__main__":
         cr = reader.read(TODAY)
         c["read"] = cr if cr in ("BULLISH", "BEARISH") else "STAND ASIDE"   # the tested read, not the untested tie-breaks
         c["record"] = cot_record(reader, p, cr)
-        c["conv"] = {2: "Both groups", 1: "One group"}.get(groups, "None") if c["read"] != "STAND ASIDE" else "None"
+        c["conv"] = {2: "vs retail & funds", 1: "vs one group"}.get(groups, "None") if c["read"] != "STAND ASIDE" else "None"
         s.pop("_cal", None)
         res[k] = {"name": m[0], "sector": m[3], "cot": c, "seas": s, "verdict": v, "lineup": why,
 

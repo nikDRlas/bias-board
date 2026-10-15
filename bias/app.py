@@ -301,7 +301,7 @@ function seasStance(m) {
 function why(m) {
   const c = m.cot, s = m.seas, d = s.driver;
   const win = d ? `${title(d.side)} window ${fmtD(d.start)}–${fmtD(d.end)}, ${d.wins} of 15 years` : "";
-  const g = m.groups === 2 ? "retail and commercials both" : c.info.comm.lit >= 2 ? "commercials" : "retail";
+  const g = m.groups === 2 ? "commercials, with retail and funds on the other side" : "commercials, with retail or funds on the other side";
   switch (m.basis) {
     case "COT + calendar": return `Both engines point ${m.verdict.toLowerCase()}: ${g} at extremes, and the calendar agrees (${win}).`;
     case "COT only": return `COT carries the bias alone: ${g} at extremes. ${s.read === "SELF-CANCELLING" ? "The calendar cancels itself out." : "No seasonal window is in play."}`;
@@ -310,8 +310,7 @@ function why(m) {
   const ag = (s.past && s.past.summary.against) || {n: 0, w: 0};
   if (m.basis === "Calendar over COT") return `COT reads ${title(c.read)} (${g}), against the calendar: ${win}. In the past years when COT was against this window it still paid ${ag.w} of ${ag.n} times, so the calendar stands.`;
   if (m.basis.startsWith("Conflict")) return `No bias. COT reads ${title(c.read)} (${g}) while the calendar says ${title(s.read)} (${win}). ${ag.n >= 3 ? `In past years with COT against it, this window paid only ${ag.w} of ${ag.n} times` : `This window has too few past years with COT against it (${ag.n}) to judge`}, so COT is relevant here and we wait.`;
-  if (m.basis.includes("disagree")) return `No bias. Retail and commercials point opposite ways, and ${s.read === "SELF-CANCELLING" ? "the calendar cancels itself out" : "there is no seasonal window"}.`;
-  return `No bias. Positioning has no extreme on two or more lookbacks of either group, and ${s.read === "SELF-CANCELLING" ? "the calendar cancels itself out" : "there is no seasonal window in play"}.`;
+  return `No bias. The commercials are not at an extreme with retail or funds on the other side, and ${s.read === "SELF-CANCELLING" ? "the calendar cancels itself out" : "there is no seasonal window in play"}.`;
 }
 function bestCotRow(m) {
   const e = m.cot.edge;
@@ -583,7 +582,7 @@ function testedSection() {
     <div class="tbl"><table>${hd}<tbody>${row("All seasonal trades", T.seas_all)}${row("COT agreed", sc.agree)}${row("COT against", sc.against)}${row("COT no side", sc.neutral)}${row("COT groups disagreed", sc.mixed)}</tbody></table></div>
     <h4 class="note" style="font-weight:600;color:var(--ink);margin-top:12px">The COT read, split by what the calendar said (${T.first_cot.slice(0, 4)}–${T.last.slice(0, 4)})</h4>
     <div class="tbl"><table>${hd}<tbody>${row("All COT trades", T.cot_all)}${row("Calendar agreed", cs.agree)}${row("Calendar against", cs.against)}${row("No seasonal window", cs.none)}
-      ${row("Currencies, one group", cc["FX|1"])}${row("Currencies, both groups", cc["FX|2"])}${row("Commodities, one group", cc["Commodities|1"])}${row("Commodities, both groups", cc["Commodities|2"])}${row("Indices, one group", cc["Indices|1"])}${row("Indices, both groups", cc["Indices|2"])}${row("Agriculture, one group", cc["Agriculture|1"])}${row("Agriculture, both groups", cc["Agriculture|2"])}</tbody></table></div>
+      ${row("Currencies, vs one group", cc["FX|1"])}${row("Currencies, vs retail & funds", cc["FX|2"])}${row("Metals & energy, vs one group", cc["Commodities|1"])}${row("Metals & energy, vs retail & funds", cc["Commodities|2"])}${row("Indices, vs one group", cc["Indices|1"])}${row("Indices, vs retail & funds", cc["Indices|2"])}${row("Agriculture, vs one group", cc["Agriculture|1"])}${row("Agriculture, vs retail & funds", cc["Agriculture|2"])}</tbody></table></div>
     ${D.verdict_test ? `<h4 class="note" style="font-weight:600;color:var(--ink);margin-top:12px">The board's final verdict (${D.verdict_test.first.slice(0, 4)}–${D.verdict_test.last.slice(0, 4)}), the basis of the confidence dots</h4>
     <div class="tbl"><table>${hd}<tbody>${row("All verdicts", D.verdict_test.all)}${Object.entries(D.verdict_test.by_basis).map(([k, o]) => row(k, o)).join("")}${Object.entries(D.verdict_test.by_cell).map(([k, o]) => row("· " + k.replace(" | ", ", "), o)).join("")}</tbody></table></div>
     <p class="note">Dots: t below 0 = 1, 0–1 = 2, 1–2 = 3, 2–3 = 4, 3 or more = 5, from the verdict type in the market's asset class (or across all markets when that cell has fewer than 40 trades).</p>` : ""}
