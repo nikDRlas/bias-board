@@ -234,6 +234,17 @@ def confidence(k, basis, speed=None):
             "first": r["first"][:4], "last": r["last"][:4]}
 
 
+def setup_record(k, basis):
+    """walk-forward record (research/verdict_test.py) of this verdict type on this market, and on all markets"""
+    if basis not in ("COT + calendar", "COT only", "Calendar only", "Calendar over COT") or not os.path.exists(VERDICT):
+        return None
+    r = json.load(open(VERDICT))
+    rows = [x for x in r["trades"] if x["m"] == k and x["basis"] == basis]
+    rr = np.array([x["r"] for x in rows])
+    here = {"n": len(rr), "w": int((rr > 0).sum()), "avg": round(float(rr.mean()), 2)} if len(rr) else {"n": 0, "w": 0, "avg": None}
+    return {"here": here, "all": r["by_basis"].get(basis), "first": r["first"][:4], "last": r["last"][:4]}
+
+
 def tested_for(k, basis, groups, tested):
     """the walk-forward record of this kind of verdict"""
     if not tested:
@@ -637,7 +648,7 @@ if __name__ == "__main__":
         res[k] = {"name": m[0], "sector": m[3], "cot": c, "seas": s, "verdict": v, "lineup": why,
 
                   "basis": why, "groups": groups, "timing": timing(s),
-                  "confidence": confidence(k, why, (c.get("speed") or {}).get("speed")),
+                  "confidence": None, "setup": setup_record(k, why),
                   "tested": tested_for(k, why, groups, tested)}
         d = s.get("driver")
         print(f"{k:3s} COT {c['read']:11s} {c['conv']:8s} | seas {s['read']:15s} "

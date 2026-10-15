@@ -166,6 +166,8 @@ body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border
 .dots{display:inline-flex;gap:3px;align-items:center;vertical-align:middle;margin-left:4px}
 .dots i{width:7px;height:7px;border-radius:50%;background:var(--line);display:block}
 .dots i.on{background:var(--ink)}
+.sbadge{font:600 11px/1 var(--mono);padding:4px 6px;border-radius:999px;border:1px solid var(--line);color:var(--mute)}
+.sbadge.new{font-family:var(--body)}
 .dots em{font:600 11px/1 var(--mono);font-style:normal;color:var(--mute);margin-left:4px}
 .dots.big em{font-size:13px}
 .dots.big i{width:10px;height:10px}
@@ -258,6 +260,11 @@ function spark(m) {
   const col = m.verdict === "BULLISH" ? "var(--bull)" : m.verdict === "BEARISH" ? "var(--bear)" : "var(--flat)";
   return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`;
 }
+function setupBadge(m) {
+  const su = m.setup; if (!su || m.verdict === "STAND ASIDE") return "";
+  const tip = `This setup on ${m.name}: ${su.here.w} of ${su.here.n} in the walk-forward test; all markets ${su.all.win}% of ${su.all.n}`;
+  return su.here.n ? `<span class="sbadge" title="${esc(tip)}">${su.here.w}/${su.here.n}</span>` : `<span class="sbadge new" title="${esc(tip)}">new</span>`;
+}
 function dots(m, big) {
   const c = m.confidence; if (!c || m.verdict === "STAND ASIDE") return "";
   const tip = `Confidence ${c.dots}/5: ${c.scope} won ${c.win}% (${c.n} trades, avg ${sgn(c.avg)}%, t ${c.t.toFixed(1)}) in the walk-forward test ${c.first}–${c.last}`;
@@ -277,7 +284,7 @@ function boards() {
     const m = M[k];
     return `<button class="tile" id="t-${k}" data-k="${k}" aria-current="false">${ring(m)}
       <div><div class="nm">${esc(m.name)}</div><div class="tk">${k}</div></div>
-      <div class="row">${pill(m.verdict)}${dots(m)}</div>
+      <div class="row">${pill(m.verdict)}${setupBadge(m)}</div>
       <div class="basis">${basisIcon(m)}${esc(m.basis)}</div>${spark(m)}</button>`;
   }).join("") + `</div>`).join("");
   document.querySelectorAll(".tile").forEach(b => b.addEventListener("click", () => select(b.dataset.k, true)));
@@ -351,7 +358,8 @@ function testedHero(m) {
     if (rows.length) groups.push(`<div class="isg"><div class="isgh">${fa(m, m.cot.read)}<span>COT</span></div>${rows.join("")}</div>`);
   }
   if (!groups.length && !cf) return "";
-  const wf = cf ? `<p class="wf">Confidence ${cf.dots}/5 · walk-forward ${cf.first}–${cf.last}: ${esc(cf.scope)} won ${cf.win}% · ${cf.n} trades · avg ${sgn(cf.avg)}% · t ${cf.t.toFixed(1)}. The big numbers are each signal's own history; this line is how this kind of verdict did when traded week by week afterwards.</p>` : "";
+  const su = m.setup;
+  const wf = su ? `<p class="wf">${su.here.n ? `<b>This setup on ${esc(m.name)}:</b> won ${su.here.w} of ${su.here.n} times in the walk-forward test ${su.first}–${su.last} (avg ${sgn(su.here.avg)}%)${su.here.n < 10 ? ", too few cases to judge on their own" : ""}.` : `<b>This setup has not occurred on ${esc(m.name)}</b> in the walk-forward test ${su.first}–${su.last}.`} Across all markets: ${su.all.win}% of ${su.all.n}. The big numbers above are each signal's own history; this line is how the board's verdict did when traded week by week.</p>` : "";
   return `<div class="tested">${groups.length ? `<div class="iscs">${groups.join("")}</div>` : ""}${wf}</div>`;
 }
 function banner(m) {
@@ -592,7 +600,7 @@ function testedSection() {
       ${row("Currencies, vs one group", cc["FX|1"])}${row("Currencies, vs retail & funds", cc["FX|2"])}${row("Metals & energy, vs one group", cc["Commodities|1"])}${row("Metals & energy, vs retail & funds", cc["Commodities|2"])}${row("Indices, vs one group", cc["Indices|1"])}${row("Indices, vs retail & funds", cc["Indices|2"])}${row("Agriculture, vs one group", cc["Agriculture|1"])}${row("Agriculture, vs retail & funds", cc["Agriculture|2"])}</tbody></table></div>
     ${D.verdict_test ? `<h4 class="note" style="font-weight:600;color:var(--ink);margin-top:12px">The board's final verdict (${D.verdict_test.first.slice(0, 4)}–${D.verdict_test.last.slice(0, 4)}), the basis of the confidence dots</h4>
     <div class="tbl"><table>${hd}<tbody>${row("All verdicts", D.verdict_test.all)}${Object.entries(D.verdict_test.by_basis).map(([k, o]) => row(k, o)).join("")}${Object.entries(D.verdict_test.by_cell).map(([k, o]) => row("· " + k.replace(" | ", ", "), o)).join("")}</tbody></table></div>
-    <p class="note">Dots show how certain the edge is (t below 0 = 1, 0–1 = 2, 1–2 = 3, 2–3 = 4, 3 or more = 5); the % beside them is how often that verdict type won. Both come from the verdict type across all markets. A window's own record (years won, size of its usual move, last 4 years) was tested as a grade and did not predict later results. Finer grades (by asset class or COT speed) were tried and dropped: graded on 2019–21 they did not pick the better trades in 2022–26. "COT + calendar" was the only verdict type clearly ahead in both halves (61% and 58%). COT signals the commercials crept into slowly are skipped.</p>` : ""}
+    <p class="note">The badge on each tile (e.g. 7/10) is how this setup did on this market in the walk-forward test. Per market the samples are small, so read it together with the all-markets row above. Confidence grades were tried and dropped: finer grades did not keep their ranking from 2019–21 to 2022–26, and a window's own record (years won, size of its usual move, last 4 years) did not predict later results. Finer grades (by asset class or COT speed) were tried and dropped: graded on 2019–21 they did not pick the better trades in 2022–26. "COT + calendar" was the only verdict type clearly ahead in both halves (61% and 58%). COT signals the commercials crept into slowly are skipped.</p>` : ""}
     <h4 class="note" style="font-weight:600;color:var(--ink);margin-top:12px">Per asset: each market tested on its own data</h4>
     <div class="tbl"><table><thead><tr><th>Market</th><th>Seasonal trades</th><th>Won</th><th>Avg</th><th>COT trades</th><th>Won</th><th>Avg</th></tr></thead><tbody>${KEYS.map(k => { const pa = (T.per_asset || {})[k] || {}, a = pa.seas, b = pa.cot;
       const c = o => o ? `<td class="n">${o.n}</td><td class="n">${o.win}%</td><td class="n">${sgn(o.avg)}%</td>` : `<td class="n">–</td><td class="n">–</td><td class="n">–</td>`;
@@ -607,7 +615,7 @@ function render(k) {
   const cards = (m.basis === "Calendar only" || m.basis === "Calendar over COT") ? [seasonCard(m, true), evc, cotCard(m, m.basis !== "Calendar only")] : [cotCard(m, cEss), seasonCard(m, sEss), evc];
   const extra = [];
   P.style.animation = "none"; void P.offsetWidth; P.style.animation = "";
-  P.innerHTML = `<div class="hero"><div><h1>${esc(m.name)}</h1><div class="sub">${k} · ${m.sector} · ${pill(m.verdict)} ${dots(m, true)} <span style="margin-left:6px">${m.basis}</span></div>
+  P.innerHTML = `<div class="hero"><div><h1>${esc(m.name)}</h1><div class="sub">${k} · ${m.sector} · ${pill(m.verdict)} <span style="margin-left:6px">${m.basis}</span></div>
       <p class="why">${why(m)}</p>${testedHero(m)}</div>${dial(m)}</div>${banner(m)}
     <div class="engines"><div class="eng ${cEss ? "lead" : ""}">${ICON.cot.replace("<svg", '<svg width="16" height="16"')}<span class="k">COT</span><b>${c_read(m)}</b>${m.cot.conv}</div>
       <div class="eng ${sEss ? "lead" : ""}">${ICON.cal.replace("<svg", '<svg width="16" height="16"')}<span class="k">Seasonality</span><b>${title(m.seas.read)}</b>${m.seas.strength ? title(m.seas.strength) : "–"}</div></div>
