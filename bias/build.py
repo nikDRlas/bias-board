@@ -163,6 +163,7 @@ def season_block(p):
     score = round(0.5 * 100 * d["wins"] / 15 + 0.2 * 25 * d["rec"] + 0.3 * na)
     kind = "sharp" if d["len"] <= 15 else "mid-length" if d["len"] <= 32 else "broad"
     timing = ("forgiving" if na >= 75 else "fairly forgiving" if na >= 65 else "tight" if na >= 58 else "very tight")
+    out["remaining"] = cal.remaining(TODAY, d)
     out.update(driver=d, neigh=nb, neigh_avg=round(na), score=score, kind=kind, timing=timing,
                strength="STRONG" if score >= 80 else "MODERATE" if score >= 70 else "WEAK",
                read="SELF-CANCELLING" if status == "cancel" else ("BULLISH" if d["side"] == "BUY" else "BEARISH"))

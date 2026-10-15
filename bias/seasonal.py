@@ -156,6 +156,21 @@ class Calendar:
             out.append({"shift": sh, "win": round(100 * float(np.mean(np.array(r) > 0)))})
         return out
 
+    def remaining(self, t, w):
+        """what the window usually still does from t (or its start, if later) to its end, over the 15 past years,
+        and what it has done so far this year"""
+        Y, now = t.year, self.td(t)
+        s0, e = max(now, w["s"]), w["s"] + w["len"]
+        if e <= s0:
+            return None
+        sg = 1 if w["side"] == "BUY" else -1
+        r = np.array([np.exp(self.lc[self.first[y][0] + e] - self.lc[self.first[y][0] + s0]) - 1 for y in range(Y - NY, Y)])
+        so_far = None
+        if now > w["s"] and self.first[Y][0] + now < self.n:
+            so_far = round(100 * float(np.exp(self.lc[self.first[Y][0] + now] - self.lc[self.first[Y][0] + w["s"]]) - 1), 2)
+        return {"days": int(e - s0), "avg": round(100 * float(r.mean()), 2), "median": round(100 * float(np.median(r)), 2),
+                "wins": int((sg * r > 0).sum()), "n": NY, "so_far": so_far, "started": bool(now >= w["s"])}
+
     def past(self, Y, w, reader):
         """the window in each of its 15 past years: COT read at its start, and whether it paid"""
         side = "BULLISH" if w["side"] == "BUY" else "BEARISH"

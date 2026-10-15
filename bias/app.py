@@ -169,6 +169,9 @@ body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border
 .dots.big i{width:10px;height:10px}
 .fa{display:inline-block;font:600 10px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;padding:3px 6px;border-radius:999px;margin-right:6px;background:var(--flat-soft);color:var(--mute)}
 .fa.for{background:var(--bull-soft);color:var(--bull)} .fa.against{background:var(--bear-soft);color:var(--bear)}
+.wstats{display:flex;flex-wrap:wrap;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:10px 0 4px}
+.wstats div{flex:1 1 180px;background:var(--card);padding:9px 12px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.wstats b{font:700 18px/1 var(--mono);color:var(--ink)} .wstats span{font-size:12px;color:var(--mute)}
 .foot{color:var(--mute);font-size:12px;margin-top:28px;max-width:80ch}
 .kbd{font:11px var(--mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 5px}
 @media (max-width:640px){.hero{grid-template-columns:1fr}.dial{width:160px}.board{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -369,6 +372,16 @@ function seasonPaths(m) {
   const proj = []; for (let i = k0; i < n; i++) proj.push([i, A15[i]]);
   return {n, mc, cur: s.cur.map(toP), a5: anchor(s.avg["5"]), a10: anchor(s.avg["10"]), a15: A15, proj};
 }
+function windowStats(m) {
+  const s = m.seas, d = s.driver, r = s.remaining; if (!d || !r) return "";
+  const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+  const cell = (big, small) => `<div><b>${big}</b><span>${small}</span></div>`;
+  return `<div class="wstats">
+    ${cell(pc(d.avg), `usual move over the whole window, ${fmtD(d.start)} – ${fmtD(d.end)}`)}
+    ${cell(pc(r.avg), `${r.started ? "still to come" : "expected"} over the ${r.days} trading days ${r.started ? "left" : "of the window"} · went that way ${r.wins} of 15 years`)}
+    ${r.so_far == null ? "" : cell(pc(r.so_far), "this year so far in the window")}
+  </div>`;
+}
 function seasonChart(m) {
   const s = m.seas, W = 760, H = 290, L = 58, R = 14, T = 14, B = 26, sp = seasonPaths(m), n = sp.n;
   const all = [...sp.cur, ...sp.a5, ...sp.a10, ...sp.a15, ...sp.proj.map(p => p[1])];
@@ -390,18 +403,19 @@ function seasonChart(m) {
   const ticks = tv.map(v => `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke-dasharray="2 4"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end">${fmtPx(v)}</text>`).join("");
   const P = a => a.map((v, i) => [X(i), Y(v)]);
   const cur = P(sp.cur), proj = sp.proj.map(([i, v]) => [X(i), Y(v)]);
-  const end = proj[proj.length - 1];
-  const chg = 100 * (sp.proj[sp.proj.length - 1][1] / sp.proj[0][1] - 1);
+  const d = s.driver, xEnd = d ? XD(d.end) : null;
+  const projW = d ? proj.filter(p => p[0] <= xEnd + 0.5) : [];
+  const pcol = d && d.side === "SELL" ? "var(--bear)" : "var(--bull)";
   return `<div class="chart" data-kind="season"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Seasonal price chart">${bands}<g class="ax">${ticks}${months}</g>
     ${poly(P(sp.a5), "var(--line)", 1.4)}${poly(P(sp.a10), "var(--flat)", 1.4)}${poly(P(sp.a15), "var(--mute)", 1.8)}
     ${poly(cur, "var(--ink)", 3)}
-    <polyline points="${proj.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ")}" fill="none" stroke="var(--q-deep)" stroke-width="2.6" stroke-dasharray="6 5" stroke-linecap="round"/>
-    <text x="${Math.min(end[0], W - R - 4)}" y="${end[1] - 8}" text-anchor="end" style="font:600 11px var(--mono);fill:var(--q-deep)">${chg >= 0 ? "+" : ""}${chg.toFixed(1)}% to year end</text>
+    ${projW.length > 1 ? `<polyline points="${projW.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ")}" fill="none" stroke="${pcol}" stroke-width="3" stroke-dasharray="7 5" stroke-linecap="round"/><circle cx="${projW[projW.length - 1][0]}" cy="${projW[projW.length - 1][1]}" r="4.5" fill="${pcol}" stroke="var(--card)" stroke-width="2"/>` : ""}
     <line x1="${tx}" x2="${tx}" y1="${T}" y2="${H - B}" stroke="var(--sun)" stroke-width="2" stroke-dasharray="3 3"/>
     <circle cx="${cur[cur.length - 1][0]}" cy="${cur[cur.length - 1][1]}" r="5" fill="var(--sun)" class="pulse"/>
     <circle cx="${cur[cur.length - 1][0]}" cy="${cur[cur.length - 1][1]}" r="4" fill="var(--sun)" stroke="var(--card)" stroke-width="2"/>
     <rect class="hit" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/></svg><div class="tip"></div></div>
-    <div class="legend"><span><i style="background:var(--ink)"></i>${TODAY.getFullYear()} price</span><span><i style="background:var(--q-deep)"></i>15-yr pattern from today (projection)</span><span><i style="background:var(--mute)"></i>15-yr avg</span><span><i style="background:var(--flat)"></i>10-yr</span><span><i style="background:var(--line)"></i>5-yr</span><span><i style="background:var(--sun)"></i>today</span></div>`;
+    ${windowStats(m)}
+    <div class="legend"><span><i style="background:var(--ink)"></i>${TODAY.getFullYear()} price</span><span><i style="background:${pcol}"></i>usual path to the window's end</span><span><i style="background:var(--mute)"></i>15-yr avg</span><span><i style="background:var(--flat)"></i>10-yr</span><span><i style="background:var(--line)"></i>5-yr</span><span><i style="background:var(--sun)"></i>today</span></div>`;
 }
 function cotChart(m, grp, lb) {
   const c = m.cot, sr = c.series, W = 760, H = 270, L = 62, R = 14, T = 14, B = 26, n = sr.dates.length;
@@ -545,7 +559,7 @@ function chartTag(m, which) {
 function seasonCard(m, ess) {
   const s = m.seas;
   return `<div class="card"><h3>Seasonality ${chartTag(m, "seas")} ${pill(s.read === "BULLISH" || s.read === "BEARISH" ? s.read : "flat", title(s.read))}${s.strength ? ` <span class="st">${title(s.strength)} · ${s.kind}</span>` : ""}</h3>
-    <p class="note">In price: ${TODAY.getFullYear()} so far, and the average path of the last 5, 10 and 15 years lined up to pass through today's price, so the 15-year pattern continues from today to year end (dashed). Shape match ${s.shape >= 0 ? "+" : ""}${s.shape.toFixed(2)}, ${s.shape_read}.</p>${seasonChart(m)}${pastYears(m)}</div>`;
+    <p class="note">In price: ${TODAY.getFullYear()} so far, and the average path of the last 5, 10 and 15 years lined up to pass through today's price, and the usual path from today to the end of the current seasonal window (dashed). The numbers under the chart are measured over the same trading days in each of the last 15 years. Shape match ${s.shape >= 0 ? "+" : ""}${s.shape.toFixed(2)}, ${s.shape_read}.</p>${seasonChart(m)}${pastYears(m)}</div>`;
 }
 function testedSection() {
   if (!T) return "";
