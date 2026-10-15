@@ -16,6 +16,7 @@ import core as R                                   # noqa: E402
 from core import DRIFT_N                           # noqa: E402
 import seasonal as SS                              # noqa: E402
 import events as EV                                # noqa: E402
+import verdict as VD                               # noqa: E402
 
 ASOF, TODAY, M = R.ASOF, R.TODAY, R.M
 LB, HIST = R.LB, R.HIST
@@ -196,27 +197,36 @@ def tested_cells():
 
 
 def combine(k, reader, s):
-    """two engines, each allowed to carry the bias alone; if they contradict, there is no bias.
-    Walk-forward (research/conflict_test.py): in a contradiction the calendar won 50% and COT 53%,
-    neither reliable enough to overrule the other."""
+    """the board's verdict (bias/verdict.py)"""
     v = reader.read(TODAY)
     g = reader.last_groups
-    cd = v if v in ("BULLISH", "BEARISH") else None
-    sd = s["read"] if s["read"] in ("BULLISH", "BEARISH") else None
-    if cd and sd:
-        if cd == sd:
-            return cd, "COT + calendar", g
-        # user rule: the calendar stands if this window already paid in past years when COT was against it;
-        # otherwise COT is relevant here and there is no bias (tested: research/conflict_relevance.py)
-        ag = ((s.get("past") or {}).get("summary") or {}).get("against") or {"n": 0, "w": 0}
-        if ag["n"] >= 3 and ag["w"] / ag["n"] >= 2 / 3:
-            return sd, "Calendar over COT", g
-        return "STAND ASIDE", "Conflict · COT relevant", g
-    if cd:
-        return cd, "COT only", g
-    if sd:
-        return sd, "Calendar only", g
-    return "STAND ASIDE", ("No side · groups disagree" if v == "MIXED" else "No side"), g
+    ag = ((s.get("past") or {}).get("summary") or {}).get("against")
+    verdict, basis = VD.decide(v, s["read"], ag)
+    return verdict, basis, g
+
+
+VERDICT = os.path.join(ROOT, "data", "research", "verdict.json")
+SECTOR_V = lambda k: {"FX": "Currencies", "Indices": "Indices", "Agriculture": "Agriculture"}.get(M[k][3], "Metals & energy")
+MIN_CELL = 40
+
+
+def confidence(k, basis):
+    """1-5 dots from the walk-forward record of this verdict type in this asset class (research/verdict_test.py):
+    how many standard errors verdicts like this one beat a coin flip by. t < 0: 1, 0-1: 2, 1-2: 3, 2-3: 4, >= 3: 5.
+    Falls back to the verdict type across all markets when the asset-class cell has fewer than 40 trades."""
+    if basis not in ("COT + calendar", "COT only", "Calendar only", "Calendar over COT") or not os.path.exists(VERDICT):
+        return None
+    r = json.load(open(VERDICT))
+    cell = r["by_cell"].get(f"{basis} | {SECTOR_V(k)}")
+    scope = f"{basis} verdicts in {SECTOR_V(k).lower()}"
+    if not cell or cell["n"] < MIN_CELL:
+        cell, scope = r["by_basis"].get(basis), f"{basis} verdicts across all markets"
+    if not cell:
+        return None
+    t = cell["t"]
+    dots = 1 if t < 0 else 2 if t < 1 else 3 if t < 2 else 4 if t < 3 else 5
+    return {"dots": dots, "n": cell["n"], "win": cell["win"], "avg": cell["avg"], "t": t, "scope": scope,
+            "first": r["first"][:4], "last": r["last"][:4]}
 
 
 def tested_for(k, basis, groups, tested):
@@ -572,7 +582,7 @@ if __name__ == "__main__":
         s.pop("_cal", None)
         res[k] = {"name": m[0], "sector": m[3], "cot": c, "seas": s, "verdict": v, "lineup": why,
 
-                  "basis": why, "groups": groups, "timing": timing(s),
+                  "basis": why, "groups": groups, "timing": timing(s), "confidence": confidence(k, why),
                   "tested": tested_for(k, why, groups, tested)}
         d = s.get("driver")
         print(f"{k:3s} COT {c['read']:11s} {c['conv']:8s} | seas {s['read']:15s} "
@@ -583,7 +593,10 @@ if __name__ == "__main__":
         for k in ks:
             if k in M:
                 quant.append({"id": f"{kind}-{k}", "market": k, "market_name": M[k][0], **EV.strategy(R.load_px(k), kind, TODAY)})
-    json.dump({"asof": str(ASOF.date()), "today": str(TODAY.date()), "tested": tested, "markets": res, "quant": quant},
+    vt = json.load(open(VERDICT)) if os.path.exists(VERDICT) else None
+    vsum = {k2: vt[k2] for k2 in ("first", "last", "all", "by_basis", "by_cell", "by_sector")} if vt else None
+    json.dump({"asof": str(ASOF.date()), "today": str(TODAY.date()), "tested": tested, "verdict_test": vsum,
+               "markets": res, "quant": quant},
               open(f"{ROOT}/data/live/outlook.json", "w"), indent=1, default=float)
     os.makedirs(f"{ROOT}/site", exist_ok=True)
     out = f"{ROOT}/site/outlook.html"

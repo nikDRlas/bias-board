@@ -159,6 +159,10 @@ body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border
 .qbanner{display:flex;gap:10px;align-items:flex-start;margin-top:16px;padding:11px 14px;border-radius:12px;background:var(--q-soft);font-size:14px}
 .qbanner.on{background:var(--q);color:var(--q-ink)}
 .qrule{border-left:4px solid var(--q);padding:8px 12px;margin-top:16px;background:var(--q-soft);border-radius:0 10px 10px 0;font-size:14px}
+.dots{display:inline-flex;gap:3px;align-items:center;vertical-align:middle;margin-left:4px}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--line);display:block}
+.dots i.on{background:var(--ink)}
+.dots.big i{width:10px;height:10px}
 .foot{color:var(--mute);font-size:12px;margin-top:28px;max-width:80ch}
 .kbd{font:11px var(--mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 5px}
 @media (max-width:640px){.hero{grid-template-columns:1fr}.dial{width:160px}.board{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -240,6 +244,11 @@ function spark(m) {
   const col = m.verdict === "BULLISH" ? "var(--bull)" : m.verdict === "BEARISH" ? "var(--bear)" : "var(--flat)";
   return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`;
 }
+function dots(m, big) {
+  const c = m.confidence; if (!c || m.verdict === "STAND ASIDE") return "";
+  const tip = `Confidence ${c.dots}/5: ${c.scope} won ${c.win}% (${c.n} trades, avg ${sgn(c.avg)}%, t ${c.t.toFixed(1)}) in the walk-forward test ${c.first}–${c.last}`;
+  return `<span class="dots${big ? " big" : ""}" title="${esc(tip)}" aria-label="${esc(tip)}">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= c.dots ? "on" : ""}"></i>`).join("")}</span>`;
+}
 function evBadge(m) {
   if (!m.events) return "";
   const on = m.events.filter(e => e.active), soon = m.events.filter(e => !e.active && e.days_to <= 5);
@@ -254,7 +263,7 @@ function boards() {
     const m = M[k];
     return `<button class="tile" id="t-${k}" data-k="${k}" aria-current="false">${ring(m)}
       <div><div class="nm">${esc(m.name)}</div><div class="tk">${k}</div></div>
-      <div class="row">${pill(m.verdict)}</div>
+      <div class="row">${pill(m.verdict)}${dots(m)}</div>
       <div class="basis">${basisIcon(m)}${esc(m.basis)}</div>${spark(m)}</button>`;
   }).join("") + `</div>`).join("");
   document.querySelectorAll(".tile").forEach(b => b.addEventListener("click", () => select(b.dataset.k, true)));
@@ -306,7 +315,7 @@ function bestCotRow(m) {
   return best;
 }
 function testedHero(m) {
-  const t = m.tested, d = m.seas.driver, cards = [];
+  const t = m.tested, d = m.seas.driver, cards = [], cfv = m.confidence;
   const usesCal = ["Calendar only", "Calendar over COT", "COT + calendar"].includes(m.basis) || m.basis.startsWith("Conflict");
   const usesCot = m.basis.startsWith("COT") || m.basis === "Calendar over COT" || m.basis.startsWith("Conflict");
   if (usesCal && d) {
@@ -318,8 +327,9 @@ function testedHero(m) {
     const H = {4: "4 weeks", 8: "8 weeks", 13: "3 months", 26: "6 months", 52: "1 year"};
     cards.push(`<div class="isc"><b>${Math.round(100 * c.w / c.n)}%</b><span><b class="tl">COT ${GN[c.group].toLowerCase()} · ${c.lb}</b> ${c.w} of ${c.n} past cases · avg ${sgn(c.avg)}% over ${H[c.h]}${c.bar ? "" : " · below the 6-case bar"}</span></div>`);
   }
-  if (!cards.length && !t) return "";
-  const wf = t ? `<p class="wf">Walk-forward check: ${t.label.replace("{win}", t.win)} · ${t.n} trades · avg ${sgn(t.avg)}% in the trade direction. The big numbers are each signal's own history; this line is how this kind of verdict did when traded week by week afterwards.</p>` : "";
+  const cf = cfv;
+  if (!cards.length && !cf) return "";
+  const wf = cf ? `<p class="wf">Confidence ${cf.dots}/5 · walk-forward ${cf.first}–${cf.last}: ${esc(cf.scope)} won ${cf.win}% · ${cf.n} trades · avg ${sgn(cf.avg)}% · t ${cf.t.toFixed(1)}. The big numbers are each signal's own history; this line is how this kind of verdict did when traded week by week afterwards.</p>` : "";
   return `<div class="tested">${cards.length ? `<div class="iscs">${cards.join("")}</div>` : ""}${wf}</div>`;
 }
 function banner(m) {
@@ -510,6 +520,9 @@ function testedSection() {
     <h4 class="note" style="font-weight:600;color:var(--ink);margin-top:12px">The COT read, split by what the calendar said (${T.first_cot.slice(0, 4)}–${T.last.slice(0, 4)})</h4>
     <div class="tbl"><table>${hd}<tbody>${row("All COT trades", T.cot_all)}${row("Calendar agreed", cs.agree)}${row("Calendar against", cs.against)}${row("No seasonal window", cs.none)}
       ${row("Currencies, one group", cc["FX|1"])}${row("Currencies, both groups", cc["FX|2"])}${row("Commodities, one group", cc["Commodities|1"])}${row("Commodities, both groups", cc["Commodities|2"])}${row("Indices, one group", cc["Indices|1"])}${row("Indices, both groups", cc["Indices|2"])}${row("Agriculture, one group", cc["Agriculture|1"])}${row("Agriculture, both groups", cc["Agriculture|2"])}</tbody></table></div>
+    ${D.verdict_test ? `<h4 class="note" style="font-weight:600;color:var(--ink);margin-top:12px">The board's final verdict (${D.verdict_test.first.slice(0, 4)}–${D.verdict_test.last.slice(0, 4)}), the basis of the confidence dots</h4>
+    <div class="tbl"><table>${hd}<tbody>${row("All verdicts", D.verdict_test.all)}${Object.entries(D.verdict_test.by_basis).map(([k, o]) => row(k, o)).join("")}${Object.entries(D.verdict_test.by_cell).map(([k, o]) => row("· " + k.replace(" | ", ", "), o)).join("")}</tbody></table></div>
+    <p class="note">Dots: t below 0 = 1, 0–1 = 2, 1–2 = 3, 2–3 = 4, 3 or more = 5, from the verdict type in the market's asset class (or across all markets when that cell has fewer than 40 trades).</p>` : ""}
     <h4 class="note" style="font-weight:600;color:var(--ink);margin-top:12px">Per asset: each market tested on its own data</h4>
     <div class="tbl"><table><thead><tr><th>Market</th><th>Seasonal trades</th><th>Won</th><th>Avg</th><th>COT trades</th><th>Won</th><th>Avg</th></tr></thead><tbody>${KEYS.map(k => { const pa = (T.per_asset || {})[k] || {}, a = pa.seas, b = pa.cot;
       const c = o => o ? `<td class="n">${o.n}</td><td class="n">${o.win}%</td><td class="n">${sgn(o.avg)}%</td>` : `<td class="n">–</td><td class="n">–</td><td class="n">–</td>`;
@@ -524,7 +537,7 @@ function render(k) {
   const cards = (m.basis === "Calendar only" || m.basis === "Calendar over COT") ? [seasonCard(m, true), evc, cotCard(m, m.basis !== "Calendar only")] : [cotCard(m, cEss), seasonCard(m, sEss), evc];
   const extra = [];
   P.style.animation = "none"; void P.offsetWidth; P.style.animation = "";
-  P.innerHTML = `<div class="hero"><div><h1>${esc(m.name)}</h1><div class="sub">${k} · ${m.sector} · ${pill(m.verdict)} <span style="margin-left:6px">${m.basis}</span></div>
+  P.innerHTML = `<div class="hero"><div><h1>${esc(m.name)}</h1><div class="sub">${k} · ${m.sector} · ${pill(m.verdict)} ${dots(m, true)} <span style="margin-left:6px">${m.basis}</span></div>
       <p class="why">${why(m)}</p>${testedHero(m)}</div>${dial(m)}</div>${banner(m)}
     <div class="engines"><div class="eng ${cEss ? "lead" : ""}">${ICON.cot.replace("<svg", '<svg width="16" height="16"')}<span class="k">COT</span><b>${c_read(m)}</b>${m.cot.conv}</div>
       <div class="eng ${sEss ? "lead" : ""}">${ICON.cal.replace("<svg", '<svg width="16" height="16"')}<span class="k">Seasonality</span><b>${title(m.seas.read)}</b>${m.seas.strength ? title(m.seas.strength) : "–"}</div></div>
