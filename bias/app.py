@@ -322,6 +322,8 @@ function testedHero(m) {
     const dirAvg = d.side === "BUY" ? d.avg : -d.avg;
     cards.push(`<div class="isc"><b>${Math.round(100 * d.wins / 15)}%</b><span><b class="tl">Seasonal window</b> ${d.wins} of 15 years · avg ${sgn(+dirAvg.toFixed(2))}% · last 4: ${d.rec}/4</span></div>`);
   }
+  const rc = usesCot && m.cot.record;
+  if (rc) cards.push(`<div class="isc"><b>${Math.round(100 * rc.w / rc.n)}%</b><span><b class="tl">COT read ${m.cot.read.toLowerCase()}</b> ${rc.w} of ${rc.n} times since ${rc.first} · avg ${sgn(rc.avg)}% over ${rc.hold} weeks · last 4: ${rc.rec}/4</span></div>`);
   const c = usesCot && m.cot.read !== "STAND ASIDE" ? bestCotRow(m) : null;
   if (c) {
     const H = {4: "4 weeks", 8: "8 weeks", 13: "3 months", 26: "6 months", 52: "1 year"};

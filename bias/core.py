@@ -122,7 +122,10 @@ class CotReader:
         self.last_groups = 0
 
     def read(self, t):
-        i = self.dates.searchsorted(t - pd.Timedelta(days=3), "right") - 1
+        return self.read_at(self.dates.searchsorted(t - pd.Timedelta(days=3), "right") - 1)
+
+    def read_at(self, i):
+        """the read on the i-th weekly report"""
         self.last_groups = 0
         if i < 0:
             return "NEUTRAL"

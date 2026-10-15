@@ -272,6 +272,31 @@ def timing(s):
             "only": False}
 
 
+def cot_record(reader, p, side, hold=8):
+    """every past time this market's COT read switched to `side` (since prices start), and whether price moved
+    that way over the next `hold` weeks, from the first close after the Friday release. The live episode is left out."""
+    if side not in ("BULLISH", "BEARISH"):
+        return None
+    sg = 1 if side == "BULLISH" else -1
+    reads = [reader.read_at(i) for i in range(len(reader.dates))]
+    cases = []
+    for i in range(1, len(reads)):
+        if reads[i] == side and reads[i - 1] != side:
+            rel = reader.dates[i] + pd.Timedelta(days=3)
+            if rel < p.index[0]:
+                continue
+            a = p.index.searchsorted(rel)
+            b = p.index.searchsorted(rel + pd.Timedelta(weeks=hold))
+            if b >= len(p):
+                continue                                   # result not known yet (includes the live episode)
+            cases.append({"d": str(reader.dates[i].date()), "r": round(100 * sg * float(p.iloc[b] / p.iloc[a] - 1), 2)})
+    if not cases:
+        return None
+    r = np.array([c["r"] for c in cases])
+    return {"n": len(r), "w": int((r > 0).sum()), "avg": round(float(r.mean()), 2), "median": round(float(np.median(r)), 2),
+            "rec": int((r[-4:] > 0).sum()), "first": cases[0]["d"][:4], "hold": hold, "cases": cases}
+
+
 def past_years(k, s, reader, p):
     """for the current driver window: each of its 15 past years, COT at its start and whether it paid.
     These are the years the window was picked from."""
@@ -578,6 +603,7 @@ if __name__ == "__main__":
         v, why, groups = combine(k, reader, s)
         cr = reader.read(TODAY)
         c["read"] = cr if cr in ("BULLISH", "BEARISH") else "STAND ASIDE"   # the tested read, not the untested tie-breaks
+        c["record"] = cot_record(reader, p, cr)
         c["conv"] = {2: "Both groups", 1: "One group"}.get(groups, "None") if c["read"] != "STAND ASIDE" else "None"
         s.pop("_cal", None)
         res[k] = {"name": m[0], "sector": m[3], "cot": c, "seas": s, "verdict": v, "lineup": why,
