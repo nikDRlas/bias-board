@@ -114,7 +114,10 @@ tr.ok td,tr.ok th{background:var(--sun-soft)}
 .nbrs .bar{width:34px;border-radius:6px 6px 2px 2px;background:var(--flat-soft);position:relative;transition:height .6s cubic-bezier(.3,1.5,.5,1)}
 .nbrs .bar.c{background:var(--ink)}
 .tested{display:flex;flex-direction:column;gap:8px;margin-top:12px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;font-size:13px;color:var(--mute);max-width:66ch}
-.iscs{display:flex;flex-wrap:wrap;gap:10px 22px} .isc{display:flex;align-items:center;gap:10px;min-width:0;flex:1 1 230px}
+.iscs{display:flex;flex-wrap:wrap;gap:12px 18px} .isc{display:flex;align-items:center;gap:10px;min-width:0}
+.isg{flex:1 1 260px;min-width:0;display:flex;flex-direction:column;gap:8px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--line) 25%,transparent)}
+.isgh{display:flex;align-items:center;gap:6px;font:700 11px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--ink)}
+.isgh .fa{margin-right:0}
 .isc > b{font:800 30px/1 var(--display);color:var(--ink)} .wf{margin:0;font-size:11.5px;color:var(--mute)}
 .tested > b{font:800 24px/1 var(--display);color:var(--ink)} .tested b.tl{font-weight:600;color:var(--ink)}
 .card h3 .tag.ctx{background:var(--flat-soft);color:var(--mute)}
@@ -322,24 +325,25 @@ function fa(m, side) {
   return side === m.verdict ? '<span class="fa for">for the verdict</span>' : '<span class="fa against">against the verdict</span>';
 }
 function testedHero(m) {
-  const t = m.tested, d = m.seas.driver, cards = [], cfv = m.confidence;
+  const d = m.seas.driver, groups = [], cf = m.confidence;
   const usesCal = ["Calendar only", "Calendar over COT", "COT + calendar"].includes(m.basis) || m.basis.startsWith("Conflict");
   const usesCot = m.basis.startsWith("COT") || m.basis === "Calendar over COT" || m.basis.startsWith("Conflict");
+  const line = (big, title, txt) => `<div class="isc"><b>${big}</b><span><b class="tl">${title}</b> ${txt}</span></div>`;
   if (usesCal && d) {
     const dirAvg = d.side === "BUY" ? d.avg : -d.avg;
-    cards.push(`<div class="isc"><b>${Math.round(100 * d.wins / 15)}%</b><span>${fa(m, d.side === "BUY" ? "BULLISH" : "BEARISH")}<b class="tl">Seasonal window</b> ${d.wins} of 15 years · avg ${sgn(+dirAvg.toFixed(2))}% · last 4: ${d.rec}/4</span></div>`);
+    groups.push(`<div class="isg"><div class="isgh">${fa(m, d.side === "BUY" ? "BULLISH" : "BEARISH")}<span>Seasonality</span></div>
+      ${line(`${Math.round(100 * d.wins / 15)}%`, "Window", `${d.wins} of 15 years · avg ${sgn(+dirAvg.toFixed(2))}% · last 4: ${d.rec}/4`)}</div>`);
   }
-  const rc = usesCot && m.cot.record;
-  if (rc) cards.push(`<div class="isc"><b>${Math.round(100 * rc.w / rc.n)}%</b><span>${fa(m, m.cot.read)}<b class="tl">COT read ${m.cot.read.toLowerCase()}</b> ${rc.w} of ${rc.n} times since ${rc.first} · avg ${sgn(rc.avg)}% over ${rc.hold} weeks · last 4: ${rc.rec}/4</span></div>`);
-  const c = usesCot && m.cot.read !== "STAND ASIDE" ? bestCotRow(m) : null;
-  if (c) {
+  if (usesCot && m.cot.read !== "STAND ASIDE") {
+    const rc = m.cot.record, c = bestCotRow(m), rows = [];
     const H = {4: "4 weeks", 8: "8 weeks", 13: "3 months", 26: "6 months", 52: "1 year"};
-    cards.push(`<div class="isc"><b>${Math.round(100 * c.w / c.n)}%</b><span>${fa(m, m.cot.read)}<b class="tl">COT ${GN[c.group].toLowerCase()} · ${c.lb}</b> ${c.w} of ${c.n} past cases · avg ${sgn(c.avg)}% over ${H[c.h]}${c.bar ? "" : " · below the 6-case bar"}</span></div>`);
+    if (rc) rows.push(line(`${Math.round(100 * rc.w / rc.n)}%`, `Read ${m.cot.read.toLowerCase()}`, `${rc.w} of ${rc.n} times since ${rc.first} · avg ${sgn(rc.avg)}% over ${rc.hold} weeks · last 4: ${rc.rec}/4`));
+    if (c) rows.push(line(`${Math.round(100 * c.w / c.n)}%`, `${GN[c.group]} · ${c.lb}`, `${c.w} of ${c.n} past cases · avg ${sgn(c.avg)}% over ${H[c.h]}${c.bar ? "" : " · below the 6-case bar"}`));
+    if (rows.length) groups.push(`<div class="isg"><div class="isgh">${fa(m, m.cot.read)}<span>COT</span></div>${rows.join("")}</div>`);
   }
-  const cf = cfv;
-  if (!cards.length && !cf) return "";
+  if (!groups.length && !cf) return "";
   const wf = cf ? `<p class="wf">Confidence ${cf.dots}/5 · walk-forward ${cf.first}–${cf.last}: ${esc(cf.scope)} won ${cf.win}% · ${cf.n} trades · avg ${sgn(cf.avg)}% · t ${cf.t.toFixed(1)}. The big numbers are each signal's own history; this line is how this kind of verdict did when traded week by week afterwards.</p>` : "";
-  return `<div class="tested">${cards.length ? `<div class="iscs">${cards.join("")}</div>` : ""}${wf}</div>`;
+  return `<div class="tested">${groups.length ? `<div class="iscs">${groups.join("")}</div>` : ""}${wf}</div>`;
 }
 function banner(m) {
   const t = m.timing; if (!t) return "";
