@@ -26,7 +26,8 @@ PRICES = {
     "SEK": ("USD/SEK", "fx"),
     "ES": ("SPX500/USD", "index"), "NQ": ("NAS100/USD", "index"), "YM": ("US30/USD", "index"),
     "ZC": ("CORN/USD", "commodity"), "ZW": ("WHEAT/USD", "commodity"), "ZS": ("SOYBN/USD", "commodity"),
-    "SB": ("SUGAR/USD", "commodity"),          # only needed to rebuild DXY from its legs
+    "SB": ("SUGAR/USD", "commodity"),
+    "KC": ("COFFEE/USD", "commodity"), "LE": ("CATTLE/USD", "commodity"),          # only needed to rebuild DXY from its legs
 }
 
 

@@ -30,7 +30,12 @@ M = {
     "YM": ("Dow Jones", "YM", 0, "Indices"),
     "ZC": ("Corn", "ZC", 0, "Agriculture"), "ZW": ("Wheat", "ZW", 0, "Agriculture"),
     "ZS": ("Soybeans", "ZS", 0, "Agriculture"), "SB": ("Sugar", "SB", 0, "Agriculture"),
+    "KC": ("Coffee", "KC", 0, "Agriculture"), "LE": ("Live Cattle", "LE", 0, "Agriculture"),
 }
+# LSE has these only from 2026: history = TradingView back-adjusted continuous futures (data/history, to May 2026),
+# continued with LSE daily prices rescaled at the overlap. Win ratios are exact; % averages are approximate.
+# (cotton and orange juice were left out: their back-adjusted history sits at or below zero for years)
+SPLICED = {"KC", "LE"}
 # LSE's CL and NG COT history is a different contract before 2026: use the CFTC series, append LSE after it
 CFTC_ONLY = {"CL", "NG"}
 
@@ -61,7 +66,19 @@ def _raw(k):
     return p[p.index <= TODAY]
 
 
+def _spliced(k):
+    h = pd.read_csv(os.path.join(ROOT, "data", "history", f"{k}_tv.csv"), parse_dates=["date"]).set_index("date").close
+    live = _raw(k)
+    j = pd.DataFrame({"h": h, "l": live}).dropna()
+    ratio = float((j.h / j.l).median())
+    p = pd.concat([h, live[live.index > h.index[-1]] * ratio])
+    p = p[p.index.dayofweek < 5]
+    return p[p.index <= TODAY]
+
+
 def load_px(k):
+    if k in SPLICED:
+        return _spliced(k)
     if k == "DX":          # ICE formula; LSE's own DXY candle only starts 2026-06
         legs = pd.DataFrame({x: _raw(x) for x in ("6E", "6J", "6B", "6C", "SEK", "6S")}).dropna()
         return (50.14348112 * legs["6E"] ** -0.576 * legs["6J"] ** 0.136 * legs["6B"] ** -0.119

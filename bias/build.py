@@ -571,14 +571,19 @@ if __name__ == "__main__":
         c["conv"] = {2: "Both groups", 1: "One group"}.get(groups, "None") if c["read"] != "STAND ASIDE" else "None"
         s.pop("_cal", None)
         res[k] = {"name": m[0], "sector": m[3], "cot": c, "seas": s, "verdict": v, "lineup": why,
-                  "events": EV.event_block(p, TODAY) if m[3] == "Indices" else None,
+
                   "basis": why, "groups": groups, "timing": timing(s),
                   "tested": tested_for(k, why, groups, tested)}
         d = s.get("driver")
         print(f"{k:3s} COT {c['read']:11s} {c['conv']:8s} | seas {s['read']:15s} "
               + (f"{d['side']} {d['start'][5:]}..{d['end'][5:]} {d['wins']}/15 {d['avg']:+.1f}% {s['strength']} nb{s['neigh_avg']}" if d else "")
               + f" shape {s['shape']:+.2f} | {v}")
-    json.dump({"asof": str(ASOF.date()), "today": str(TODAY.date()), "tested": tested, "markets": res},
+    quant = []
+    for kind, ks in EV.MARKETS.items():
+        for k in ks:
+            if k in M:
+                quant.append({"id": f"{kind}-{k}", "market": k, "market_name": M[k][0], **EV.strategy(R.load_px(k), kind, TODAY)})
+    json.dump({"asof": str(ASOF.date()), "today": str(TODAY.date()), "tested": tested, "markets": res, "quant": quant},
               open(f"{ROOT}/data/live/outlook.json", "w"), indent=1, default=float)
     os.makedirs(f"{ROOT}/site", exist_ok=True)
     out = f"{ROOT}/site/outlook.html"

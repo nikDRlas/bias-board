@@ -1,13 +1,16 @@
 # Bias Board
 
-Weekly directional bias for 22 futures markets (metals, energy, currencies, US stock indices and grains/sugar), from two engines:
+Weekly directional bias for 24 futures markets (metals, energy, currencies, US stock indices, grains, softs and cattle), plus a separate Quant strategies view, from two engines:
 
 - **COT positioning**: retail (non-reportables) faded and commercials followed at extremes of five nested lookbacks
   (6 months to 5 years, lit at the 80th/20th percentile), with the track record of past cases.
 - **Seasonality**: Seasonax-style windows counted in trading days (`bias/seasonal.py`): win ratio over the
   15 prior years, at least 12 of 15, 5–63 trading days long, entry within −2 to +8 weeks; trend-removed count shown too.
-- **Calendar events** for the stock indices (`bias/events.py`): turn of the month, first trading day, Halloween,
-  FOMC window. Fixed in advance with a known cause; shown as information. FOMC dates in `data/fomc_dates.csv`.
+- **Quant strategies** (`bias/events.py`, own view in the app): fixed calendar rules with a known cause, validated on the
+  20 years after publication: turn of the month, first trading day, Halloween and FOMC window on the S&P, Nasdaq and Dow,
+  and the corn pre-harvest short. FOMC dates in `data/fomc_dates.csv`.
+- Coffee and live cattle use TradingView back-adjusted futures history (`data/history/`, to May 2026) continued with
+  LSE daily prices; their win ratios are exact, % averages approximate.
 
 **The verdict is the COT read.** Seasonality is shown as context only, because the walk-forward test in
 `research/conflict_test.py` (results in `data/research/conflict.json`) found that the board's seasonal windows won

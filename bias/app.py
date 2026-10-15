@@ -19,18 +19,22 @@ PAGE = r"""<title>Bias Board</title>
   --bg:#edf1f6; --card:#ffffff; --ink:#16213a; --mute:#5d6985; --line:#d6dde8;
   --bull:#0d8466; --bull-soft:#d3f0e6; --bear:#d9472f; --bear-soft:#fbe0da; --flat:#8b95ab; --flat-soft:#e5e9f0;
   --sun:#c98a00; --sun-soft:#fdf0c4; --retail:#b23fc4; --comm:#2a63d4; --funds:#e07f0c;
+  --q:#f5c518; --q-ink:#2b2100; --q-deep:#9a6b00; --q-soft:#fff3c2; --q-line:#ecd68a; --q-bg:#f7f3e6;
   --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif; --body:"Instrument Sans",system-ui,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,monospace; --shadow:0 1px 2px rgba(22,33,58,.06),0 6px 18px rgba(22,33,58,.07);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0e1424; --card:#161f33; --ink:#e8ecf5; --mute:#93a0bd; --line:#263252;
   --bull:#3fd0a4; --bull-soft:#12372f; --bear:#ff7d68; --bear-soft:#3d1f1d; --flat:#7d88a3; --flat-soft:#222c43;
-  --sun:#ffc933; --sun-soft:#3a3115; --retail:#e07ae8; --comm:#6ea0ff; --funds:#ffaa4d; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.25); color-scheme:dark}}
+  --sun:#ffc933; --sun-soft:#3a3115; --retail:#e07ae8; --comm:#6ea0ff; --funds:#ffaa4d; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.25);
+  --q:#ffd23f; --q-ink:#231b00; --q-deep:#ffd23f; --q-soft:#3a3214; --q-line:#5a4b1a; --q-bg:#15140e; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0e1424; --card:#161f33; --ink:#e8ecf5; --mute:#93a0bd; --line:#263252;
   --bull:#3fd0a4; --bull-soft:#12372f; --bear:#ff7d68; --bear-soft:#3d1f1d; --flat:#7d88a3; --flat-soft:#222c43;
-  --sun:#ffc933; --sun-soft:#3a3115; --retail:#e07ae8; --comm:#6ea0ff; --funds:#ffaa4d; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.25); color-scheme:dark}
+  --sun:#ffc933; --sun-soft:#3a3115; --retail:#e07ae8; --comm:#6ea0ff; --funds:#ffaa4d; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.25);
+  --q:#ffd23f; --q-ink:#231b00; --q-deep:#ffd23f; --q-soft:#3a3214; --q-line:#5a4b1a; --q-bg:#15140e; color-scheme:dark}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body);margin:0}
 .wrap{max-width:1220px;margin-inline:auto;padding-inline:18px;padding-block:0 60px}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
@@ -128,6 +132,33 @@ tr.ok td,tr.ok th{background:var(--sun-soft)}
 .evw{font-size:12.5px;color:var(--mute)} .evs{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mute)} .evs b{font:600 14px var(--mono);color:var(--ink)}
 .ev .note{margin:0}
 .tile .evb{font:600 10.5px/1 var(--body);padding:3px 6px;border-radius:999px;background:var(--sun-soft);color:var(--sun)}
+.views{display:inline-flex;border:1.5px solid var(--line);border-radius:999px;padding:3px;background:var(--card);gap:2px}
+.vbtn{font:600 13px/1 var(--body);border:0;background:transparent;color:var(--mute);padding:8px 13px;border-radius:999px;cursor:pointer;transition:background .2s,color .2s}
+.vbtn[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.vbtn.q[aria-selected="true"]{background:var(--q);color:var(--q-ink)}
+.vbtn:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.qintro{color:var(--mute);max-width:70ch;margin:20px 0 0;font-size:14px}
+body.quant{background:var(--q-bg)}
+body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border-bottom-color:var(--q-line)}
+#quant-view h2.sec{color:var(--q-deep)}
+.qtile{position:relative;text-align:left;background:var(--card);border:1.5px solid var(--q-line);border-radius:14px;padding:11px 12px 10px;cursor:pointer;color:var(--ink);font:inherit;
+  box-shadow:var(--shadow);transition:transform .18s cubic-bezier(.3,1.6,.5,1),border-color .15s;display:flex;flex-direction:column;gap:6px;min-width:0}
+.qtile:hover{transform:translateY(-3px) rotate(.4deg)}
+.qtile[aria-current="true"]{border-color:var(--q-deep);box-shadow:0 0 0 3px color-mix(in srgb,var(--q) 35%,transparent),var(--shadow)}
+.qtile.on{background:linear-gradient(180deg,var(--q-soft),var(--card) 70%)}
+.qtile:focus-visible{outline:3px solid var(--q-deep);outline-offset:2px}
+.qtile .nm{font:700 15px/1.15 var(--display)} .qtile .tk{font:12px var(--mono);color:var(--mute)}
+.qstat{font-size:12px;color:var(--mute)} .qstat b{font:700 13px var(--mono);color:var(--ink)}
+.qwhen{font:600 11.5px/1 var(--body);padding:4px 7px;border-radius:999px;background:var(--q-soft);color:var(--q-deep);align-self:flex-start}
+.qwhen.on{background:var(--q);color:var(--q-ink)}
+.bars{height:24px;width:100%}
+.qpanel{border-color:var(--q-line)}
+.qpanel .hero h1{color:var(--ink)}
+.qbig{display:flex;flex-wrap:wrap;gap:12px 28px;margin-top:16px}
+.qbig div{display:flex;flex-direction:column;gap:3px} .qbig b{font:800 34px/1 var(--display);color:var(--q-deep)} .qbig span{font-size:12px;color:var(--mute)}
+.qbanner{display:flex;gap:10px;align-items:flex-start;margin-top:16px;padding:11px 14px;border-radius:12px;background:var(--q-soft);font-size:14px}
+.qbanner.on{background:var(--q);color:var(--q-ink)}
+.qrule{border-left:4px solid var(--q);padding:8px 12px;margin-top:16px;background:var(--q-soft);border-radius:0 10px 10px 0;font-size:14px}
 .foot{color:var(--mute);font-size:12px;margin-top:28px;max-width:80ch}
 .kbd{font:11px var(--mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 5px}
 @media (max-width:640px){.hero{grid-template-columns:1fr}.dial{width:160px}.board{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -136,8 +167,12 @@ tr.ok td,tr.ok th{background:var(--sun-soft)}
 
 <div class="top"><div class="wrap">
   <div class="brand"><svg viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="11" fill="none" stroke="var(--ink)" stroke-width="2.5"/><path d="M13 13 L20 7" stroke="var(--bear)" stroke-width="3" stroke-linecap="round"/><circle cx="13" cy="13" r="2.6" fill="var(--ink)"/></svg>Bias Board</div>
+  <div class="views" role="tablist" aria-label="View">
+    <button class="vbtn" id="v-outlook" role="tab" aria-selected="true">Outlook</button>
+    <button class="vbtn q" id="v-quant" role="tab" aria-selected="false">Quant strategies</button>
+  </div>
   <div class="meta" id="meta"></div>
-  <div class="filters" role="group" aria-label="Filter markets">
+  <div class="filters" id="filters" role="group" aria-label="Filter markets">
     <button class="chip" id="f-all" aria-pressed="true">All</button>
     <button class="chip" id="f-BULLISH" aria-pressed="false">Bullish</button>
     <button class="chip" id="f-BEARISH" aria-pressed="false">Bearish</button>
@@ -148,8 +183,15 @@ tr.ok td,tr.ok th{background:var(--sun-soft)}
 </div></div>
 
 <div class="wrap">
-  <div id="boards"></div>
-  <section class="panel" id="panel" aria-live="polite"></section>
+  <div id="outlook-view">
+    <div id="boards"></div>
+    <section class="panel" id="panel" aria-live="polite"></section>
+  </div>
+  <div id="quant-view" hidden>
+    <p class="qintro">Fixed rules with a known cause, defined before testing and validated on the 20 years after they were published. Each one trades on its own dates, separate from the weekly outlook.</p>
+    <div id="qboards"></div>
+    <section class="panel qpanel" id="qpanel" aria-live="polite"></section>
+  </div>
   <p class="foot">COT: CFTC legacy report via LSE (CFTC history for WTI and natural gas). Prices: LSE daily spot, yen, franc and Canadian dollar in futures direction, dollar index rebuilt from its legs. Seasonal windows: Seasonax-style scan in trading days, 15 prior years, at least five trading days long, win ratio 12 of 15 or better. Move between markets with <span class="kbd">←</span> <span class="kbd">→</span>. A bias is not a trade. Educational, not advice.</p>
 </div>
 
@@ -213,7 +255,7 @@ function boards() {
     return `<button class="tile" id="t-${k}" data-k="${k}" aria-current="false">${ring(m)}
       <div><div class="nm">${esc(m.name)}</div><div class="tk">${k}</div></div>
       <div class="row">${pill(m.verdict)}</div>
-      <div class="basis">${basisIcon(m)}${esc(m.basis)}</div>${evBadge(m)}${spark(m)}</button>`;
+      <div class="basis">${basisIcon(m)}${esc(m.basis)}</div>${spark(m)}</button>`;
   }).join("") + `</div>`).join("");
   document.querySelectorAll(".tile").forEach(b => b.addEventListener("click", () => select(b.dataset.k, true)));
 }
@@ -478,7 +520,7 @@ function testedSection() {
 function render(k) {
   const m = M[k], P = $("#panel");
   const cEss = cotLed(m) || m.basis.startsWith("Conflict"), sEss = seasonLed(m) || m.basis.startsWith("Conflict");
-  const evc = eventsCard(m);
+  const evc = "";
   const cards = (m.basis === "Calendar only" || m.basis === "Calendar over COT") ? [seasonCard(m, true), evc, cotCard(m, m.basis !== "Calendar only")] : [cotCard(m, cEss), seasonCard(m, sEss), evc];
   const extra = [];
   P.style.animation = "none"; void P.offsetWidth; P.style.animation = "";
@@ -512,6 +554,72 @@ function select(k, user) {
   if (user) { try { history.replaceState(null, "", "#" + k); } catch (e) {} if ($("#panel").getBoundingClientRect().top > innerHeight * .6) $("#panel").scrollIntoView({behavior: "smooth", block: "start"}); }
 }
 
+/* ---------- quant strategies ---------- */
+const Q = D.quant || [];
+const QBY = Object.fromEntries(Q.map(q => [q.id, q]));
+const qWhen = q => q.active ? `Active · ${q.days_left} td left` : q.entry ? (q.days_to <= 0 ? "Starts today" : `In ${q.days_to} td`) : "No date";
+function qbars(q, W = 150, H = 24, last = 36) {
+  const h = q.hist.slice(-last); if (!h.length) return "";
+  const mx = Math.max(...h.map(x => Math.abs(x.r))) || 1, bw = W / h.length;
+  return `<svg class="bars" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><line x1="0" x2="${W}" y1="${H / 2}" y2="${H / 2}" stroke="var(--line)"/>` +
+    h.map((x, i) => { const hh = Math.max(1, Math.abs(x.r) / mx * (H / 2 - 1)); return `<rect x="${(i * bw + bw * .15).toFixed(1)}" width="${(bw * .7).toFixed(1)}" y="${x.r >= 0 ? H / 2 - hh : H / 2}" height="${hh}" fill="${x.r > 0 ? "var(--bull)" : "var(--bear)"}"/>`; }).join("") + `</svg>`;
+}
+function qboards() {
+  const by = {};
+  Q.forEach(q => (by[q.name] ||= []).push(q));
+  $("#qboards").innerHTML = Object.entries(by).map(([name, qs]) => `<h2 class="sec">${esc(name)}</h2><div class="board">` + qs.map(q =>
+    `<button class="qtile ${q.active ? "on" : ""}" id="qt-${q.id}" data-q="${q.id}" aria-current="false">
+       <div><div class="nm">${esc(q.market_name)}</div><div class="tk">${q.market} · ${esc(q.name)}</div></div>
+       <div class="row">${pill(sideV(q.side), title(q.side))}<span class="qwhen ${q.active ? "on" : ""}">${qWhen(q)}</span></div>
+       <div class="qstat"><b>${q.win}%</b> won · <b>${sgn(q.avg)}%</b> avg · ${q.n}×</div>${qbars(q)}</button>`).join("") + `</div>`).join("");
+  document.querySelectorAll(".qtile").forEach(b => b.addEventListener("click", () => qselect(b.dataset.q, true)));
+}
+function qchart(q) {
+  const h = q.hist, W = 760, H = 240, L = 46, R = 12, T = 14, B = 26; if (!h.length) return "";
+  const mx = Math.max(...h.map(x => Math.abs(x.r))) || 1, n = h.length, bw = (W - L - R) / n;
+  const Y = v => T + (H - T - B) * (1 - (v + mx) / (2 * mx));
+  const years = []; h.forEach((x, i) => { if (i && x.d.slice(0, 4) !== h[i - 1].d.slice(0, 4)) years.push(`<line x1="${L + i * bw}" x2="${L + i * bw}" y1="${T}" y2="${H - B}" stroke-dasharray="2 4"/><text x="${L + i * bw + 3}" y="${H - 8}">${x.d.slice(0, 4)}</text>`); });
+  let cum = 0; const cp = h.map((x, i) => { cum += x.r; return [L + (i + .5) * bw, cum]; });
+  const cmx = Math.max(...cp.map(c => Math.abs(c[1])), 1e-9), CY = v => T + (H - T - B) * (1 - (v + cmx) / (2 * cmx));
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Every occurrence, last 15 years">
+    <g class="ax">${years.join("")}<line x1="${L}" x2="${W - R}" y1="${Y(0)}" y2="${Y(0)}"/><text x="${L - 6}" y="${Y(mx) + 4}" text-anchor="end">+${mx.toFixed(1)}%</text><text x="${L - 6}" y="${Y(-mx) + 4}" text-anchor="end">−${mx.toFixed(1)}%</text></g>
+    ${h.map((x, i) => { const y0 = Y(0), y1 = Y(x.r); return `<rect x="${(L + i * bw + bw * .12).toFixed(1)}" width="${Math.max(1, bw * .76).toFixed(1)}" y="${Math.min(y0, y1).toFixed(1)}" height="${Math.max(1, Math.abs(y1 - y0)).toFixed(1)}" rx="1.5" fill="${x.r > 0 ? "var(--bull)" : "var(--bear)"}" opacity=".85"><title>${x.d}: ${sgn(x.r)}%</title></rect>`; }).join("")}
+    ${poly(cp.map(c => [c[0], CY(c[1])]), "var(--q-deep)", 2.6)}</svg></div>
+    <div class="legend"><span><i style="background:var(--bull)"></i>trade won</span><span><i style="background:var(--bear)"></i>lost</span><span><i style="background:var(--q-deep)"></i>running total (own scale)</span></div>`;
+}
+let qstate = null;
+function qrender(id) {
+  const q = QBY[id], P = $("#qpanel");
+  const when = q.active ? `<b>Active now.</b> Entered ${fmtD(q.entry)}, exit at the close on ${fmtD(q.exit)} (${q.days_left} trading days left).`
+    : q.entry ? `<b>Next: ${q.side === "BUY" ? "buy" : "sell"} at the close on ${fmtD(q.entry)}, exit at the close on ${fmtD(q.exit)}.</b> Starts in ${q.days_to} trading days.` : "No upcoming date.";
+  P.style.animation = "none"; void P.offsetWidth; P.style.animation = "";
+  P.innerHTML = `<div class="hero"><div><h1>${esc(q.name)}</h1><div class="sub">${esc(q.market_name)} · ${q.market} · ${pill(sideV(q.side), title(q.side))}</div>
+      <p class="why">${esc(q.why.charAt(0).toUpperCase() + q.why.slice(1))}.</p></div></div>
+    <div class="qbanner ${q.active ? "on" : ""}"><svg class="clock" width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 6v5l3.5 2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><div>${when}</div></div>
+    <div class="qbig"><div><b>${q.win}%</b><span>won, last 15 years</span></div><div><b>${sgn(q.avg)}%</b><span>average per trade</span></div><div><b>${sgn(q.median)}%</b><span>median</span></div><div><b>${q.n}</b><span>trades</span></div><div><b>${q.t == null ? "–" : q.t.toFixed(1)}</b><span>t-stat</span></div></div>
+    <div class="qrule"><b>Rule.</b> ${esc(q.rule)}</div>
+    <div class="charts"><div class="card"><h3>Every trade, last 15 years</h3><p class="note">One bar per trade, in the trade's direction. Hover a bar for its date.</p>${qchart(q)}</div></div>
+    <p class="note" style="margin-top:14px"><b>Validation.</b> ${esc(q.test.charAt(0).toUpperCase() + q.test.slice(1))}.</p>`;
+}
+function qselect(id, user) {
+  if (!QBY[id]) id = (Q.find(q => q.active) || Q[0] || {}).id; if (!id) return;
+  qstate = id;
+  document.querySelectorAll(".qtile").forEach(t => t.setAttribute("aria-current", t.dataset.q === id));
+  qrender(id);
+  if (user) { try { history.replaceState(null, "", "#q-" + id); } catch (e) {} if ($("#qpanel").getBoundingClientRect().top > innerHeight * .6) $("#qpanel").scrollIntoView({behavior: "smooth", block: "start"}); }
+}
+let view = "outlook";
+function setView(v, user) {
+  view = v;
+  $("#outlook-view").hidden = v !== "outlook"; $("#quant-view").hidden = v !== "quant"; $("#filters").hidden = v !== "outlook";
+  document.body.classList.toggle("quant", v === "quant");
+  $("#v-outlook").setAttribute("aria-selected", v === "outlook"); $("#v-quant").setAttribute("aria-selected", v === "quant");
+  if (v === "quant" && !qstate) qselect(null, false);
+  if (user) { try { history.replaceState(null, "", v === "quant" ? "#q-" + qstate : "#" + state.k); } catch (e) {} }
+}
+$("#v-outlook").addEventListener("click", () => setView("outlook", true));
+$("#v-quant").addEventListener("click", () => setView("quant", true));
+
 /* ---------- filters + keys ---------- */
 function filt(f) {
   document.querySelectorAll(".filters .chip").forEach(b => b.setAttribute("aria-pressed", b.id === "f-" + f));
@@ -523,13 +631,15 @@ function filt(f) {
 document.querySelectorAll(".filters .chip").forEach(b => b.addEventListener("click", () => filt(b.id.slice(2))));
 addEventListener("keydown", e => {
   if (e.target.closest("input,textarea") || !["ArrowLeft", "ArrowRight"].includes(e.key)) return;
+  if (view === "quant") { const ids = Q.map(q => q.id), i = ids.indexOf(qstate), j = (i + (e.key === "ArrowRight" ? 1 : -1) + ids.length) % ids.length; qselect(ids[j], true); $("#qt-" + ids[j]).focus({preventScroll: true}); return; }
   const i = KEYS.indexOf(state.k), j = (i + (e.key === "ArrowRight" ? 1 : -1) + KEYS.length) % KEYS.length;
   select(KEYS[j], true); $("#t-" + KEYS[j]).focus({preventScroll: true});
 });
 
 $("#meta").textContent = `Week of ${new Date(D.today + "T00:00:00").toLocaleDateString("en-GB", {day: "numeric", month: "long", year: "numeric"})} · COT as of ${D.asof}`;
-boards();
+boards(); qboards();
 let start = (location.hash || "").slice(1);
+if (start.startsWith("q-")) { qselect(start.slice(2), false); setView("quant", false); start = ""; }
 if (!M[start]) start = KEYS.find(k => M[k].timing && M[k].timing.closing && M[k].timing.flip) || KEYS[0];
 select(start, false);
 </script>
