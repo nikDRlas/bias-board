@@ -655,7 +655,7 @@ function qboards() {
     `<button class="qtile ${q.active ? "on" : ""}" id="qt-${q.id}" data-q="${q.id}" aria-current="false">
        <div><div class="nm">${esc(q.market_name)}</div><div class="tk">${q.market} · ${esc(q.name)}</div></div>
        <div class="row">${pill(sideV(q.side), title(q.side))}<span class="qwhen ${q.active ? "on" : ""}">${qWhen(q)}</span></div>
-       <div class="qstat"><b>${q.win}%</b> won · <b>${sgn(q.avg)}%</b> avg · ${q.n}×</div>${qbars(q)}</button>`).join("") + `</div>`).join("");
+       <div class="qstat"><b>${q.win}%</b> won · PF <b>${q.pf == null ? "∞" : q.pf.toFixed(2)}</b> · <b>${sgn(q.avg)}%</b> avg · ${q.n}×</div>${qbars(q)}</button>`).join("") + `</div>`).join("");
   document.querySelectorAll(".qtile").forEach(b => b.addEventListener("click", () => qselect(b.dataset.q, true)));
 }
 function qchart(q) {
@@ -680,7 +680,7 @@ function qrender(id) {
   P.innerHTML = `<div class="hero"><div><h1>${esc(q.name)}</h1><div class="sub">${esc(q.market_name)} · ${q.market} · ${pill(sideV(q.side), title(q.side))}</div>
       <p class="why">${esc(q.why.charAt(0).toUpperCase() + q.why.slice(1))}.</p></div></div>
     <div class="qbanner ${q.active ? "on" : ""}"><svg class="clock" width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 6v5l3.5 2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><div>${when}</div></div>
-    <div class="qbig"><div><b>${q.win}%</b><span>won, last 15 years</span></div><div><b>${sgn(q.avg)}%</b><span>average per trade</span></div><div><b>${sgn(q.median)}%</b><span>median</span></div><div><b>${q.n}</b><span>trades</span></div><div><b>${q.t == null ? "–" : q.t.toFixed(1)}</b><span>t-stat</span></div></div>
+    <div class="qbig"><div><b>${q.win}%</b><span>won, last 15 years</span></div><div><b>${q.pf == null ? "∞" : q.pf.toFixed(2)}</b><span>profit factor</span></div><div><b>${sgn(q.avg)}%</b><span>average per trade</span></div><div><b>${sgn(q.median)}%</b><span>median</span></div><div><b>${q.n}</b><span>trades</span></div><div><b>${q.t == null ? "–" : q.t.toFixed(1)}</b><span>t-stat</span></div></div>
     <div class="qrule"><b>Rule.</b> ${esc(q.rule)}</div>
     <div class="charts"><div class="card"><h3>Every trade, last 15 years</h3><p class="note">One bar per trade, in the trade's direction. Hover a bar for its date.</p>${qchart(q)}</div></div>
     <p class="note" style="margin-top:14px"><b>Validation.</b> ${esc(q.test.charAt(0).toUpperCase() + q.test.slice(1))}.</p>`;

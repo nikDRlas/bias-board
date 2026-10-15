@@ -88,6 +88,8 @@ def strategy(p, kind, today):
             "avg": round(float(r.mean()), 2) if len(r) else None,
             "median": round(float(np.median(r)), 2) if len(r) else None,
             "t": round(float(r.mean() / r.std(ddof=1) * np.sqrt(len(r))), 2) if len(r) > 2 else None,
+            # profit factor: sum of winning trades / sum of losing trades (in %, same size per trade)
+            "pf": (round(float(r[r > 0].sum() / -r[r < 0].sum()), 2) if (r < 0).any() else None) if len(r) else None,
             "active": bool(live),
             "entry": str(cur[0].date()) if cur else None, "exit": str(cur[1].date()) if cur else None,
             "days_to": int(np.busday_count(today.date(), cur[0].date())) if cur and not live else 0,
