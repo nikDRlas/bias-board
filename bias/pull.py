@@ -24,7 +24,9 @@ PRICES = {
     "6S": ("USD/CHF", "fx"), "6A": ("AUD/USD", "fx"), "6C": ("USD/CAD", "fx"),
     "6N": ("NZD/USD", "fx"),
     "SEK": ("USD/SEK", "fx"),
-    "ES": ("SPX500/USD", "index"), "NQ": ("NAS100/USD", "index"), "YM": ("US30/USD", "index"),          # only needed to rebuild DXY from its legs
+    "ES": ("SPX500/USD", "index"), "NQ": ("NAS100/USD", "index"), "YM": ("US30/USD", "index"),
+    "ZC": ("CORN/USD", "commodity"), "ZW": ("WHEAT/USD", "commodity"), "ZS": ("SOYBN/USD", "commodity"),
+    "SB": ("SUGAR/USD", "commodity"),          # only needed to rebuild DXY from its legs
 }
 
 

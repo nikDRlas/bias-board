@@ -170,7 +170,7 @@ RESEARCH = os.path.join(ROOT, "data", "research", "conflict.json")
 
 
 def sector2(k):
-    return {"FX": "FX", "Indices": "Indices"}.get(M[k][3], "Commodities")
+    return {"FX": "FX", "Indices": "Indices", "Agriculture": "Agriculture"}.get(M[k][3], "Commodities")
 
 
 def tested_cells():
@@ -185,10 +185,11 @@ def tested_cells():
                 "t": round(float(z.mean() / z.std(ddof=1) * np.sqrt(len(z))), 2)} if len(rows) > 2 else None
     B, A = r["trades_cot"], r["trades_seasonal"]
     cot = {f"{sec}|{g}": agg([x for x in B if sector2(x["m"]) == sec and x["groups"] == g])
-           for sec in ("FX", "Commodities", "Indices") for g in (1, 2)}
+           for sec in ("FX", "Commodities", "Indices", "Agriculture") for g in (1, 2)}
     rp = os.path.join(ROOT, "data", "research", "conflict_relevance.json")
     rel = json.load(open(rp))["by_played_out"] if os.path.exists(rp) else {}
-    return {"relevance": rel, "first_cot": min(x["t"] for x in B), "first_seas": r["first"], "last": r["last"], "cot": cot,
+    per = {k: {"seas": agg([x for x in A if x["m"] == k]), "cot": agg([x for x in B if x["m"] == k])} for k in M}
+    return {"per_asset": per, "relevance": rel, "first_cot": min(x["t"] for x in B), "first_seas": r["first"], "last": r["last"], "cot": cot,
             "cot_all": r["cot"]["all"], "cot_by_seasonal": r["cot"]["by_seasonal"],
             "seas_all": r["seasonal"]["all"], "seas_by_cot": r["seasonal"]["by_cot"],
             "seas_by_sector": r.get("seasonal_by_sector")}
@@ -226,7 +227,7 @@ def tested_for(k, basis, groups, tested):
     if basis == "COT + calendar":
         return rec(tested["cot_by_seasonal"].get("agree"), "COT reads while the calendar agreed won {win}% over 8 weeks")
     if basis == "COT only":
-        sec = {"FX": "currency", "Indices": "index"}.get(sector2(k), "commodity")
+        sec = {"FX": "currency", "Indices": "index", "Agriculture": "agricultural"}.get(sector2(k), "metal and energy")
         return rec(tested["cot"].get(f"{sector2(k)}|{groups}"),
                    f"{sec} COT reads with {'both groups' if groups == 2 else 'one group'} won {{win}}% over 8 weeks")
     if basis == "Calendar only":

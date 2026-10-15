@@ -28,6 +28,8 @@ M = {
     "6N": ("NZ Dollar", "N6", 0, "FX"),
     "ES": ("S&P 500", "ES", 0, "Indices"), "NQ": ("Nasdaq 100", "NQ", 0, "Indices"),
     "YM": ("Dow Jones", "YM", 0, "Indices"),
+    "ZC": ("Corn", "ZC", 0, "Agriculture"), "ZW": ("Wheat", "ZW", 0, "Agriculture"),
+    "ZS": ("Soybeans", "ZS", 0, "Agriculture"), "SB": ("Sugar", "SB", 0, "Agriculture"),
 }
 # LSE's CL and NG COT history is a different contract before 2026: use the CFTC series, append LSE after it
 CFTC_ONLY = {"CL", "NG"}
