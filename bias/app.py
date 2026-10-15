@@ -118,6 +118,7 @@ tr.ok td,tr.ok th{background:var(--sun-soft)}
 .isc > b{font:800 30px/1 var(--display);color:var(--ink)} .wf{margin:0;font-size:11.5px;color:var(--mute)}
 .tested > b{font:800 24px/1 var(--display);color:var(--ink)} .tested b.tl{font-weight:600;color:var(--ink)}
 .card h3 .tag.ctx{background:var(--flat-soft);color:var(--mute)}
+.card h3 .tag.conflict{background:var(--bear-soft);color:var(--bear)}
 .yrs{display:flex;flex-wrap:wrap;gap:6px}
 .yr{display:flex;flex-direction:column;align-items:center;gap:3px;font:11px var(--mono);color:var(--mute);padding:5px 4px 3px;border-radius:10px;border:2px solid transparent;min-width:38px}
 .yr.agree{border-color:var(--ink)} .yr.against{border-color:var(--bear);border-style:dashed} .yr.none{border-color:var(--line)}
@@ -488,7 +489,7 @@ function defaultCot(m) {
 }
 function cotCard(m, essential) {
   const c = m.cot;
-  return `<div class="card" id="cotcard"><h3>Positioning ${essential ? '<span class="tag">drives the bias</span>' : ""} ${pill(c.read === "STAND ASIDE" ? "NEUTRAL" : c.read, c.read === "STAND ASIDE" ? "Neutral" : title(c.read))}</h3>
+  return `<div class="card" id="cotcard"><h3>Positioning ${chartTag(m, "cot")} ${pill(c.read === "STAND ASIDE" ? "NEUTRAL" : c.read, c.read === "STAND ASIDE" ? "Neutral" : title(c.read))}</h3>
     <p class="note">Weekly net contracts, last five years. The shaded band is the 20th to 80th percentile of the chosen lookback; outside it a group is at an extreme. Dots are past cases.</p>
     <div class="ctl" role="group" aria-label="Group">${["comm", "retail", "fund"].map(g => `<button class="chip" data-g="${g}" aria-pressed="${g === state.grp}">${GN[g]} · ${c.groups[g].filter(r => r.side).length}/5 lit</button>`).join("")}</div>
     <div class="ctl" role="group" aria-label="Lookback">${LBS.map(l => { const r = c.groups[state.grp].find(x => x.lb === l); return `<button class="chip" data-lb="${l}" aria-pressed="${l === state.lb}">${l} · ${r.pct.toFixed(0)}${r.side ? " ●" : ""}</button>`; }).join("")}</div>
@@ -505,9 +506,18 @@ function pastYears(m) {
     <div class="legend"><span><i class="lg agree"></i>COT agreed: paid ${f(S.agree)}</span><span><i class="lg against"></i>COT against: paid ${f(S.against)}</span><span><i class="lg none"></i>COT no side: paid ${f(S.none)}</span></div>
     <p class="note">These are the same years the window was picked from, so every column looks good. The out-of-sample answer is in "How the board is tested" below.</p>`;
 }
+function chartTag(m, which) {
+  const b = m.basis, drive = '<span class="tag">drives the bias</span>', off = t => `<span class="tag ctx">${t}</span>`;
+  if (b.startsWith("Conflict")) return '<span class="tag conflict">in conflict · no bias</span>';
+  if (b === "COT + calendar") return drive;
+  if (b === "COT only") return which === "cot" ? drive : off("not part of the verdict");
+  if (b === "Calendar only") return which === "seas" ? drive : off("not part of the verdict");
+  if (b === "Calendar over COT") return which === "seas" ? drive : off("overruled by the calendar");
+  return off("no side");
+}
 function seasonCard(m, ess) {
   const s = m.seas;
-  return `<div class="card"><h3>Seasonality ${ess ? '<span class="tag">drives the bias</span>' : '<span class="tag ctx">not part of the verdict</span>'} ${pill(s.read === "BULLISH" || s.read === "BEARISH" ? s.read : "flat", title(s.read))}${s.strength ? ` <span class="st">${title(s.strength)} · ${s.kind}</span>` : ""}</h3>
+  return `<div class="card"><h3>Seasonality ${chartTag(m, "seas")} ${pill(s.read === "BULLISH" || s.read === "BEARISH" ? s.read : "flat", title(s.read))}${s.strength ? ` <span class="st">${title(s.strength)} · ${s.kind}</span>` : ""}</h3>
     <p class="note">Average path of the last 5, 10 and 15 years and ${TODAY.getFullYear()} so far. Shape match ${s.shape >= 0 ? "+" : ""}${s.shape.toFixed(2)}, ${s.shape_read}.</p>${seasonChart(m)}${pastYears(m)}</div>`;
 }
 function testedSection() {
