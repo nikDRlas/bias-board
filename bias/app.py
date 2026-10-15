@@ -331,7 +331,7 @@ function fa(m, side) {
 function testedHero(m) {
   const d = m.seas.driver, groups = [], cf = m.confidence;
   const usesCal = ["Calendar only", "Calendar over COT", "COT + calendar"].includes(m.basis) || m.basis.startsWith("Conflict");
-  const usesCot = m.basis.startsWith("COT") || m.basis === "Calendar over COT" || m.basis.startsWith("Conflict");
+  const usesCot = m.basis.startsWith("COT") || m.basis === "Calendar over COT" || m.basis.startsWith("Conflict") || (m.cot.speed && m.cot.speed.speed === "slow");
   const line = (big, title, txt) => `<div class="isc"><b>${big}</b><span><b class="tl">${title}</b> ${txt}</span></div>`;
   if (usesCal && d) {
     const dirAvg = d.side === "BUY" ? d.avg : -d.avg;
@@ -344,7 +344,7 @@ function testedHero(m) {
     if (rc) rows.push(line(`${Math.round(100 * rc.w / rc.n)}%`, `Read ${m.cot.read.toLowerCase()}`, `${rc.w} of ${rc.n} times since ${rc.first} · avg ${sgn(rc.avg)}% over ${rc.hold} weeks · last 4: ${rc.rec}/4`));
     if (c) rows.push(line(`${Math.round(100 * c.w / c.n)}%`, `${GN[c.group]} · ${c.lb}`, `${c.w} of ${c.n} past cases · avg ${sgn(c.avg)}% over ${H[c.h]}${c.bar ? "" : " · below the 6-case bar"}`));
     const sp = m.cot.speed;
-    if (sp) rows.push(`<p class="spd"><b class="sp ${sp.speed}">${sp.speed === "fast" ? "Reached fast" : sp.speed === "slow" ? "Crept in slowly" : "Medium speed"}</b> commercials moved ${sp.move.toFixed(1)}× a typical 4-week change into this extreme. ${title(sp.speed)} signals won ${sp.all.win}% since 2003 and ${sp.recent.win}% since 2016 (fast ${sp.fast_all.win}%, slow ${sp.slow_all.win}%).</p>`);
+    if (sp) rows.push(`<p class="spd"><b class="sp ${sp.speed}">${sp.speed === "fast" ? "Reached fast" : sp.speed === "slow" ? "Crept in slowly · skipped" : "Medium speed"}</b> commercials moved ${sp.move.toFixed(1)}× a typical 4-week change into this extreme. ${title(sp.speed)} signals won ${sp.all.win}% since 2003 and ${sp.recent.win}% since 2016 (fast ${sp.fast_all.win}%, slow ${sp.slow_all.win}%).${sp.speed === "slow" ? " Slow signals are not used for the verdict: skipping them tested better." : ""}</p>`);
     if (rows.length) groups.push(`<div class="isg"><div class="isgh">${fa(m, m.cot.read)}<span>COT</span></div>${rows.join("")}</div>`);
   }
   if (!groups.length && !cf) return "";
@@ -589,7 +589,7 @@ function testedSection() {
       ${row("Currencies, vs one group", cc["FX|1"])}${row("Currencies, vs retail & funds", cc["FX|2"])}${row("Metals & energy, vs one group", cc["Commodities|1"])}${row("Metals & energy, vs retail & funds", cc["Commodities|2"])}${row("Indices, vs one group", cc["Indices|1"])}${row("Indices, vs retail & funds", cc["Indices|2"])}${row("Agriculture, vs one group", cc["Agriculture|1"])}${row("Agriculture, vs retail & funds", cc["Agriculture|2"])}</tbody></table></div>
     ${D.verdict_test ? `<h4 class="note" style="font-weight:600;color:var(--ink);margin-top:12px">The board's final verdict (${D.verdict_test.first.slice(0, 4)}–${D.verdict_test.last.slice(0, 4)}), the basis of the confidence dots</h4>
     <div class="tbl"><table>${hd}<tbody>${row("All verdicts", D.verdict_test.all)}${Object.entries(D.verdict_test.by_basis).map(([k, o]) => row(k, o)).join("")}${Object.entries(D.verdict_test.by_cell).map(([k, o]) => row("· " + k.replace(" | ", ", "), o)).join("")}</tbody></table></div>
-    <p class="note">Dots: t below 0 = 1, 0–1 = 2, 1–2 = 3, 2–3 = 4, 3 or more = 5, from the verdict type in the market's asset class (or across all markets when that cell has fewer than 40 trades).</p>` : ""}
+    <p class="note">Dots: t below 0 = 1, 0–1 = 2, 1–2 = 3, 2–3 = 4, 3 or more = 5. Verdicts with a COT side are graded by the verdict type and the COT signal's speed; calendar-only verdicts by the verdict type in the market's asset class; a cell with fewer than 40 trades falls back to the verdict type across all markets. COT signals the commercials crept into slowly are skipped.</p>` : ""}
     <h4 class="note" style="font-weight:600;color:var(--ink);margin-top:12px">Per asset: each market tested on its own data</h4>
     <div class="tbl"><table><thead><tr><th>Market</th><th>Seasonal trades</th><th>Won</th><th>Avg</th><th>COT trades</th><th>Won</th><th>Avg</th></tr></thead><tbody>${KEYS.map(k => { const pa = (T.per_asset || {})[k] || {}, a = pa.seas, b = pa.cot;
       const c = o => o ? `<td class="n">${o.n}</td><td class="n">${o.win}%</td><td class="n">${sgn(o.avg)}%</td>` : `<td class="n">–</td><td class="n">–</td><td class="n">–</td>`;

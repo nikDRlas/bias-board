@@ -199,10 +199,13 @@ def tested_cells():
             "seas_by_sector": r.get("seasonal_by_sector")}
 
 
-def combine(k, reader, s):
-    """the board's verdict (bias/verdict.py)"""
+def combine(k, reader, s, speed=None):
+    """the board's verdict (bias/verdict.py). A COT signal the commercials crept into slowly counts as no side
+    (tested: research/verdict_test.py with SKIP_SLOW=1 beat keeping them)."""
     v = reader.read(TODAY)
     g = reader.last_groups
+    if speed == "slow":
+        v = "NEUTRAL"
     ag = ((s.get("past") or {}).get("summary") or {}).get("against")
     verdict, basis = VD.decide(v, s["read"], ag)
     return verdict, basis, g
@@ -213,15 +216,20 @@ SECTOR_V = lambda k: {"FX": "Currencies", "Indices": "Indices", "Agriculture": "
 MIN_CELL = 40
 
 
-def confidence(k, basis):
+def confidence(k, basis, speed=None):
     """1-5 dots from the walk-forward record of this verdict type in this asset class (research/verdict_test.py):
     how many standard errors verdicts like this one beat a coin flip by. t < 0: 1, 0-1: 2, 1-2: 3, 2-3: 4, >= 3: 5.
     Falls back to the verdict type across all markets when the asset-class cell has fewer than 40 trades."""
     if basis not in ("COT + calendar", "COT only", "Calendar only", "Calendar over COT") or not os.path.exists(VERDICT):
         return None
     r = json.load(open(VERDICT))
-    cell = r["by_cell"].get(f"{basis} | {SECTOR_V(k)}")
-    scope = f"{basis} verdicts in {SECTOR_V(k).lower()}"
+    cell, scope = None, ""
+    if speed and basis != "Calendar only":                       # verdicts with a COT side: graded by its speed
+        cell = r.get("by_basis_speed", {}).get(f"{basis} | {speed}")
+        scope = f"{basis} verdicts with a {speed} COT signal"
+    if not cell or cell["n"] < MIN_CELL:
+        cell = r["by_cell"].get(f"{basis} | {SECTOR_V(k)}")
+        scope = f"{basis} verdicts in {SECTOR_V(k).lower()}"
     if not cell or cell["n"] < MIN_CELL:
         cell, scope = r["by_basis"].get(basis), f"{basis} verdicts across all markets"
     if not cell:
@@ -624,7 +632,8 @@ if __name__ == "__main__":
         c, s = cot_block(k, p), season_block(p)
         reader = R.CotReader(k)
         s["past"] = past_years(k, s, reader, p)
-        v, why, groups = combine(k, reader, s)
+        spd0 = cot_speed(k, reader, reader.read(TODAY))
+        v, why, groups = combine(k, reader, s, spd0["speed"] if spd0 else None)
         cr = reader.read(TODAY)
         c["read"] = cr if cr in ("BULLISH", "BEARISH") else "STAND ASIDE"   # the tested read, not the untested tie-breaks
         c["record"] = cot_record(reader, p, cr)
@@ -633,7 +642,8 @@ if __name__ == "__main__":
         s.pop("_cal", None)
         res[k] = {"name": m[0], "sector": m[3], "cot": c, "seas": s, "verdict": v, "lineup": why,
 
-                  "basis": why, "groups": groups, "timing": timing(s), "confidence": confidence(k, why),
+                  "basis": why, "groups": groups, "timing": timing(s),
+                  "confidence": confidence(k, why, (c.get("speed") or {}).get("speed")),
                   "tested": tested_for(k, why, groups, tested)}
         d = s.get("driver")
         print(f"{k:3s} COT {c['read']:11s} {c['conv']:8s} | seas {s['read']:15s} "
