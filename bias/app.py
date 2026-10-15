@@ -164,6 +164,8 @@ body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border
 .dots i{width:7px;height:7px;border-radius:50%;background:var(--line);display:block}
 .dots i.on{background:var(--ink)}
 .dots.big i{width:10px;height:10px}
+.fa{display:inline-block;font:600 10px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;padding:3px 6px;border-radius:999px;margin-right:6px;background:var(--flat-soft);color:var(--mute)}
+.fa.for{background:var(--bull-soft);color:var(--bull)} .fa.against{background:var(--bear-soft);color:var(--bear)}
 .foot{color:var(--mute);font-size:12px;margin-top:28px;max-width:80ch}
 .kbd{font:11px var(--mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 5px}
 @media (max-width:640px){.hero{grid-template-columns:1fr}.dial{width:160px}.board{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -315,20 +317,24 @@ function bestCotRow(m) {
   }));
   return best;
 }
+function fa(m, side) {
+  if (m.verdict === "STAND ASIDE") return `<span class="fa">${side === "BULLISH" ? "says bullish" : "says bearish"}</span>`;
+  return side === m.verdict ? '<span class="fa for">for the verdict</span>' : '<span class="fa against">against the verdict</span>';
+}
 function testedHero(m) {
   const t = m.tested, d = m.seas.driver, cards = [], cfv = m.confidence;
   const usesCal = ["Calendar only", "Calendar over COT", "COT + calendar"].includes(m.basis) || m.basis.startsWith("Conflict");
   const usesCot = m.basis.startsWith("COT") || m.basis === "Calendar over COT" || m.basis.startsWith("Conflict");
   if (usesCal && d) {
     const dirAvg = d.side === "BUY" ? d.avg : -d.avg;
-    cards.push(`<div class="isc"><b>${Math.round(100 * d.wins / 15)}%</b><span><b class="tl">Seasonal window</b> ${d.wins} of 15 years · avg ${sgn(+dirAvg.toFixed(2))}% · last 4: ${d.rec}/4</span></div>`);
+    cards.push(`<div class="isc"><b>${Math.round(100 * d.wins / 15)}%</b><span>${fa(m, d.side === "BUY" ? "BULLISH" : "BEARISH")}<b class="tl">Seasonal window</b> ${d.wins} of 15 years · avg ${sgn(+dirAvg.toFixed(2))}% · last 4: ${d.rec}/4</span></div>`);
   }
   const rc = usesCot && m.cot.record;
-  if (rc) cards.push(`<div class="isc"><b>${Math.round(100 * rc.w / rc.n)}%</b><span><b class="tl">COT read ${m.cot.read.toLowerCase()}</b> ${rc.w} of ${rc.n} times since ${rc.first} · avg ${sgn(rc.avg)}% over ${rc.hold} weeks · last 4: ${rc.rec}/4</span></div>`);
+  if (rc) cards.push(`<div class="isc"><b>${Math.round(100 * rc.w / rc.n)}%</b><span>${fa(m, m.cot.read)}<b class="tl">COT read ${m.cot.read.toLowerCase()}</b> ${rc.w} of ${rc.n} times since ${rc.first} · avg ${sgn(rc.avg)}% over ${rc.hold} weeks · last 4: ${rc.rec}/4</span></div>`);
   const c = usesCot && m.cot.read !== "STAND ASIDE" ? bestCotRow(m) : null;
   if (c) {
     const H = {4: "4 weeks", 8: "8 weeks", 13: "3 months", 26: "6 months", 52: "1 year"};
-    cards.push(`<div class="isc"><b>${Math.round(100 * c.w / c.n)}%</b><span><b class="tl">COT ${GN[c.group].toLowerCase()} · ${c.lb}</b> ${c.w} of ${c.n} past cases · avg ${sgn(c.avg)}% over ${H[c.h]}${c.bar ? "" : " · below the 6-case bar"}</span></div>`);
+    cards.push(`<div class="isc"><b>${Math.round(100 * c.w / c.n)}%</b><span>${fa(m, m.cot.read)}<b class="tl">COT ${GN[c.group].toLowerCase()} · ${c.lb}</b> ${c.w} of ${c.n} past cases · avg ${sgn(c.avg)}% over ${H[c.h]}${c.bar ? "" : " · below the 6-case bar"}</span></div>`);
   }
   const cf = cfv;
   if (!cards.length && !cf) return "";
@@ -349,33 +355,49 @@ function lineLen(pts) { let L = 0; for (let i = 1; i < pts.length; i++) L += Mat
 function poly(pts, stroke, w, extra = "") {
   return `<polyline points="${pts.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ")}" fill="none" stroke="${stroke}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round" class="draw" style="--len:${lineLen(pts)}" ${extra}/>`;
 }
+const fmtPx = v => { const a = Math.abs(v); return v.toFixed(a >= 1000 ? 0 : a >= 100 ? 1 : a >= 10 ? 2 : a >= 1 ? 3 : 5); };
+function seasonPaths(m) {
+  const s = m.seas, base = s.base, toP = v => base * (1 + v / 100), n = s.avg["15"].length, mc = s.cur.length;
+  const a15 = s.avg["15"], k0 = mc - 1, now = toP(s.cur[k0]);
+  // every average path is anchored to pass through today's price, so it reads directly against the price line
+  const anchor = a => a.map(v => now * (1 + v / 100) / (1 + a[k0] / 100));
+  const A15 = anchor(a15);
+  const proj = []; for (let i = k0; i < n; i++) proj.push([i, A15[i]]);
+  return {n, mc, cur: s.cur.map(toP), a5: anchor(s.avg["5"]), a10: anchor(s.avg["10"]), a15: A15, proj};
+}
 function seasonChart(m) {
-  const s = m.seas, W = 760, H = 270, L = 46, R = 14, T = 14, B = 26, n = s.avg["15"].length;
-  const all = [...s.avg["5"], ...s.avg["10"], ...s.avg["15"], ...s.cur], lo = Math.min(...all, 0), hi = Math.max(...all, 0);
+  const s = m.seas, W = 760, H = 290, L = 58, R = 14, T = 14, B = 26, sp = seasonPaths(m), n = sp.n;
+  const all = [...sp.cur, ...sp.a5, ...sp.a10, ...sp.a15, ...sp.proj.map(p => p[1])];
+  let lo = Math.min(...all), hi = Math.max(...all); const pad = (hi - lo) * .06; lo -= pad; hi += pad;
   const X = i => L + (W - L - R) * i / (n - 1), Y = v => T + (H - T - B) * (1 - (v - lo) / (hi - lo || 1));
   const doy = d => { const t = new Date(d + "T00:00:00"); return (t - new Date(t.getFullYear(), 0, 1)) / 864e5; };
   const XD = d => { const t = new Date(d + "T00:00:00"); const yy = t.getFullYear() > TODAY.getFullYear() ? 365 : 0; return X(Math.min(n - 1, (doy(d) + yy) / 365 * (n - 1))); };
   let bands = "";
-  s.windows.forEach((w, i) => {
+  s.windows.forEach(w => {
     const x0 = XD(w.start), x1 = XD(w.end), main = !!(s.driver && w.start === s.driver.start && w.side === s.driver.side), col = w.side === "BUY" ? "var(--bull)" : "var(--bear)";
     const flip = m.timing && m.timing.flip && m.timing.flip.start === w.start;
     if (!main && !flip) return;
     bands += `<rect x="${x0}" y="${T}" width="${Math.max(2, x1 - x0)}" height="${H - T - B}" fill="${col}" opacity="${main ? .13 : .07}" ${flip ? 'stroke="' + col + '" stroke-dasharray="4 4" stroke-opacity=".6"' : ""} rx="4"/>
       <text x="${x0 + 5}" y="${T + (main ? 13 : 29)}" style="font:600 11px var(--body);fill:${col}">${main ? "◀ driver · " : "next · "}${w.side.toLowerCase()} ${w.wins}/15</text>`;
   });
-  const tx = X((s.cur.length - 1));
+  const tx = X(sp.mc - 1);
   const months = "JFMAMJJASOND".split("").map((c, i) => `<text x="${X((i + .5) / 12 * (n - 1))}" y="${H - 8}" text-anchor="middle">${c}</text>`).join("");
-  const ticks = [lo, 0, hi].map(v => `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" ${v === 0 ? "" : 'stroke-dasharray="2 4"'}/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end">${v > 0 ? "+" : ""}${v.toFixed(0)}%</text>`).join("");
+  const tv = [0, 1, 2, 3, 4].map(j => lo + (hi - lo) * (j + .5) / 5);
+  const ticks = tv.map(v => `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke-dasharray="2 4"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end">${fmtPx(v)}</text>`).join("");
   const P = a => a.map((v, i) => [X(i), Y(v)]);
-  const cur = P(s.cur);
-  return `<div class="chart" data-kind="season"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Seasonal map">${bands}<g class="ax">${ticks}${months}</g>
-    ${poly(P(s.avg["5"]), "var(--line)", 1.6)}${poly(P(s.avg["10"]), "var(--flat)", 1.6)}${poly(P(s.avg["15"]), "var(--mute)", 2.2)}
+  const cur = P(sp.cur), proj = sp.proj.map(([i, v]) => [X(i), Y(v)]);
+  const end = proj[proj.length - 1];
+  const chg = 100 * (sp.proj[sp.proj.length - 1][1] / sp.proj[0][1] - 1);
+  return `<div class="chart" data-kind="season"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Seasonal price chart">${bands}<g class="ax">${ticks}${months}</g>
+    ${poly(P(sp.a5), "var(--line)", 1.4)}${poly(P(sp.a10), "var(--flat)", 1.4)}${poly(P(sp.a15), "var(--mute)", 1.8)}
     ${poly(cur, "var(--ink)", 3)}
+    <polyline points="${proj.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ")}" fill="none" stroke="var(--q-deep)" stroke-width="2.6" stroke-dasharray="6 5" stroke-linecap="round"/>
+    <text x="${Math.min(end[0], W - R - 4)}" y="${end[1] - 8}" text-anchor="end" style="font:600 11px var(--mono);fill:var(--q-deep)">${chg >= 0 ? "+" : ""}${chg.toFixed(1)}% to year end</text>
     <line x1="${tx}" x2="${tx}" y1="${T}" y2="${H - B}" stroke="var(--sun)" stroke-width="2" stroke-dasharray="3 3"/>
     <circle cx="${cur[cur.length - 1][0]}" cy="${cur[cur.length - 1][1]}" r="5" fill="var(--sun)" class="pulse"/>
     <circle cx="${cur[cur.length - 1][0]}" cy="${cur[cur.length - 1][1]}" r="4" fill="var(--sun)" stroke="var(--card)" stroke-width="2"/>
     <rect class="hit" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/></svg><div class="tip"></div></div>
-    <div class="legend"><span><i style="background:var(--ink)"></i>${TODAY.getFullYear()}</span><span><i style="background:var(--mute)"></i>15-yr avg</span><span><i style="background:var(--flat)"></i>10-yr</span><span><i style="background:var(--line)"></i>5-yr</span><span><i style="background:var(--sun)"></i>today</span></div>`;
+    <div class="legend"><span><i style="background:var(--ink)"></i>${TODAY.getFullYear()} price</span><span><i style="background:var(--q-deep)"></i>15-yr pattern from today (projection)</span><span><i style="background:var(--mute)"></i>15-yr avg</span><span><i style="background:var(--flat)"></i>10-yr</span><span><i style="background:var(--line)"></i>5-yr</span><span><i style="background:var(--sun)"></i>today</span></div>`;
 }
 function cotChart(m, grp, lb) {
   const c = m.cot, sr = c.series, W = 760, H = 270, L = 62, R = 14, T = 14, B = 26, n = sr.dates.length;
@@ -414,8 +436,9 @@ function hookTips(root, m) {
       const x0 = +hit.getAttribute("x"), w = +hit.getAttribute("width"), f = Math.max(0, Math.min(1, (fx - x0) / w));
       let html;
       if (ch.dataset.kind === "season") {
-        const s = m.seas, i = Math.round(f * (s.avg["15"].length - 1)), mo = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ")[Math.min(11, Math.floor(f * 12))];
-        html = `${mo} · 15y ${s.avg["15"][i] >= 0 ? "+" : ""}${s.avg["15"][i].toFixed(1)}%` + (i < s.cur.length ? ` · ${TODAY.getFullYear()} ${s.cur[i] >= 0 ? "+" : ""}${s.cur[i].toFixed(1)}%` : "");
+        const sp = seasonPaths(m), i = Math.round(f * (sp.n - 1)), mo = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ")[Math.min(11, Math.floor(f * 12))];
+        const pj = sp.proj.find(p => p[0] === i);
+        html = `${mo} · 15y avg ${fmtPx(sp.a15[i])}` + (i < sp.mc ? ` · ${TODAY.getFullYear()} ${fmtPx(sp.cur[i])}` : pj ? ` · projection ${fmtPx(pj[1])}` : "");
       } else {
         const sr = m.cot.series, i = Math.round(f * (sr.dates.length - 1));
         html = `${sr.dates[i]} · ${GN[ch.dataset.g]} ${sr[ch.dataset.g][i].toLocaleString("en-US")}`;
@@ -518,7 +541,7 @@ function chartTag(m, which) {
 function seasonCard(m, ess) {
   const s = m.seas;
   return `<div class="card"><h3>Seasonality ${chartTag(m, "seas")} ${pill(s.read === "BULLISH" || s.read === "BEARISH" ? s.read : "flat", title(s.read))}${s.strength ? ` <span class="st">${title(s.strength)} · ${s.kind}</span>` : ""}</h3>
-    <p class="note">Average path of the last 5, 10 and 15 years and ${TODAY.getFullYear()} so far. Shape match ${s.shape >= 0 ? "+" : ""}${s.shape.toFixed(2)}, ${s.shape_read}.</p>${seasonChart(m)}${pastYears(m)}</div>`;
+    <p class="note">In price: ${TODAY.getFullYear()} so far, and the average path of the last 5, 10 and 15 years lined up to pass through today's price, so the 15-year pattern continues from today to year end (dashed). Shape match ${s.shape >= 0 ? "+" : ""}${s.shape.toFixed(2)}, ${s.shape_read}.</p>${seasonChart(m)}${pastYears(m)}</div>`;
 }
 function testedSection() {
   if (!T) return "";

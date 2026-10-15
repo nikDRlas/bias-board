@@ -142,7 +142,9 @@ def paths(p):
                    "rest": round(float(100 * ((1 + py[-1] / 100) / (1 + py[m - 1] / 100) - 1)), 1)})
     an.sort(key=lambda a: -a["match"])
     return {"avg": {str(s): [round(float(v), 2) for v in a[::2]] for s, a in avg.items()},
-            "cur": [round(float(v), 2) for v in cur[::2]], "m": m, "n": n, "shape": round(shape, 2), "analogs": an[:4]}
+            "cur": [round(float(v), 2) for v in cur[::2]], "m": m, "n": n, "shape": round(shape, 2), "analogs": an[:4],
+            "base": float(by[TODAY.year - 1][-1]) if TODAY.year - 1 in by else float(by[TODAY.year][0]),
+            "now": float(by[TODAY.year][-1])}
 
 
 def season_block(p):
