@@ -166,6 +166,8 @@ body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border
 .dots{display:inline-flex;gap:3px;align-items:center;vertical-align:middle;margin-left:4px}
 .dots i{width:7px;height:7px;border-radius:50%;background:var(--line);display:block}
 .dots i.on{background:var(--ink)}
+.dots em{font:600 11px/1 var(--mono);font-style:normal;color:var(--mute);margin-left:4px}
+.dots.big em{font-size:13px}
 .dots.big i{width:10px;height:10px}
 .fa{display:inline-block;font:600 10px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;padding:3px 6px;border-radius:999px;margin-right:6px;background:var(--flat-soft);color:var(--mute)}
 .fa.for{background:var(--bull-soft);color:var(--bull)} .fa.against{background:var(--bear-soft);color:var(--bear)}
@@ -259,7 +261,7 @@ function spark(m) {
 function dots(m, big) {
   const c = m.confidence; if (!c || m.verdict === "STAND ASIDE") return "";
   const tip = `Confidence ${c.dots}/5: ${c.scope} won ${c.win}% (${c.n} trades, avg ${sgn(c.avg)}%, t ${c.t.toFixed(1)}) in the walk-forward test ${c.first}–${c.last}`;
-  return `<span class="dots${big ? " big" : ""}" title="${esc(tip)}" aria-label="${esc(tip)}">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= c.dots ? "on" : ""}"></i>`).join("")}</span>`;
+  return `<span class="dots${big ? " big" : ""}" title="${esc(tip)}" aria-label="${esc(tip)}">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= c.dots ? "on" : ""}"></i>`).join("")}<em>${Math.round(c.win)}%</em></span>`;
 }
 function evBadge(m) {
   if (!m.events) return "";
@@ -590,7 +592,7 @@ function testedSection() {
       ${row("Currencies, vs one group", cc["FX|1"])}${row("Currencies, vs retail & funds", cc["FX|2"])}${row("Metals & energy, vs one group", cc["Commodities|1"])}${row("Metals & energy, vs retail & funds", cc["Commodities|2"])}${row("Indices, vs one group", cc["Indices|1"])}${row("Indices, vs retail & funds", cc["Indices|2"])}${row("Agriculture, vs one group", cc["Agriculture|1"])}${row("Agriculture, vs retail & funds", cc["Agriculture|2"])}</tbody></table></div>
     ${D.verdict_test ? `<h4 class="note" style="font-weight:600;color:var(--ink);margin-top:12px">The board's final verdict (${D.verdict_test.first.slice(0, 4)}–${D.verdict_test.last.slice(0, 4)}), the basis of the confidence dots</h4>
     <div class="tbl"><table>${hd}<tbody>${row("All verdicts", D.verdict_test.all)}${Object.entries(D.verdict_test.by_basis).map(([k, o]) => row(k, o)).join("")}${Object.entries(D.verdict_test.by_cell).map(([k, o]) => row("· " + k.replace(" | ", ", "), o)).join("")}</tbody></table></div>
-    <p class="note">Dots: t below 0 = 1, 0–1 = 2, 1–2 = 3, 2–3 = 4, 3 or more = 5, from the verdict type across all markets. Finer grades (by asset class or COT speed) were tried and dropped: graded on 2019–21 they did not pick the better trades in 2022–26. "COT + calendar" was the only verdict type clearly ahead in both halves (61% and 58%). COT signals the commercials crept into slowly are skipped.</p>` : ""}
+    <p class="note">Dots show how certain the edge is (t below 0 = 1, 0–1 = 2, 1–2 = 3, 2–3 = 4, 3 or more = 5); the % beside them is how often that verdict type won. Both come from the verdict type across all markets. A window's own record (years won, size of its usual move, last 4 years) was tested as a grade and did not predict later results. Finer grades (by asset class or COT speed) were tried and dropped: graded on 2019–21 they did not pick the better trades in 2022–26. "COT + calendar" was the only verdict type clearly ahead in both halves (61% and 58%). COT signals the commercials crept into slowly are skipped.</p>` : ""}
     <h4 class="note" style="font-weight:600;color:var(--ink);margin-top:12px">Per asset: each market tested on its own data</h4>
     <div class="tbl"><table><thead><tr><th>Market</th><th>Seasonal trades</th><th>Won</th><th>Avg</th><th>COT trades</th><th>Won</th><th>Avg</th></tr></thead><tbody>${KEYS.map(k => { const pa = (T.per_asset || {})[k] || {}, a = pa.seas, b = pa.cot;
       const c = o => o ? `<td class="n">${o.n}</td><td class="n">${o.win}%</td><td class="n">${sgn(o.avg)}%</td>` : `<td class="n">–</td><td class="n">–</td><td class="n">–</td>`;
