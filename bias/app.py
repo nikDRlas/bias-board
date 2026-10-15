@@ -260,10 +260,21 @@ function spark(m) {
   const col = m.verdict === "BULLISH" ? "var(--bull)" : m.verdict === "BEARISH" ? "var(--bear)" : "var(--flat)";
   return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`;
 }
+function setupStats(m) {
+  // the record of exactly this setup: the window's own years, the COT signal's own cases, or the years both lined up
+  const s = m.seas, d = s.driver, c = m.cot, b = m.basis, sg = d && d.side === "SELL" ? -1 : 1;
+  const yrs = rel => (s.past ? s.past.years.filter(y => !rel || y.rel === rel) : []);
+  const fromYears = (ys, label) => ys.length ? {w: ys.filter(y => y.win).length, n: ys.length, avg: ys.reduce((a, y) => a + y.r, 0) / ys.length, label} : null;
+  if (b === "Calendar only" && d) return {w: d.wins, n: d.n || 15, avg: sg * d.avg, label: `this window, last ${d.n || 15} years`};
+  if (b === "COT only" && c.record) return {w: c.record.w, n: c.record.n, avg: c.record.avg, label: `this COT signal on ${m.name} since ${c.record.first}, 8 weeks`};
+  if (b === "COT + calendar") return fromYears(yrs("agree"), "years of this window when COT pointed the same way at its start");
+  if (b === "Calendar over COT") return fromYears(yrs("against"), "years of this window when COT was against it at its start");
+  return null;
+}
 function setupBadge(m) {
-  const su = m.setup; if (!su || m.verdict === "STAND ASIDE") return "";
-  const tip = `This setup on ${m.name}: ${su.here.w} of ${su.here.n} in the walk-forward test; all markets ${su.all.win}% of ${su.all.n}`;
-  return su.here.n ? `<span class="sbadge" title="${esc(tip)}">${su.here.w}/${su.here.n}</span>` : `<span class="sbadge new" title="${esc(tip)}">new</span>`;
+  const st = setupStats(m); if (!st || m.verdict === "STAND ASIDE") return "";
+  const tip = `${st.w} of ${st.n} · avg ${st.avg >= 0 ? "+" : ""}${st.avg.toFixed(2)}% — ${st.label}`;
+  return `<span class="sbadge" title="${esc(tip)}">${st.w}/${st.n} · ${st.avg >= 0 ? "+" : ""}${st.avg.toFixed(1)}%</span>`;
 }
 function dots(m, big) {
   const c = m.confidence; if (!c || m.verdict === "STAND ASIDE") return "";
@@ -358,8 +369,8 @@ function testedHero(m) {
     if (rows.length) groups.push(`<div class="isg"><div class="isgh">${fa(m, m.cot.read)}<span>COT</span></div>${rows.join("")}</div>`);
   }
   if (!groups.length && !cf) return "";
-  const su = m.setup;
-  const wf = su ? `<p class="wf">${su.here.n ? `<b>This setup on ${esc(m.name)}:</b> won ${su.here.w} of ${su.here.n} times in the walk-forward test ${su.first}–${su.last} (avg ${sgn(su.here.avg)}%)${su.here.n < 10 ? ", too few cases to judge on their own" : ""}.` : `<b>This setup has not occurred on ${esc(m.name)}</b> in the walk-forward test ${su.first}–${su.last}.`} Across all markets: ${su.all.win}% of ${su.all.n}. The big numbers above are each signal's own history; this line is how the board's verdict did when traded week by week.</p>` : "";
+  const su = m.setup, st = setupStats(m);
+  const wf = (st || su) ? `<p class="wf">${st ? `<b>This setup:</b> won ${st.w} of ${st.n} (${Math.round(100 * st.w / st.n)}%), average ${st.avg >= 0 ? "+" : ""}${st.avg.toFixed(2)}% in the trade's direction — ${esc(st.label)}. ` : ""}${su && su.all ? `Board's walk-forward record for ${esc(m.basis)} verdicts across all markets ${su.first}–${su.last}: ${su.all.win}% of ${su.all.n}.` : ""}</p>` : "";
   return `<div class="tested">${groups.length ? `<div class="iscs">${groups.join("")}</div>` : ""}${wf}</div>`;
 }
 function banner(m) {
@@ -600,7 +611,7 @@ function testedSection() {
       ${row("Currencies, vs one group", cc["FX|1"])}${row("Currencies, vs retail & funds", cc["FX|2"])}${row("Metals & energy, vs one group", cc["Commodities|1"])}${row("Metals & energy, vs retail & funds", cc["Commodities|2"])}${row("Indices, vs one group", cc["Indices|1"])}${row("Indices, vs retail & funds", cc["Indices|2"])}${row("Agriculture, vs one group", cc["Agriculture|1"])}${row("Agriculture, vs retail & funds", cc["Agriculture|2"])}</tbody></table></div>
     ${D.verdict_test ? `<h4 class="note" style="font-weight:600;color:var(--ink);margin-top:12px">The board's final verdict (${D.verdict_test.first.slice(0, 4)}–${D.verdict_test.last.slice(0, 4)}), the basis of the confidence dots</h4>
     <div class="tbl"><table>${hd}<tbody>${row("All verdicts", D.verdict_test.all)}${Object.entries(D.verdict_test.by_basis).map(([k, o]) => row(k, o)).join("")}${Object.entries(D.verdict_test.by_cell).map(([k, o]) => row("· " + k.replace(" | ", ", "), o)).join("")}</tbody></table></div>
-    <p class="note">The badge on each tile (e.g. 7/10) is how this setup did on this market in the walk-forward test. Per market the samples are small, so read it together with the all-markets row above. Confidence grades were tried and dropped: finer grades did not keep their ranking from 2019–21 to 2022–26, and a window's own record (years won, size of its usual move, last 4 years) did not predict later results. Finer grades (by asset class or COT speed) were tried and dropped: graded on 2019–21 they did not pick the better trades in 2022–26. "COT + calendar" was the only verdict type clearly ahead in both halves (61% and 58%). COT signals the commercials crept into slowly are skipped.</p>` : ""}
+    <p class="note">The badge on each tile is the record of exactly the current setup: for a calendar verdict the window's own 15 years, for a COT verdict that signal's past cases on the market, and for COT + calendar only the years in which both pointed the same way. These are in-sample records; the tables above are the walk-forward check. Confidence grades were tried and dropped: finer grades did not keep their ranking from 2019–21 to 2022–26, and a window's own record (years won, size of its usual move, last 4 years) did not predict later results. Finer grades (by asset class or COT speed) were tried and dropped: graded on 2019–21 they did not pick the better trades in 2022–26. "COT + calendar" was the only verdict type clearly ahead in both halves (61% and 58%). COT signals the commercials crept into slowly are skipped.</p>` : ""}
     <h4 class="note" style="font-weight:600;color:var(--ink);margin-top:12px">Per asset: each market tested on its own data</h4>
     <div class="tbl"><table><thead><tr><th>Market</th><th>Seasonal trades</th><th>Won</th><th>Avg</th><th>COT trades</th><th>Won</th><th>Avg</th></tr></thead><tbody>${KEYS.map(k => { const pa = (T.per_asset || {})[k] || {}, a = pa.seas, b = pa.cot;
       const c = o => o ? `<td class="n">${o.n}</td><td class="n">${o.win}%</td><td class="n">${sgn(o.avg)}%</td>` : `<td class="n">–</td><td class="n">–</td><td class="n">–</td>`;
