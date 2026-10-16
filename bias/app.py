@@ -397,8 +397,6 @@ function testedHero(m) {
     // the exact current picture (all groups together) on the lookback with the most past cases, 8 weeks
     const tr = (m.cot.track || []).filter(r => r.board && r.r8 && r.dir === m.cot.read).sort((x, y) => y.r8.n - x.r8.n)[0];
     if (tr) rows.push(line(`${Math.round(100 * tr.r8.w / tr.r8.n)}%`, `${esc(tr.label)} · ${tr.lb}`, `this exact picture ${tr.r8.w} of ${tr.r8.n} times · avg ${sgn(tr.r8.avg)}% over 8 weeks${tr.r8.n < 6 ? " · few cases" : ""}`));
-    const lv = rc && rc.live;
-    if (lv) rows.push(`<div class="cotlive"><div><b>${lv.move >= 0 ? "+" : ""}${lv.move.toFixed(2)}%</b><span>so far, since the signal (report ${fmtD(lv.since)}, entry ${fmtD(lv.entry)}) · ${lv.weeks <= rc.hold ? `${lv.weeks.toFixed(1)} of ${rc.hold} weeks gone` : `running ${lv.weeks.toFixed(0)} weeks, past the ${rc.hold}-week horizon`}</span></div><div><b>${rc.avg >= 0 ? "+" : ""}${rc.avg.toFixed(2)}%</b><span>usual at the end of ${rc.hold} weeks</span></div><div><b>+${rc.mfe.toFixed(2)}%</b><span>usual best along the way</span></div><div><b>${rc.mae.toFixed(2)}%</b><span>usual worst along the way</span></div></div>`);
     const sp = m.cot.speed;
     if (sp) rows.push(`<p class="spd"><b class="sp ${sp.speed}">${sp.speed === "fast" ? "Reached fast" : sp.speed === "slow" ? "Crept in slowly · skipped" : "Medium speed"}</b> commercials moved ${sp.move.toFixed(1)}× a typical 4-week change into this extreme. ${title(sp.speed)} signals won ${sp.all.win}% since 2003 and ${sp.recent.win}% since 2016 (fast ${sp.fast_all.win}%, slow ${sp.slow_all.win}%).${sp.speed === "slow" ? " Slow signals are not used for the verdict: skipping them tested better." : ""}</p>`);
     if (rows.length) groups.push(`<div class="isg"><div class="isgh">${fa(m, m.cot.read)}<span>COT</span></div>${rows.join("")}</div>`);
@@ -440,6 +438,18 @@ function seasonPaths(m) {
   }
   const proj = []; for (let i = k0; i < n; i++) proj.push([i, A15[i]]);
   return {n, mc, cur, a5: A5, a10: A10, a15: A15, proj, k};
+}
+function cotStats(m) {
+  // like the seasonal window stats: what the live COT signal has done so far, against its usual 8-week path
+  const rc = m.cot.record, lv = rc && rc.live; if (!lv) return "";
+  const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+  const cell = (big, small) => `<div><b>${big}</b><span>${small}</span></div>`;
+  return `<div class="wstats">
+    ${cell(pc(lv.move), `so far since the signal (report ${fmtD(lv.since)}, entry ${fmtD(lv.entry)}) · ${lv.weeks <= rc.hold ? `${lv.weeks.toFixed(1)} of ${rc.hold} weeks gone` : `running ${lv.weeks.toFixed(0)} weeks, past the ${rc.hold}-week horizon`}`)}
+    ${cell(pc(rc.avg), `usual at the end of ${rc.hold} weeks · went that way ${rc.w} of ${rc.n} times`)}
+    ${cell(pc(rc.mfe), "usual best along the way")}
+    ${cell(pc(rc.mae), "usual worst along the way")}
+  </div>`;
 }
 function windowStats(m) {
   const s = m.seas, d = s.driver, r = s.remaining; if (!d || !r) return "";
@@ -613,7 +623,7 @@ function cotCard(m, essential) {
     <p class="note">Weekly net contracts, last five years. The shaded band is the 20th to 80th percentile of the chosen lookback; outside it a group is at an extreme. Dots are past cases.</p>
     <div class="ctl" role="group" aria-label="Group">${["comm", "retail", "fund"].map(g => `<button class="chip" data-g="${g}" aria-pressed="${g === state.grp}">${GN[g]} · ${c.groups[g].filter(r => r.side).length}/5 lit</button>`).join("")}</div>
     <div class="ctl" role="group" aria-label="Lookback">${LBS.map(l => { const r = c.groups[state.grp].find(x => x.lb === l); return `<button class="chip" data-lb="${l}" aria-pressed="${l === state.lb}">${l} · ${r.pct.toFixed(0)}${r.side ? " ●" : ""}</button>`; }).join("")}</div>
-    <div id="cotchart">${cotChart(m, state.grp, state.lb)}</div>${heat(m)}</div>`;
+    <div id="cotchart">${cotChart(m, state.grp, state.lb)}</div>${cotStats(m)}${heat(m)}</div>`;
 }
 function pastYears(m) {
   const P = m.seas.past; if (!P || !P.years.length) return "";
