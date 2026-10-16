@@ -410,12 +410,28 @@ def cot_record(reader, p, side, hold=8):
             b = p.index.searchsorted(rel + pd.Timedelta(weeks=hold))
             if b >= len(p):
                 continue                                   # result not known yet (includes the live episode)
-            cases.append({"d": str(reader.dates[i].date()), "r": round(100 * sg * float(p.iloc[b] / p.iloc[a] - 1), 2)})
+            seg = sg * (p.iloc[a:b + 1].to_numpy() / p.iloc[a] - 1)
+            cases.append({"d": str(reader.dates[i].date()), "r": round(100 * float(seg[-1]), 2),
+                          "mfe": round(100 * float(seg.max()), 2), "mae": round(100 * float(seg.min()), 2)})
     if not cases:
         return None
     r = np.array([c["r"] for c in cases])
+    # the live signal: when the read switched to `side`, and what price has done since the first close after its release
+    i0 = reader.dates.searchsorted(TODAY - pd.Timedelta(days=3), "right") - 1
+    live = None
+    if 0 <= i0 < len(reads) and reads[i0] == side:
+        j = i0
+        while j > 0 and reads[j - 1] == side:
+            j -= 1
+        rel = reader.dates[j] + pd.Timedelta(days=3)
+        a = p.index.searchsorted(rel)
+        if a < len(p):
+            live = {"since": str(reader.dates[j].date()), "entry": str(p.index[a].date()),
+                    "move": round(100 * sg * float(p.iloc[-1] / p.iloc[a] - 1), 2),
+                    "weeks": round(float((p.index[-1] - p.index[a]).days) / 7, 1)}
     return {"n": len(r), "w": int((r > 0).sum()), "avg": round(float(r.mean()), 2), "median": round(float(np.median(r)), 2),
-            "rec": int((r[-4:] > 0).sum()), "first": cases[0]["d"][:4], "hold": hold, "cases": cases}
+            "mfe": round(float(np.mean([c["mfe"] for c in cases])), 2), "mae": round(float(np.mean([c["mae"] for c in cases])), 2),
+            "rec": int((r[-4:] > 0).sum()), "first": cases[0]["d"][:4], "hold": hold, "cases": cases, "live": live}
 
 
 def cot_speed(k, reader, side):

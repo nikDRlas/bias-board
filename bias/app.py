@@ -186,6 +186,8 @@ body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border
 .frank{position:absolute;left:12px;top:12px;font:800 22px/1 var(--display);color:var(--mute)}
 .fh{display:flex;justify-content:space-between;align-items:flex-start;gap:8px} .fh .nm{font:700 16px/1.15 var(--display)} .fh .tk{font:12px var(--mono);color:var(--mute)}
 .fs{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px} .fs b{display:block;font:700 16px/1 var(--mono)} .fs span{font-size:11px;color:var(--mute)}
+.cotlive{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.cotlive div{background:var(--card);padding:7px 9px;display:flex;flex-direction:column;gap:2px} .cotlive b{font:700 14px/1 var(--mono)} .cotlive span{font-size:11px;color:var(--mute)}
 .foot{color:var(--mute);font-size:12px;margin-top:28px;max-width:80ch}
 .kbd{font:11px var(--mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 5px}
 @media (max-width:640px){.hero{grid-template-columns:1fr}.dial{width:160px}.board{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -393,6 +395,8 @@ function testedHero(m) {
     const H = {4: "4 weeks", 8: "8 weeks", 13: "3 months", 26: "6 months", 52: "1 year"};
     if (rc) rows.push(line(`${Math.round(100 * rc.w / rc.n)}%`, `Read ${m.cot.read.toLowerCase()}`, `${rc.w} of ${rc.n} times since ${rc.first} · avg ${sgn(rc.avg)}% over ${rc.hold} weeks · last 4: ${rc.rec}/4`));
     if (c) rows.push(line(`${Math.round(100 * c.w / c.n)}%`, `${GN[c.group]} · ${c.lb}`, `${c.w} of ${c.n} past cases · avg ${sgn(c.avg)}% over ${H[c.h]}${c.bar ? "" : " · below the 6-case bar"}`));
+    const lv = rc && rc.live;
+    if (lv) rows.push(`<div class="cotlive"><div><b>${lv.move >= 0 ? "+" : ""}${lv.move.toFixed(2)}%</b><span>so far, since the signal (report ${fmtD(lv.since)}, entry ${fmtD(lv.entry)}) · ${lv.weeks <= rc.hold ? `${lv.weeks.toFixed(1)} of ${rc.hold} weeks gone` : `running ${lv.weeks.toFixed(0)} weeks, past the ${rc.hold}-week horizon`}</span></div><div><b>${rc.avg >= 0 ? "+" : ""}${rc.avg.toFixed(2)}%</b><span>usual at the end of ${rc.hold} weeks</span></div><div><b>+${rc.mfe.toFixed(2)}%</b><span>usual best along the way</span></div><div><b>${rc.mae.toFixed(2)}%</b><span>usual worst along the way</span></div></div>`);
     const sp = m.cot.speed;
     if (sp) rows.push(`<p class="spd"><b class="sp ${sp.speed}">${sp.speed === "fast" ? "Reached fast" : sp.speed === "slow" ? "Crept in slowly · skipped" : "Medium speed"}</b> commercials moved ${sp.move.toFixed(1)}× a typical 4-week change into this extreme. ${title(sp.speed)} signals won ${sp.all.win}% since 2003 and ${sp.recent.win}% since 2016 (fast ${sp.fast_all.win}%, slow ${sp.slow_all.win}%).${sp.speed === "slow" ? " Slow signals are not used for the verdict: skipping them tested better." : ""}</p>`);
     if (rows.length) groups.push(`<div class="isg"><div class="isgh">${fa(m, m.cot.read)}<span>COT</span></div>${rows.join("")}</div>`);
