@@ -394,7 +394,9 @@ function testedHero(m) {
     const rc = m.cot.record, c = bestCotRow(m), rows = [];
     const H = {4: "4 weeks", 8: "8 weeks", 13: "3 months", 26: "6 months", 52: "1 year"};
     if (rc) rows.push(line(`${Math.round(100 * rc.w / rc.n)}%`, `Read ${m.cot.read.toLowerCase()}`, `${rc.w} of ${rc.n} times since ${rc.first} · avg ${sgn(rc.avg)}% over ${rc.hold} weeks · last 4: ${rc.rec}/4`));
-    if (c) rows.push(line(`${Math.round(100 * c.w / c.n)}%`, `${GN[c.group]} · ${c.lb}`, `${c.w} of ${c.n} past cases · avg ${sgn(c.avg)}% over ${H[c.h]}${c.bar ? "" : " · below the 6-case bar"}`));
+    // the exact current picture (all groups together) on the lookback with the most past cases, 8 weeks
+    const tr = (m.cot.track || []).filter(r => r.board && r.r8 && r.dir === m.cot.read).sort((x, y) => y.r8.n - x.r8.n)[0];
+    if (tr) rows.push(line(`${Math.round(100 * tr.r8.w / tr.r8.n)}%`, `${esc(tr.label)} · ${tr.lb}`, `this exact picture ${tr.r8.w} of ${tr.r8.n} times · avg ${sgn(tr.r8.avg)}% over 8 weeks${tr.r8.n < 6 ? " · few cases" : ""}`));
     const lv = rc && rc.live;
     if (lv) rows.push(`<div class="cotlive"><div><b>${lv.move >= 0 ? "+" : ""}${lv.move.toFixed(2)}%</b><span>so far, since the signal (report ${fmtD(lv.since)}, entry ${fmtD(lv.entry)}) · ${lv.weeks <= rc.hold ? `${lv.weeks.toFixed(1)} of ${rc.hold} weeks gone` : `running ${lv.weeks.toFixed(0)} weeks, past the ${rc.hold}-week horizon`}</span></div><div><b>${rc.avg >= 0 ? "+" : ""}${rc.avg.toFixed(2)}%</b><span>usual at the end of ${rc.hold} weeks</span></div><div><b>+${rc.mfe.toFixed(2)}%</b><span>usual best along the way</span></div><div><b>${rc.mae.toFixed(2)}%</b><span>usual worst along the way</span></div></div>`);
     const sp = m.cot.speed;

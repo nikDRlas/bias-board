@@ -1,0 +1,862 @@
+[
+ {
+  "rule": "month-end USD",
+  "market": "DX",
+  "side": "long",
+  "cause": "month-end dollar demand from rebalancing",
+  "is": {
+   "n": 211,
+   "win": 44.1,
+   "avg": -0.054,
+   "pf": 0.84,
+   "t": -1.02,
+   "excess": -0.043,
+   "excess_t": -0.81
+  },
+  "oos": {
+   "n": 58,
+   "win": 53.4,
+   "avg": 0.016,
+   "pf": 1.06,
+   "t": 0.17,
+   "excess": 0.018,
+   "excess_t": 0.2
+  },
+  "wf": {
+   "n": 190,
+   "win": 52.6,
+   "avg": 0.024,
+   "pf": 1.08,
+   "t": 0.41
+  },
+  "fixed_2011": {
+   "n": 190,
+   "win": 49.5,
+   "avg": -0.023,
+   "pf": 0.92,
+   "t": -0.45
+  },
+  "wf_picks_center_share": 0.0,
+  "years": [
+   2004,
+   2026
+  ]
+ },
+ {
+  "rule": "JPY fiscal year-end",
+  "market": "6J",
+  "side": "long",
+  "cause": "Japanese repatriation before the 31 March year end",
+  "is": {
+   "n": 19,
+   "win": 47.4,
+   "avg": -0.495,
+   "pf": 0.59,
+   "t": -0.87,
+   "excess": -0.524,
+   "excess_t": -0.92
+  },
+  "oos": {
+   "n": 5,
+   "win": 40.0,
+   "avg": -0.743,
+   "pf": 0.46,
+   "t": -0.56,
+   "excess": -0.203,
+   "excess_t": -0.15
+  },
+  "wf": {
+   "n": 16,
+   "win": 37.5,
+   "avg": -1.032,
+   "pf": 0.34,
+   "t": -1.58
+  },
+  "fixed_2011": {
+   "n": 16,
+   "win": 43.8,
+   "avg": -0.77,
+   "pf": 0.33,
+   "t": -1.53
+  },
+  "wf_picks_center_share": 0.0,
+  "years": [
+   2003,
+   2026
+  ]
+ },
+ {
+  "rule": "pre-holiday S&P",
+  "market": "ES",
+  "side": "long",
+  "cause": "pre-holiday optimism, thin supply",
+  "is": {
+   "n": 169,
+   "win": 58.6,
+   "avg": 0.097,
+   "pf": 1.4,
+   "t": 1.43,
+   "excess": 0.085,
+   "excess_t": 1.26
+  },
+  "oos": {
+   "n": 47,
+   "win": 59.6,
+   "avg": 0.122,
+   "pf": 1.65,
+   "t": 1.24,
+   "excess": 0.108,
+   "excess_t": 1.1
+  },
+  "wf": {
+   "n": 146,
+   "win": 67.8,
+   "avg": 0.92,
+   "pf": 2.51,
+   "t": 4.06
+  },
+  "fixed_2011": {
+   "n": 146,
+   "win": 61.0,
+   "avg": 0.092,
+   "pf": 1.45,
+   "t": 1.53
+  },
+  "wf_picks_center_share": 0.0,
+  "years": [
+   2003,
+   2026
+  ]
+ },
+ {
+  "rule": "pre-holiday Nasdaq",
+  "market": "NQ",
+  "side": "long",
+  "cause": "pre-holiday optimism, thin supply",
+  "is": {
+   "n": 169,
+   "win": 59.2,
+   "avg": 0.105,
+   "pf": 1.37,
+   "t": 1.43,
+   "excess": 0.07,
+   "excess_t": 0.96
+  },
+  "oos": {
+   "n": 47,
+   "win": 55.3,
+   "avg": 0.139,
+   "pf": 1.43,
+   "t": 0.9,
+   "excess": 0.111,
+   "excess_t": 0.72
+  },
+  "wf": {
+   "n": 146,
+   "win": 67.8,
+   "avg": 1.218,
+   "pf": 2.56,
+   "t": 4.22
+  },
+  "fixed_2011": {
+   "n": 146,
+   "win": 62.3,
+   "avg": 0.097,
+   "pf": 1.35,
+   "t": 1.29
+  },
+  "wf_picks_center_share": 0.0,
+  "years": [
+   2003,
+   2026
+  ]
+ },
+ {
+  "rule": "pre-holiday Dow",
+  "market": "YM",
+  "side": "long",
+  "cause": "pre-holiday optimism, thin supply",
+  "is": {
+   "n": 169,
+   "win": 58.0,
+   "avg": 0.06,
+   "pf": 1.25,
+   "t": 0.96,
+   "excess": 0.054,
+   "excess_t": 0.85
+  },
+  "oos": {
+   "n": 47,
+   "win": 44.7,
+   "avg": 0.035,
+   "pf": 1.16,
+   "t": 0.4,
+   "excess": 0.033,
+   "excess_t": 0.37
+  },
+  "wf": {
+   "n": 146,
+   "win": 64.4,
+   "avg": 0.73,
+   "pf": 2.08,
+   "t": 3.23
+  },
+  "fixed_2011": {
+   "n": 146,
+   "win": 54.8,
+   "avg": 0.051,
+   "pf": 1.24,
+   "t": 0.87
+  },
+  "wf_picks_center_share": 0.0,
+  "years": [
+   2003,
+   2026
+  ]
+ },
+ {
+  "rule": "OPEX week S&P",
+  "market": "ES",
+  "side": "long",
+  "cause": "dealer hedging flows into monthly options expiry",
+  "is": {
+   "n": 225,
+   "win": 57.3,
+   "avg": 0.134,
+   "pf": 1.19,
+   "t": 0.88,
+   "excess": -0.038,
+   "excess_t": -0.25
+  },
+  "oos": {
+   "n": 58,
+   "win": 46.6,
+   "avg": -0.08,
+   "pf": 0.92,
+   "t": -0.25,
+   "excess": -0.274,
+   "excess_t": -0.87
+  },
+  "wf": {
+   "n": 189,
+   "win": 66.7,
+   "avg": 0.418,
+   "pf": 1.51,
+   "t": 2.03
+  },
+  "fixed_2011": {
+   "n": 190,
+   "win": 55.3,
+   "avg": 0.045,
+   "pf": 1.06,
+   "t": 0.27
+  },
+  "wf_picks_center_share": 0.12,
+  "years": [
+   2003,
+   2026
+  ]
+ },
+ {
+  "rule": "OPEX week Nasdaq",
+  "market": "NQ",
+  "side": "long",
+  "cause": "dealer hedging flows into monthly options expiry",
+  "is": {
+   "n": 225,
+   "win": 56.0,
+   "avg": 0.23,
+   "pf": 1.27,
+   "t": 1.32,
+   "excess": -0.055,
+   "excess_t": -0.32
+  },
+  "oos": {
+   "n": 58,
+   "win": 46.6,
+   "avg": -0.155,
+   "pf": 0.89,
+   "t": -0.35,
+   "excess": -0.428,
+   "excess_t": -0.97
+  },
+  "wf": {
+   "n": 189,
+   "win": 65.1,
+   "avg": 0.8,
+   "pf": 1.79,
+   "t": 2.99
+  },
+  "fixed_2011": {
+   "n": 190,
+   "win": 53.2,
+   "avg": 0.06,
+   "pf": 1.06,
+   "t": 0.29
+  },
+  "wf_picks_center_share": 0.0,
+  "years": [
+   2003,
+   2026
+  ]
+ },
+ {
+  "rule": "OPEX week Dow",
+  "market": "YM",
+  "side": "long",
+  "cause": "dealer hedging flows into monthly options expiry",
+  "is": {
+   "n": 225,
+   "win": 58.2,
+   "avg": 0.167,
+   "pf": 1.24,
+   "t": 1.11,
+   "excess": 0.017,
+   "excess_t": 0.12
+  },
+  "oos": {
+   "n": 58,
+   "win": 43.1,
+   "avg": -0.021,
+   "pf": 0.97,
+   "t": -0.08,
+   "excess": -0.152,
+   "excess_t": -0.55
+  },
+  "wf": {
+   "n": 189,
+   "win": 57.1,
+   "avg": 0.15,
+   "pf": 1.18,
+   "t": 0.78
+  },
+  "fixed_2011": {
+   "n": 190,
+   "win": 52.6,
+   "avg": 0.039,
+   "pf": 1.05,
+   "t": 0.24
+  },
+  "wf_picks_center_share": 0.69,
+  "years": [
+   2003,
+   2026
+  ]
+ },
+ {
+  "rule": "Santa rally S&P",
+  "market": "ES",
+  "side": "long",
+  "cause": "year-end inflows and tax timing",
+  "is": {
+   "n": 19,
+   "win": 73.7,
+   "avg": 0.592,
+   "pf": 2.1,
+   "t": 1.1,
+   "excess": 0.34,
+   "excess_t": 0.63
+  },
+  "oos": {
+   "n": 4,
+   "win": 25.0,
+   "avg": -0.462,
+   "pf": 0.28,
+   "t": -1.12,
+   "excess": -0.751,
+   "excess_t": -1.82
+  },
+  "wf": {
+   "n": 15,
+   "win": 80.0,
+   "avg": 0.753,
+   "pf": 2.29,
+   "t": 1.15
+  },
+  "fixed_2011": {
+   "n": 15,
+   "win": 66.7,
+   "avg": 0.097,
+   "pf": 1.18,
+   "t": 0.25
+  },
+  "wf_picks_center_share": 0.0,
+  "years": [
+   2003,
+   2025
+  ]
+ },
+ {
+  "rule": "Santa rally Nasdaq",
+  "market": "NQ",
+  "side": "long",
+  "cause": "year-end inflows and tax timing",
+  "is": {
+   "n": 19,
+   "win": 63.2,
+   "avg": 0.666,
+   "pf": 1.99,
+   "t": 1.19,
+   "excess": 0.254,
+   "excess_t": 0.45
+  },
+  "oos": {
+   "n": 4,
+   "win": 0.0,
+   "avg": -1.348,
+   "pf": 0.0,
+   "t": -3.09,
+   "excess": -1.751,
+   "excess_t": -4.02
+  },
+  "wf": {
+   "n": 15,
+   "win": 60.0,
+   "avg": 0.132,
+   "pf": 1.14,
+   "t": 0.19
+  },
+  "fixed_2011": {
+   "n": 15,
+   "win": 40.0,
+   "avg": -0.153,
+   "pf": 0.82,
+   "t": -0.32
+  },
+  "wf_picks_center_share": 0.0,
+  "years": [
+   2003,
+   2025
+  ]
+ },
+ {
+  "rule": "Santa rally Dow",
+  "market": "YM",
+  "side": "long",
+  "cause": "year-end inflows and tax timing",
+  "is": {
+   "n": 19,
+   "win": 68.4,
+   "avg": 0.435,
+   "pf": 1.75,
+   "t": 0.87,
+   "excess": 0.212,
+   "excess_t": 0.43
+  },
+  "oos": {
+   "n": 4,
+   "win": 50.0,
+   "avg": -0.103,
+   "pf": 0.67,
+   "t": -0.3,
+   "excess": -0.299,
+   "excess_t": -0.88
+  },
+  "wf": {
+   "n": 15,
+   "win": 73.3,
+   "avg": 0.101,
+   "pf": 1.15,
+   "t": 0.18
+  },
+  "fixed_2011": {
+   "n": 15,
+   "win": 66.7,
+   "avg": 0.182,
+   "pf": 1.39,
+   "t": 0.47
+  },
+  "wf_picks_center_share": 0.0,
+  "years": [
+   2003,
+   2025
+  ]
+ },
+ {
+  "rule": "gold Chinese New Year",
+  "market": "GC",
+  "side": "long",
+  "cause": "Chinese New Year physical buying",
+  "is": {
+   "n": 16,
+   "win": 75.0,
+   "avg": 4.687,
+   "pf": 8.65,
+   "t": 3.34,
+   "excess": 3.673,
+   "excess_t": 2.62
+  },
+  "oos": {
+   "n": 4,
+   "win": 100.0,
+   "avg": 7.136,
+   "pf": null,
+   "t": 2.67,
+   "excess": 4.597,
+   "excess_t": 1.73
+  },
+  "wf": {
+   "n": 12,
+   "win": 75.0,
+   "avg": 4.612,
+   "pf": 12.15,
+   "t": 3.66
+  },
+  "fixed_2011": {
+   "n": 15,
+   "win": 86.7,
+   "avg": 5.204,
+   "pf": 33.91,
+   "t": 4.6
+  },
+  "wf_picks_center_share": 0.0,
+  "years": [
+   2006,
+   2025
+  ]
+ },
+ {
+  "rule": "gold Indian festivals",
+  "market": "GC",
+  "side": "long",
+  "cause": "Indian festival and wedding demand",
+  "is": {
+   "n": 16,
+   "win": 56.2,
+   "avg": 1.116,
+   "pf": 1.47,
+   "t": 0.66,
+   "excess": -0.55,
+   "excess_t": -0.33
+  },
+  "oos": {
+   "n": 5,
+   "win": 60.0,
+   "avg": 3.751,
+   "pf": 3.27,
+   "t": 0.96,
+   "excess": -0.477,
+   "excess_t": -0.12
+  },
+  "wf": {
+   "n": 13,
+   "win": 46.2,
+   "avg": 1.782,
+   "pf": 1.91,
+   "t": 0.93
+  },
+  "fixed_2011": {
+   "n": 16,
+   "win": 56.2,
+   "avg": 1.739,
+   "pf": 2.0,
+   "t": 1.09
+  },
+  "wf_picks_center_share": 0.0,
+  "years": [
+   2006,
+   2026
+  ]
+ },
+ {
+  "rule": "natural gas pre-winter",
+  "market": "NG",
+  "side": "long",
+  "cause": "pre-winter heating demand",
+  "is": {
+   "n": 19,
+   "win": 63.2,
+   "avg": 13.246,
+   "pf": 5.41,
+   "t": 2.5,
+   "excess": 11.643,
+   "excess_t": 2.19
+  },
+  "oos": {
+   "n": 5,
+   "win": 80.0,
+   "avg": 11.034,
+   "pf": 2.51,
+   "t": 0.8,
+   "excess": 8.844,
+   "excess_t": 0.64
+  },
+  "wf": {
+   "n": 15,
+   "win": 73.3,
+   "avg": 8.407,
+   "pf": 2.93,
+   "t": 1.4
+  },
+  "fixed_2011": {
+   "n": 16,
+   "win": 56.2,
+   "avg": 7.312,
+   "pf": 2.52,
+   "t": 1.38
+  },
+  "wf_picks_center_share": 0.0,
+  "years": [
+   2003,
+   2026
+  ]
+ },
+ {
+  "rule": "crude spring",
+  "market": "CL",
+  "side": "long",
+  "cause": "refinery restarts before the driving season",
+  "is": {
+   "n": 19,
+   "win": 73.7,
+   "avg": 6.763,
+   "pf": 2.15,
+   "t": 1.17,
+   "excess": 3.787,
+   "excess_t": 0.66
+  },
+  "oos": {
+   "n": 5,
+   "win": 60.0,
+   "avg": 13.246,
+   "pf": 4.2,
+   "t": 0.89,
+   "excess": 12.068,
+   "excess_t": 0.81
+  },
+  "wf": {
+   "n": 16,
+   "win": 68.8,
+   "avg": 6.827,
+   "pf": 2.12,
+   "t": 1.0
+  },
+  "fixed_2011": {
+   "n": 16,
+   "win": 62.5,
+   "avg": 6.85,
+   "pf": 2.06,
+   "t": 0.91
+  },
+  "wf_picks_center_share": 0.0,
+  "years": [
+   2003,
+   2026
+  ]
+ },
+ {
+  "rule": "soybeans harvest",
+  "market": "ZS",
+  "side": "short",
+  "cause": "US harvest supply",
+  "is": {
+   "n": 19,
+   "win": 63.2,
+   "avg": 13.266,
+   "pf": 5.8,
+   "t": 2.59,
+   "excess": 13.579,
+   "excess_t": 2.66
+  },
+  "oos": {
+   "n": 5,
+   "win": 80.0,
+   "avg": 5.745,
+   "pf": 3.44,
+   "t": 1.09,
+   "excess": 4.297,
+   "excess_t": 0.82
+  },
+  "wf": {
+   "n": 16,
+   "win": 68.8,
+   "avg": 7.113,
+   "pf": 4.92,
+   "t": 2.42
+  },
+  "fixed_2011": {
+   "n": 16,
+   "win": 68.8,
+   "avg": 8.351,
+   "pf": 5.21,
+   "t": 2.35
+  },
+  "wf_picks_center_share": 0.12,
+  "years": [
+   2003,
+   2026
+  ]
+ },
+ {
+  "rule": "wheat harvest",
+  "market": "ZW",
+  "side": "short",
+  "cause": "winter-wheat harvest",
+  "is": {
+   "n": 19,
+   "win": 47.4,
+   "avg": -2.462,
+   "pf": 0.65,
+   "t": -0.77,
+   "excess": -2.164,
+   "excess_t": -0.68
+  },
+  "oos": {
+   "n": 5,
+   "win": 60.0,
+   "avg": 15.998,
+   "pf": 12.17,
+   "t": 1.28,
+   "excess": 14.9,
+   "excess_t": 1.2
+  },
+  "wf": {
+   "n": 16,
+   "win": 62.5,
+   "avg": 4.086,
+   "pf": 2.12,
+   "t": 1.14
+  },
+  "fixed_2011": {
+   "n": 16,
+   "win": 50.0,
+   "avg": 3.46,
+   "pf": 1.66,
+   "t": 0.66
+  },
+  "wf_picks_center_share": 0.0,
+  "years": [
+   2003,
+   2026
+  ]
+ },
+ {
+  "rule": "coffee frost season",
+  "market": "KC",
+  "side": "long",
+  "cause": "Brazil frost-risk premium",
+  "is": {
+   "n": 19,
+   "win": 47.4,
+   "avg": 3.359,
+   "pf": 1.58,
+   "t": 0.61,
+   "excess": 2.794,
+   "excess_t": 0.5
+  },
+  "oos": {
+   "n": 5,
+   "win": 80.0,
+   "avg": 6.151,
+   "pf": 2.39,
+   "t": 0.78,
+   "excess": -0.353,
+   "excess_t": -0.04
+  },
+  "wf": {
+   "n": 16,
+   "win": 62.5,
+   "avg": 6.402,
+   "pf": 2.14,
+   "t": 1.09
+  },
+  "fixed_2011": {
+   "n": 16,
+   "win": 62.5,
+   "avg": 6.613,
+   "pf": 2.06,
+   "t": 0.98
+  },
+  "wf_picks_center_share": 0.0,
+  "years": [
+   2003,
+   2026
+  ]
+ },
+ {
+  "rule": "sugar Brazil harvest",
+  "market": "SB",
+  "side": "short",
+  "cause": "Brazil centre-south harvest",
+  "is": {
+   "n": 19,
+   "win": 42.1,
+   "avg": -3.282,
+   "pf": 0.7,
+   "t": -0.6,
+   "excess": -3.353,
+   "excess_t": -0.62
+  },
+  "oos": {
+   "n": 5,
+   "win": 40.0,
+   "avg": -3.062,
+   "pf": 0.45,
+   "t": -0.65,
+   "excess": -5.695,
+   "excess_t": -1.2
+  },
+  "wf": {
+   "n": 16,
+   "win": 50.0,
+   "avg": -0.77,
+   "pf": 0.89,
+   "t": -0.19
+  },
+  "fixed_2011": {
+   "n": 16,
+   "win": 50.0,
+   "avg": -1.196,
+   "pf": 0.81,
+   "t": -0.33
+  },
+  "wf_picks_center_share": 0.0,
+  "years": [
+   2003,
+   2026
+  ]
+ },
+ {
+  "rule": "cattle grilling season",
+  "market": "LE",
+  "side": "long",
+  "cause": "grilling-season beef demand",
+  "is": {
+   "n": 19,
+   "win": 42.1,
+   "avg": -0.775,
+   "pf": 0.66,
+   "t": -0.69,
+   "excess": -0.619,
+   "excess_t": -0.55
+  },
+  "oos": {
+   "n": 5,
+   "win": 60.0,
+   "avg": 3.292,
+   "pf": 3.03,
+   "t": 0.92,
+   "excess": 0.88,
+   "excess_t": 0.24
+  },
+  "wf": {
+   "n": 16,
+   "win": 37.5,
+   "avg": -0.221,
+   "pf": 0.93,
+   "t": -0.12
+  },
+  "fixed_2011": {
+   "n": 16,
+   "win": 37.5,
+   "avg": -0.492,
+   "pf": 0.84,
+   "t": -0.29
+  },
+  "wf_picks_center_share": 0.12,
+  "years": [
+   2003,
+   2026
+  ]
+ }
+]
