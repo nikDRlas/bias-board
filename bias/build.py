@@ -339,6 +339,43 @@ def setup_track(k, p, reader):
     return rows
 
 
+PHASE = {0: "election year", 1: "post-election year", 2: "midterm year", 3: "pre-election year"}
+
+
+def presidential_cycle(p):
+    """context for US indices: where the 4-year presidential cycle stands, the documented 'sweet spot' (1 October of the
+    midterm year to 30 June of the pre-election year) in every cycle since prices start, against the same months in all
+    other years, and the current cycle year's calendar-year return against the others. Small sample by nature."""
+    def stretch(y):
+        a = p.index.searchsorted(pd.Timestamp(y, 10, 1))
+        b = p.index.searchsorted(pd.Timestamp(y + 1, 6, 30), "right") - 1
+        return 100 * float(p.iloc[b] / p.iloc[a] - 1) if 0 < a < b < len(p) and p.index[b] <= TODAY and p.index[b].month == 6 else None
+    years = range(p.index[0].year, TODAY.year)
+    mid = [(y, round(stretch(y), 1)) for y in years if y % 4 == 2 and stretch(y) is not None]
+    other = [stretch(y) for y in years if y % 4 != 2 and stretch(y) is not None]
+    cal = {}
+    for y in range(p.index[0].year + 1, TODAY.year):
+        a = p.index.searchsorted(pd.Timestamp(y, 1, 1)) - 1
+        b = p.index.searchsorted(pd.Timestamp(y, 12, 31), "right") - 1
+        if a >= 0:
+            cal[y] = 100 * float(p.iloc[b] / p.iloc[a] - 1)
+    ph = TODAY.year % 4
+    same = [round(v, 1) for y, v in cal.items() if y % 4 == ph]
+    rest = [v for y, v in cal.items() if y % 4 != ph]
+    my = TODAY.year if ph == 2 else TODAY.year - 1 if ph == 3 else None
+    status = None
+    if my:
+        s0, s1 = pd.Timestamp(my, 10, 1), pd.Timestamp(my + 1, 6, 30)
+        status = "active" if s0 <= TODAY <= s1 else "upcoming" if TODAY < s0 else None
+    return {"phase": PHASE[ph], "year": TODAY.year,
+            "sweet": {"cases": mid, "avg": round(float(np.mean([r for _, r in mid])), 1) if mid else None,
+                      "up": sum(1 for _, r in mid if r > 0), "other_avg": round(float(np.mean(other)), 1) if other else None,
+                      "other_up": sum(1 for o in other if o > 0), "other_n": len(other), "status": status,
+                      "start": f"{my}-10-01" if my else None, "end": f"{my + 1}-06-30" if my else None},
+            "calendar": {"same": same, "same_avg": round(float(np.mean(same)), 1) if same else None,
+                         "rest_avg": round(float(np.mean(rest)), 1) if rest else None}}
+
+
 def setup_record(k, basis):
     """walk-forward record (research/verdict_test.py) of this verdict type on this market, and on all markets"""
     if basis not in ("COT + calendar", "COT only", "Calendar only", "Calendar over COT") or not os.path.exists(VERDICT):
@@ -772,6 +809,7 @@ if __name__ == "__main__":
                   "basis": why, "groups": groups, "timing": timing(s),
                   "confidence": None, "setup": setup_record(k, why),
                   "profile": setup_profile(k, p, cal_obj, reader, s, why, v),
+                  "cycle": presidential_cycle(p) if k in ("ES", "NQ", "YM") else None,
                   "tested": tested_for(k, why, groups, tested)}
         d = s.get("driver")
         print(f"{k:3s} COT {c['read']:11s} {c['conv']:8s} | seas {s['read']:15s} "

@@ -645,6 +645,17 @@ function chartTag(m, which) {
   if (b === "Calendar over COT") return which === "seas" ? drive : off("overruled by the calendar");
   return off("no side");
 }
+function cycleCard(m) {
+  const c = m.cycle; if (!c) return "";
+  const sw = c.sweet, pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
+  const when = sw.status === "active" ? `<span class="st live">active now</span> until ${fmtD(sw.end)}` : sw.status === "upcoming" ? `starts ${fmtD(sw.start)}` : "not in play this cycle year";
+  return `<div class="card"><h3>Presidential cycle <span class="tag ctx">context, small sample</span></h3>
+    <p class="note">${c.year} is a <b>${c.phase}</b>. The documented "sweet spot" runs from 1 October of the midterm year to 30 June of the pre-election year: ${when}.</p>
+    <div class="wstats"><div><b>${sw.up} of ${sw.cases.length}</b><span>cycles since ${sw.cases.length ? sw.cases[0][0] : "–"} rose in the sweet spot, avg ${pc(sw.avg)}</span></div>
+      <div><b>${pc(sw.other_avg)}</b><span>the same months in all other years (${sw.other_up} of ${sw.other_n} up)</span></div>
+      <div><b>${c.calendar.same_avg == null ? "–" : pc(c.calendar.same_avg)}</b><span>average full-year return in ${c.phase}s (${c.calendar.same.length} of them), vs ${pc(c.calendar.rest_avg)} in other years</span></div></div>
+    <p class="note">${sw.cases.map(([y, r]) => `${y}: ${pc(r)}`).join(" · ")}. One cycle every four years gives only a handful of cases, so this is shown as context and does not change the verdict. The same months overlap the Halloween window.</p></div>`;
+}
 function seasonCard(m, ess) {
   const s = m.seas;
   return `<div class="card"><h3>Seasonality ${chartTag(m, "seas")} ${pill(s.read === "BULLISH" || s.read === "BEARISH" ? s.read : "flat", title(s.read))}${s.strength ? ` <span class="st">${title(s.strength)} · ${s.kind}</span>` : ""}</h3>
@@ -678,7 +689,7 @@ function render(k) {
   const m = M[k], P = $("#panel");
   const cEss = cotLed(m) || m.basis.startsWith("Conflict"), sEss = seasonLed(m) || m.basis.startsWith("Conflict");
   const evc = "";
-  const cards = (m.basis === "Calendar only" || m.basis === "Calendar over COT") ? [seasonCard(m, true), evc, cotCard(m, m.basis !== "Calendar only")] : [cotCard(m, cEss), seasonCard(m, sEss), evc];
+  const cards = (m.basis === "Calendar only" || m.basis === "Calendar over COT") ? [seasonCard(m, true), cycleCard(m), evc, cotCard(m, m.basis !== "Calendar only")] : [cotCard(m, cEss), seasonCard(m, sEss), cycleCard(m), evc];
   const extra = [];
   P.style.animation = "none"; void P.offsetWidth; P.style.animation = "";
   P.innerHTML = `<div class="hero"><div><h1>${esc(m.name)}</h1><div class="sub">${k} · ${m.sector} · ${pill(m.verdict)} <span style="margin-left:6px">${m.basis}</span></div>
