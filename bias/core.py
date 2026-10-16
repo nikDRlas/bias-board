@@ -112,7 +112,8 @@ def pctile(s, L):
 
 class CotReader:
     """The COT read: commercials at an extreme (>= 2 of their 5 lookbacks at the same extreme) are followed, but only
-    when retail or the funds (non-commercials) sit at the OPPOSITE extreme (also >= 2 of 5). Otherwise no side.
+    when retail or the funds (non-commercials) sit at the OPPOSITE extreme (also >= 2 of 5), and the funds are not at an
+    extreme on the commercials' own side. Otherwise no side.
     last_groups = how many speculator groups oppose the commercials (1 or 2).
     Uses the latest report RELEASED (Friday) by the given day. Tested in research/opposite_test.py."""
 
@@ -138,6 +139,8 @@ class CotReader:
         if not c:
             return "NEUTRAL"
         opp = "lo" if c == "hi" else "hi"
+        if self.side("fund", i) == c:
+            return "NEUTRAL"        # funds on the commercials' side: no side (research/third_group_test.py, case E)
         n = (self.side("retail", i) == opp) + (self.side("fund", i) == opp)
         if not n:
             return "NEUTRAL"
