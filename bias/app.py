@@ -178,6 +178,14 @@ body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border
 .wstats b{font:700 18px/1 var(--mono);color:var(--ink)} .wstats span{font-size:12px;color:var(--mute)}
 .spd{margin:0;font-size:12px;color:var(--mute)} .sp{display:inline-block;font:600 10.5px/1 var(--body);text-transform:uppercase;letter-spacing:.06em;padding:3px 6px;border-radius:999px;margin-right:4px;background:var(--flat-soft);color:var(--mute)}
 .sp.fast{background:var(--bull-soft);color:var(--bull)} .sp.slow{background:var(--bear-soft);color:var(--bear)}
+.focus{margin-top:22px;padding:16px;border-radius:18px;border:1.5px solid var(--ink);background:var(--card);box-shadow:var(--shadow)}
+.fhead{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px}
+.fcard{position:relative;text-align:left;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px 12px 12px 44px;cursor:pointer;display:flex;flex-direction:column;gap:10px;min-width:0;transition:transform .18s cubic-bezier(.3,1.6,.5,1)}
+.fcard:hover{transform:translateY(-3px)} .fcard:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.frank{position:absolute;left:12px;top:12px;font:800 22px/1 var(--display);color:var(--mute)}
+.fh{display:flex;justify-content:space-between;align-items:flex-start;gap:8px} .fh .nm{font:700 16px/1.15 var(--display)} .fh .tk{font:12px var(--mono);color:var(--mute)}
+.fs{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px} .fs b{display:block;font:700 16px/1 var(--mono)} .fs span{font-size:11px;color:var(--mute)}
 .foot{color:var(--mute);font-size:12px;margin-top:28px;max-width:80ch}
 .kbd{font:11px var(--mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 5px}
 @media (max-width:640px){.hero{grid-template-columns:1fr}.dial{width:160px}.board{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -204,6 +212,7 @@ body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border
 
 <div class="wrap">
   <div id="outlook-view">
+    <section class="focus" id="focus"></section>
     <div id="boards"></div>
     <section class="panel" id="panel" aria-live="polite"></section>
   </div>
@@ -280,6 +289,20 @@ function dots(m, big) {
   const c = m.confidence; if (!c || m.verdict === "STAND ASIDE") return "";
   const tip = `Confidence ${c.dots}/5: ${c.scope} won ${c.win}% (${c.n} trades, avg ${sgn(c.avg)}%, t ${c.t.toFixed(1)}) in the walk-forward test ${c.first}–${c.last}`;
   return `<span class="dots${big ? " big" : ""}" title="${esc(tip)}" aria-label="${esc(tip)}">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= c.dots ? "on" : ""}"></i>`).join("")}<em>${Math.round(c.win)}%</em></span>`;
+}
+function focusStrip() {
+  const F = D.focus; if (!F || !F.keys.length) { $("#focus").hidden = true; return; }
+  const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
+  const card = (k, i) => { const m = M[k], f = m.profile;
+    return `<button class="fcard" data-k="${k}"><span class="frank">${i + 1}</span>
+      <div class="fh"><div><div class="nm">${esc(m.name)}</div><div class="tk">${k} · ${esc(m.basis)}</div></div>${pill(m.verdict)}</div>
+      <div class="fs"><div><b>${f.hit}%</b><span>hit rate · ${f.n} cases</span></div><div><b>${pc(f.end)}</b><span>avg at the end</span></div>
+      <div><b>${pc(f.mfe)}</b><span>best along the way</span></div><div><b>${pc(f.mae)}</b><span>worst along the way</span></div></div></button>`; };
+  const meth = F.method, all = F.all && F.all.all;
+  $("#focus").innerHTML = `<div class="fhead"><h2 class="sec" style="margin:0">Focus this week</h2>
+      <p class="note" style="margin:0">Up to three setups: both engines agreeing first, then the biggest usual move at the end of the setup. Tested 2019–2026 by picking the top three every week with only data known then: ${meth ? `${meth.all.win}% won, average ${sgn(meth.all.avg)}%` : ""}${all ? ` (all verdicts: ${all.win}%, ${sgn(all.avg)}%)` : ""}.</p></div>
+    <div class="fgrid">${F.keys.map(card).join("")}</div>`;
+  document.querySelectorAll(".fcard").forEach(b => b.addEventListener("click", () => select(b.dataset.k, true)));
 }
 function evBadge(m) {
   if (!m.events) return "";
@@ -752,7 +775,7 @@ addEventListener("keydown", e => {
 });
 
 $("#meta").textContent = `Week of ${new Date(D.today + "T00:00:00").toLocaleDateString("en-GB", {day: "numeric", month: "long", year: "numeric"})} · COT as of ${D.asof}`;
-boards(); qboards();
+focusStrip(); boards(); qboards();
 let start = (location.hash || "").slice(1);
 if (start.startsWith("q-")) { qselect(start.slice(2), false); setView("quant", false); start = ""; }
 if (!M[start]) start = KEYS.find(k => M[k].timing && M[k].timing.closing && M[k].timing.flip) || KEYS[0];

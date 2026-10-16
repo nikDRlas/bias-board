@@ -234,6 +234,66 @@ def confidence(k, basis, speed=None):
             "first": r["first"][:4], "last": r["last"][:4]}
 
 
+def setup_profile(k, p, cal, reader, s, basis, verdict):
+    """the current setup's own cases (as research/focus_test.py ranks them): hit rate, average end move, average best
+    and worst move along the way, in % and in units of the market's normal volatility"""
+    if verdict not in VD.SIDES:
+        return None
+    lc = np.log(p.to_numpy(float))
+    sig = np.diff(lc)[-252:].std()
+    cases = []
+    if basis == "COT only":
+        sp_s = (lambda x: (x["comm"].diff(4) / x["comm"].diff(4).rolling(156, min_periods=52).std().shift(1)).to_numpy())(R.load_cot(k))
+        sp_cut = json.load(open(os.path.join(ROOT, "data", "research", "cot_speed.json")))["move4w"]["cutoffs"]
+        for i in range(len(reader.dates)):
+            v = reader.read_at(i)
+            if v != verdict:
+                continue
+            sv = sp_s[i] * (1 if v == "BULLISH" else -1) if np.isfinite(sp_s[i]) else np.nan
+            if np.isfinite(sv) and sv <= sp_cut[0]:
+                continue                                   # slow signals are skipped, as on the board
+            rel = reader.dates[i] + pd.Timedelta(days=3)
+            a, b = p.index.searchsorted(rel), p.index.searchsorted(rel + pd.Timedelta(weeks=8))
+            if b >= len(p) or a < 1:
+                continue
+            seg = (1 if v == "BULLISH" else -1) * (lc[a:b + 1] - lc[a])
+            cases.append((seg[-1], seg.max(), seg.min(), b - a))
+    else:
+        d = s.get("driver")
+        if not d:
+            return None
+        rel = {"COT + calendar": "agree", "Calendar over COT": "against"}.get(basis)
+        sg = 1 if d["side"] == "BUY" else -1
+        yrs = (s.get("past") or {}).get("years") or []
+        for y, info in zip(range(TODAY.year - d.get("ny", 15), TODAY.year), yrs):
+            if rel and info["rel"] != rel:
+                continue
+            a = cal.first[y][0] + d["s"]
+            seg = sg * (lc[a:a + d["len"] + 1] - lc[a])
+            cases.append((seg[-1], seg.max(), seg.min(), d["len"]))
+    if len(cases) < 3:
+        return None
+    arr = np.array(cases)
+    norm = sig * np.sqrt(np.maximum(arr[:, 3], 1))
+    pc = lambda v: round(float(100 * (np.exp(v) - 1)), 2)
+    return {"n": len(arr), "hit": round(100 * float((arr[:, 0] > 0).mean()), 1),
+            "end": pc(arr[:, 0].mean()), "mfe": pc(arr[:, 1].mean()), "mae": pc(arr[:, 2].mean()),
+            "end_z": round(float((arr[:, 0] / norm).mean()), 3)}
+
+
+FOCUS = os.path.join(ROOT, "data", "research", "focus.json")
+
+
+def focus_picks(res, n=3):
+    """this week's focus: verdicts where both engines agree come first, then the biggest usual end move
+    (research/focus_test.py: the best of the tested ways to pick a few setups a week)"""
+    cand = [(k, m) for k, m in res.items() if m["verdict"] in VD.SIDES and m.get("profile")]
+    cand.sort(key=lambda km: (km[1]["basis"] == "COT + calendar", km[1]["profile"]["end_z"]), reverse=True)
+    rec = json.load(open(FOCUS)) if os.path.exists(FOCUS) else {}
+    return {"keys": [k for k, _ in cand[:n]], "method": rec.get("end move · COT + calendar first"),
+            "hit_method": rec.get("hit rate"), "all": rec.get("all verdicts")}
+
+
 def setup_record(k, basis):
     """walk-forward record (research/verdict_test.py) of this verdict type on this market, and on all markets"""
     if basis not in ("COT + calendar", "COT only", "Calendar only", "Calendar over COT") or not os.path.exists(VERDICT):
@@ -644,16 +704,18 @@ if __name__ == "__main__":
         c["record"] = cot_record(reader, p, cr)
         c["speed"] = cot_speed(k, reader, cr)
         c["conv"] = {2: "vs retail & funds", 1: "vs one group"}.get(groups, "None") if c["read"] != "STAND ASIDE" else "None"
-        s.pop("_cal", None)
+        cal_obj = s.pop("_cal", None)
         res[k] = {"name": m[0], "sector": m[3], "cot": c, "seas": s, "verdict": v, "lineup": why,
 
                   "basis": why, "groups": groups, "timing": timing(s),
                   "confidence": None, "setup": setup_record(k, why),
+                  "profile": setup_profile(k, p, cal_obj, reader, s, why, v),
                   "tested": tested_for(k, why, groups, tested)}
         d = s.get("driver")
         print(f"{k:3s} COT {c['read']:11s} {c['conv']:8s} | seas {s['read']:15s} "
               + (f"{d['side']} {d['start'][5:]}..{d['end'][5:]} {d['wins']}/15 {d['avg']:+.1f}% {s['strength']} nb{s['neigh_avg']}" if d else "")
               + f" shape {s['shape']:+.2f} | {v}")
+    focus = focus_picks(res)
     quant = []
     for kind, ks in EV.MARKETS.items():
         for k in ks:
@@ -661,7 +723,7 @@ if __name__ == "__main__":
                 quant.append({"id": f"{kind}-{k}", "market": k, "market_name": M[k][0], **EV.strategy(R.load_px(k), kind, TODAY)})
     vt = json.load(open(VERDICT)) if os.path.exists(VERDICT) else None
     vsum = {k2: vt[k2] for k2 in ("first", "last", "all", "by_basis", "by_cell", "by_sector")} if vt else None
-    json.dump({"asof": str(ASOF.date()), "today": str(TODAY.date()), "tested": tested, "verdict_test": vsum,
+    json.dump({"asof": str(ASOF.date()), "today": str(TODAY.date()), "tested": tested, "verdict_test": vsum, "focus": focus,
                "markets": res, "quant": quant},
               open(f"{ROOT}/data/live/outlook.json", "w"), indent=1, default=float)
     os.makedirs(f"{ROOT}/site", exist_ok=True)
