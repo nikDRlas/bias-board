@@ -294,6 +294,51 @@ def focus_picks(res, n=3):
             "hit_method": rec.get("hit rate"), "all": rec.get("all verdicts")}
 
 
+def setup_track(k, p, reader):
+    """the current COT picture per lookback (which groups are at which extreme), and every past time since prices start
+    that the same picture appeared on that lookback (after 8 weeks without it): result after 4 and 8 weeks from the first
+    close after the Friday release. Direction: follow the commercials if they are at an extreme, else fade retail."""
+    i0 = reader.dates.searchsorted(TODAY - pd.Timedelta(days=3), "right") - 1
+    lc = np.log(p.to_numpy(float))
+    word = {"comm": "Commercials", "retail": "Retail", "fund": "Funds"}
+    rows = []
+    for lb in R.LB:
+        def pic(i):
+            out = {}
+            for g in ("comm", "retail", "fund"):
+                v = reader.P[g][lb][i]
+                out[g] = ("hi" if v >= R.HI else "lo" if v <= R.LO else None) if np.isfinite(v) else None
+            return out
+        now = pic(i0)
+        if now["comm"]:
+            sg = 1 if now["comm"] == "hi" else -1
+        elif now["retail"]:
+            sg = -1 if now["retail"] == "hi" else 1
+        else:
+            continue
+        label = " · ".join(f'{word[g]} {"long" if s == "hi" else "short"}' for g, s in now.items() if s)
+        res4, res8, last = [], [], -10 ** 6
+        for j in range(1, i0):
+            if pic(j) != now:
+                continue
+            if j - last <= 8:
+                last = j
+                continue
+            last = j
+            rel = reader.dates[j] + pd.Timedelta(days=3)
+            a = p.index.searchsorted(rel)
+            if rel < p.index[0] or a >= len(p):
+                continue
+            for h, bucket in ((4, res4), (8, res8)):
+                b = p.index.searchsorted(rel + pd.Timedelta(weeks=h))
+                if b < len(p) and p.index[b] <= TODAY:
+                    bucket.append(100 * (np.exp(sg * (lc[b] - lc[a])) - 1))
+        agg = lambda r: {"n": len(r), "w": int(sum(x > 0 for x in r)), "avg": round(float(np.mean(r)), 2)} if r else None
+        rows.append({"lb": lb, "label": label, "dir": "BULLISH" if sg > 0 else "BEARISH", "board": bool(now["comm"]),
+                     "r4": agg(res4), "r8": agg(res8)})
+    return rows
+
+
 def setup_record(k, basis):
     """walk-forward record (research/verdict_test.py) of this verdict type on this market, and on all markets"""
     if basis not in ("COT + calendar", "COT only", "Calendar only", "Calendar over COT") or not os.path.exists(VERDICT):
@@ -703,6 +748,7 @@ if __name__ == "__main__":
         c["read"] = cr if cr in ("BULLISH", "BEARISH") else "STAND ASIDE"   # the tested read, not the untested tie-breaks
         c["record"] = cot_record(reader, p, cr)
         c["speed"] = cot_speed(k, reader, cr)
+        c["track"] = setup_track(k, p, reader)
         c["conv"] = {2: "vs retail & funds", 1: "vs one group"}.get(groups, "None") if c["read"] != "STAND ASIDE" else "None"
         cal_obj = s.pop("_cal", None)
         res[k] = {"name": m[0], "sector": m[3], "cot": c, "seas": s, "verdict": v, "lineup": why,

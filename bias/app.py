@@ -454,7 +454,9 @@ function seasonChart(m) {
   const XD = d => { const t = new Date(d + "T00:00:00"); const yy = t.getFullYear() > TODAY.getFullYear() ? 365 : 0; return X(Math.min(n - 1, (doy(d) + yy) / 365 * (n - 1))); };
   let bands = "";
   s.windows.forEach(w => {
-    const x0 = XD(w.start), x1 = XD(w.end), main = !!(s.driver && w.start === s.driver.start && w.side === s.driver.side), col = w.side === "BUY" ? "var(--bull)" : "var(--bear)";
+    // windows are placed by trading day, like the price paths (samples are every 2nd trading day)
+    const xs = w.s != null ? X(Math.min(n - 1, w.s / 2)) : XD(w.start), xe = w.s != null ? X(Math.min(n - 1, (w.s + w.len) / 2)) : XD(w.end);
+    const x0 = xs, x1 = xe, main = !!(s.driver && w.start === s.driver.start && w.side === s.driver.side), col = w.side === "BUY" ? "var(--bull)" : "var(--bear)";
     const flip = m.timing && m.timing.flip && m.timing.flip.start === w.start;
     if (!main && !flip) return;
     bands += `<rect x="${x0}" y="${T}" width="${Math.max(2, x1 - x0)}" height="${H - T - B}" fill="${col}" opacity="${main ? .13 : .07}" ${flip ? 'stroke="' + col + '" stroke-dasharray="4 4" stroke-opacity=".6"' : ""} rx="4"/>
@@ -466,7 +468,7 @@ function seasonChart(m) {
   const ticks = tv.map(v => `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke-dasharray="2 4"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end">${fmtPx(v)}</text>`).join("");
   const P = a => a.map((v, i) => [X(i), Y(v)]);
   const cur = P(sp.cur), proj = sp.proj.map(([i, v]) => [X(i), Y(v)]);
-  const d = s.driver, xEnd = d ? XD(d.end) : null;
+  const d = s.driver, xEnd = d ? (d.s != null ? X(Math.min(n - 1, (d.s + d.len) / 2)) : XD(d.end)) : null;
   const projW = d ? proj.filter(p => p[0] <= xEnd + 0.5) : [];
   const pcol = d && d.side === "SELL" ? "var(--bear)" : "var(--bull)";
   return `<div class="chart" data-kind="season"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Seasonal price chart">${bands}<g class="ax">${ticks}${months}</g>
@@ -551,6 +553,14 @@ function edge(m) {
   if (m.cot.read === "STAND ASIDE") return "The positioning read is neutral this week, so there is no direction to test.";
   return e ? `Strongest read: the ${e.lb.toLowerCase()} lookback on ${GN[e.group].toLowerCase()}, ${Math.round(100 * e.w / e.n)}% over ${H[e.h]}, ${e.w} of ${e.n} cases, ${e.avg >= 0 ? "+" : ""}${e.avg.toFixed(2)}% average.`
            : `Nothing in ${m.name} clears the bar (six cases, 60%, positive average). Treat the bias as context, not a tested edge.`;
+}
+function trackNow(m) {
+  const T = m.cot.track || [];
+  if (!T.length) return `<p class="note">No group is at an extreme on any lookback this week.</p>`;
+  const cell = o => o ? `<td class="n">${o.w} of ${o.n} (${Math.round(100 * o.w / o.n)}%)</td><td class="n">${o.avg >= 0 ? "+" : ""}${o.avg.toFixed(2)}%</td>` : `<td class="n">–</td><td class="n">–</td>`;
+  return `<div class="tbl"><table><thead><tr><th>Lookback</th><th>Picture now</th><th>Reads</th><th>After 4 weeks</th><th>Avg</th><th>After 8 weeks</th><th>Avg</th></tr></thead><tbody>` +
+    T.map(r => `<tr><th>${r.lb}</th><td>${esc(r.label)}${r.board ? "" : ' <span class="st">not a board signal</span>'}</td><td>${pill(r.dir)}</td>${cell(r.r4)}${cell(r.r8)}</tr>`).join("") +
+    `</tbody></table></div><p class="note">Every past time since the price history starts that the same picture appeared on that lookback (after at least 8 weeks without it), measured from the first close after the Friday release. Direction: follow the commercials when they are at an extreme, otherwise fade retail. Rows marked "not a board signal" have no commercials at an extreme, so the board's COT rule does not use them.</p>`;
 }
 function windowsTbl(m) {
   const s = m.seas; if (!s.windows.length) return `<p class="note">No seasonal window opens in the −2 to +8 week horizon.</p>`;
@@ -660,7 +670,7 @@ function render(k) {
     <div class="engines"><div class="eng ${cEss ? "lead" : ""}">${ICON.cot.replace("<svg", '<svg width="16" height="16"')}<span class="k">COT</span><b>${c_read(m)}</b>${m.cot.conv}</div>
       <div class="eng ${sEss ? "lead" : ""}">${ICON.cal.replace("<svg", '<svg width="16" height="16"')}<span class="k">Seasonality</span><b>${title(m.seas.read)}</b>${m.seas.strength ? title(m.seas.strength) : "–"}</div></div>
     <div class="charts">${cards.filter(Boolean).join("")}</div>${extra.join("")}
-    <details><summary>Track record<small>what the live extremes did before</small></summary><p class="note">${edge(m)}</p>${track(m, 4)}${track(m, 8)}</details>
+    <details><summary>Track record<small>the current COT picture, and what it did before</small></summary>${trackNow(m)}</details>
     ${m.seas.windows.length ? `<details><summary>Windows in play<small>entry −2 to +8 weeks</small></summary>${windowsTbl(m)}<h4 class="note" style="margin-top:12px">Neighbour test</h4>${nbrs(m)}</details>` : ""}
     <details><summary>Years most like this one<small>analog cross-check</small></summary>${analogs(m)}</details>${testedSection()}`;
   requestAnimationFrame(() => requestAnimationFrame(() => { const n = $("#needle"); if (n) n.style.transform = `rotate(${n.dataset.a}deg)`; }));
