@@ -1,0 +1,431 @@
+[
+ {
+  "rule": "Halloween DAX",
+  "market": "DAX",
+  "side": "long",
+  "cause": "the winter half-year beats the summer half",
+  "is": {
+   "n": 19,
+   "win": 68.4,
+   "avg": 6.826,
+   "pf": 3.32,
+   "t": 2.27,
+   "excess": 1.945,
+   "excess_t": 0.65
+  },
+  "oos": {
+   "n": 4,
+   "win": 100.0,
+   "avg": 14.315,
+   "pf": null,
+   "t": 2.92,
+   "excess": 8.361,
+   "excess_t": 1.72
+  },
+  "wf_2011": {
+   "n": 15,
+   "win": 66.7,
+   "avg": 8.067,
+   "pf": 4.08,
+   "t": 2.27,
+   "excess": 3.522,
+   "excess_t": 0.99
+  }
+ },
+ {
+  "rule": "first trading day DAX",
+  "market": "DAX",
+  "side": "long",
+  "cause": "start-of-month inflows",
+  "is": {
+   "n": 226,
+   "win": 65.0,
+   "avg": 0.211,
+   "pf": 1.45,
+   "t": 2.12,
+   "excess": 0.195,
+   "excess_t": 1.95
+  },
+  "oos": {
+   "n": 57,
+   "win": 54.4,
+   "avg": -0.146,
+   "pf": 0.73,
+   "t": -0.91,
+   "excess": -0.153,
+   "excess_t": -0.96
+  },
+  "wf_2011": {
+   "n": 189,
+   "win": 59.3,
+   "avg": -0.087,
+   "pf": 0.86,
+   "t": -0.71,
+   "excess": -0.109,
+   "excess_t": -0.89
+  }
+ },
+ {
+  "rule": "turn of the month DAX",
+  "market": "DAX",
+  "side": "long",
+  "cause": "month-end and month-start fund flows",
+  "is": {
+   "n": 226,
+   "win": 61.5,
+   "avg": 0.679,
+   "pf": 1.73,
+   "t": 3.04,
+   "excess": 0.381,
+   "excess_t": 1.7
+  },
+  "oos": {
+   "n": 57,
+   "win": 59.6,
+   "avg": 0.299,
+   "pf": 1.34,
+   "t": 0.88,
+   "excess": 0.074,
+   "excess_t": 0.22
+  },
+  "wf_2011": {
+   "n": 189,
+   "win": 54.0,
+   "avg": 0.21,
+   "pf": 1.19,
+   "t": 0.92,
+   "excess": -0.043,
+   "excess_t": -0.19
+  }
+ },
+ {
+  "rule": "FOMC window DAX",
+  "market": "DAX",
+  "side": "long",
+  "cause": "pre-announcement drift before scheduled Fed decisions",
+  "is": {
+   "n": 148,
+   "win": 63.5,
+   "avg": 0.327,
+   "pf": 1.78,
+   "t": 2.17,
+   "excess": 0.264,
+   "excess_t": 1.75
+  },
+  "oos": {
+   "n": 37,
+   "win": 51.4,
+   "avg": 0.171,
+   "pf": 1.49,
+   "t": 0.89,
+   "excess": 0.127,
+   "excess_t": 0.66
+  },
+  "wf_2011": {
+   "n": 122,
+   "win": 54.9,
+   "avg": 0.171,
+   "pf": 1.39,
+   "t": 1.23,
+   "excess": 0.125,
+   "excess_t": 0.9
+  }
+ },
+ {
+  "rule": "Santa rally DAX",
+  "market": "DAX",
+  "side": "long",
+  "cause": "year-end inflows",
+  "is": {
+   "n": 19,
+   "win": 68.4,
+   "avg": 1.04,
+   "pf": 2.76,
+   "t": 1.81,
+   "excess": 0.742,
+   "excess_t": 1.29
+  },
+  "oos": {
+   "n": 4,
+   "win": 50.0,
+   "avg": 0.683,
+   "pf": 2.22,
+   "t": 0.64,
+   "excess": 0.459,
+   "excess_t": 0.43
+  },
+  "wf_2011": {
+   "n": 15,
+   "win": 53.3,
+   "avg": 0.598,
+   "pf": 1.67,
+   "t": 0.83,
+   "excess": 0.344,
+   "excess_t": 0.47
+  }
+ },
+ {
+  "rule": "pre-holiday DAX",
+  "market": "DAX",
+  "side": "long",
+  "cause": "pre-holiday optimism, thin supply",
+  "is": {
+   "n": 68,
+   "win": 60.3,
+   "avg": 0.204,
+   "pf": 1.78,
+   "t": 1.71,
+   "excess": 0.187,
+   "excess_t": 1.57
+  },
+  "oos": {
+   "n": 16,
+   "win": 75.0,
+   "avg": 0.22,
+   "pf": 2.29,
+   "t": 1.21,
+   "excess": 0.212,
+   "excess_t": 1.17
+  },
+  "wf_2011": {
+   "n": 56,
+   "win": 57.1,
+   "avg": 0.365,
+   "pf": 1.48,
+   "t": 1.09,
+   "excess": 0.217,
+   "excess_t": 0.65
+  }
+ },
+ {
+  "rule": "late-September short DAX",
+  "market": "DAX",
+  "side": "short",
+  "cause": "late-September weakness (quarter-end rebalancing)",
+  "is": {
+   "n": 19,
+   "win": 57.9,
+   "avg": 0.825,
+   "pf": 2.1,
+   "t": 1.17,
+   "excess": 1.162,
+   "excess_t": 1.64
+  },
+  "oos": {
+   "n": 5,
+   "win": 60.0,
+   "avg": 1.525,
+   "pf": 2.91,
+   "t": 0.86,
+   "excess": 1.831,
+   "excess_t": 1.03
+  },
+  "wf_2011": {
+   "n": 16,
+   "win": 56.2,
+   "avg": 0.741,
+   "pf": 1.67,
+   "t": 0.82,
+   "excess": 1.012,
+   "excess_t": 1.12
+  }
+ },
+ {
+  "rule": "Halloween Euro Stoxx 50",
+  "market": "ESTX",
+  "side": "long",
+  "cause": "the winter half-year beats the summer half",
+  "is": {
+   "n": 19,
+   "win": 68.4,
+   "avg": 2.794,
+   "pf": 1.72,
+   "t": 0.94,
+   "excess": 1.069,
+   "excess_t": 0.36
+  },
+  "oos": {
+   "n": 4,
+   "win": 100.0,
+   "avg": 13.254,
+   "pf": null,
+   "t": 2.87,
+   "excess": 7.218,
+   "excess_t": 1.58
+  },
+  "wf_2011": {
+   "n": 15,
+   "win": 73.3,
+   "avg": 6.395,
+   "pf": 2.95,
+   "t": 1.64,
+   "excess": 3.002,
+   "excess_t": 0.77
+  }
+ },
+ {
+  "rule": "first trading day Euro Stoxx 50",
+  "market": "ESTX",
+  "side": "long",
+  "cause": "start-of-month inflows",
+  "is": {
+   "n": 220,
+   "win": 64.5,
+   "avg": 0.211,
+   "pf": 1.5,
+   "t": 2.24,
+   "excess": 0.222,
+   "excess_t": 2.35
+  },
+  "oos": {
+   "n": 57,
+   "win": 50.9,
+   "avg": -0.16,
+   "pf": 0.72,
+   "t": -0.96,
+   "excess": -0.167,
+   "excess_t": -1.0
+  },
+  "wf_2011": {
+   "n": 189,
+   "win": 56.6,
+   "avg": -0.038,
+   "pf": 0.93,
+   "t": -0.37,
+   "excess": -0.044,
+   "excess_t": -0.43
+  }
+ },
+ {
+  "rule": "turn of the month Euro Stoxx 50",
+  "market": "ESTX",
+  "side": "long",
+  "cause": "month-end and month-start fund flows",
+  "is": {
+   "n": 220,
+   "win": 59.1,
+   "avg": 0.432,
+   "pf": 1.47,
+   "t": 2.15,
+   "excess": 0.331,
+   "excess_t": 1.65
+  },
+  "oos": {
+   "n": 57,
+   "win": 57.9,
+   "avg": 0.182,
+   "pf": 1.2,
+   "t": 0.53,
+   "excess": -0.041,
+   "excess_t": -0.12
+  },
+  "wf_2011": {
+   "n": 189,
+   "win": 51.9,
+   "avg": 0.062,
+   "pf": 1.06,
+   "t": 0.32,
+   "excess": -0.11,
+   "excess_t": -0.56
+  }
+ },
+ {
+  "rule": "FOMC window Euro Stoxx 50",
+  "market": "ESTX",
+  "side": "long",
+  "cause": "pre-announcement drift before scheduled Fed decisions",
+  "is": {
+   "n": 143,
+   "win": 60.8,
+   "avg": 0.225,
+   "pf": 1.57,
+   "t": 1.71,
+   "excess": 0.217,
+   "excess_t": 1.65
+  },
+  "oos": {
+   "n": 37,
+   "win": 56.8,
+   "avg": 0.168,
+   "pf": 1.5,
+   "t": 0.9,
+   "excess": 0.126,
+   "excess_t": 0.67
+  },
+  "wf_2011": {
+   "n": 122,
+   "win": 56.6,
+   "avg": 0.173,
+   "pf": 1.46,
+   "t": 1.48,
+   "excess": 0.146,
+   "excess_t": 1.25
+  }
+ },
+ {
+  "rule": "Santa rally Euro Stoxx 50",
+  "market": "ESTX",
+  "side": "long",
+  "cause": "year-end inflows",
+  "is": {
+   "n": 19,
+   "win": 68.4,
+   "avg": 0.96,
+   "pf": 2.51,
+   "t": 1.69,
+   "excess": 0.859,
+   "excess_t": 1.51
+  },
+  "oos": {
+   "n": 4,
+   "win": 50.0,
+   "avg": 0.642,
+   "pf": 1.99,
+   "t": 0.53,
+   "excess": 0.42,
+   "excess_t": 0.34
+  },
+  "wf_2011": {
+   "n": 15,
+   "win": 66.7,
+   "avg": 0.463,
+   "pf": 1.4,
+   "t": 0.56,
+   "excess": 0.265,
+   "excess_t": 0.32
+  }
+ },
+ {
+  "rule": "late-September short Euro Stoxx 50",
+  "market": "ESTX",
+  "side": "short",
+  "cause": "late-September weakness (quarter-end rebalancing)",
+  "is": {
+   "n": 18,
+   "win": 55.6,
+   "avg": 0.587,
+   "pf": 1.82,
+   "t": 0.95,
+   "excess": 0.67,
+   "excess_t": 1.08
+  },
+  "oos": {
+   "n": 5,
+   "win": 40.0,
+   "avg": 0.886,
+   "pf": 1.84,
+   "t": 0.49,
+   "excess": 1.191,
+   "excess_t": 0.66
+  },
+  "wf_2011": {
+   "n": 16,
+   "win": 56.2,
+   "avg": 0.458,
+   "pf": 1.52,
+   "t": 0.64,
+   "excess": 0.646,
+   "excess_t": 0.9
+  }
+ }
+]

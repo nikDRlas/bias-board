@@ -36,6 +36,9 @@ M = {
 # continued with LSE daily prices rescaled at the overlap. Win ratios are exact; % averages are approximate.
 # (cotton and orange juice were left out: their back-adjusted history sits at or below zero for years)
 SPLICED = {"KC", "LE"}
+EURO = {"DAX", "ESTX"}
+# DAX and Euro Stoxx 50 (quant strategies only): Eurex futures history; LSE's index series mixes in an unrelated
+# instrument from April 2024 to early 2025, so only its clean recent part continues the history
 # LSE's CL and NG COT history is a different contract before 2026: use the CFTC series, append LSE after it
 CFTC_ONLY = {"CL", "NG"}
 
@@ -70,13 +73,36 @@ def _spliced(k):
     h = pd.read_csv(os.path.join(ROOT, "data", "history", f"{k}_tv.csv"), parse_dates=["date"]).set_index("date").close
     live = _raw(k)
     j = pd.DataFrame({"h": h, "l": live}).dropna()
-    ratio = float((j.h / j.l).median())
+    rr = j.h / j.l
+    rr = rr[(rr / rr.median()).between(0.8, 1.25)]          # ignore days where the live feed shows another instrument
+    ratio = float(rr.median())
     p = pd.concat([h, live[live.index > h.index[-1]] * ratio])
     p = p[p.index.dayofweek < 5]
     return p[p.index <= TODAY]
 
 
+def _euro(k):
+    """chained from returns: LSE index data until 8 Apr 2024, Eurex futures history (data/history) until it ends,
+    LSE again after that. LSE mixes in an unrelated instrument from 9 Apr 2024 to early 2025; the futures history is
+    additively back-adjusted, which only distorts % moves far back, so only its recent stretch is used."""
+    lse = _raw(k)
+    tv = pd.read_csv(os.path.join(ROOT, "data", "history", f"{k}_tv.csv"), parse_dates=["date"]).set_index("date").close
+    cut1, cut2 = pd.Timestamp("2024-04-08"), tv.index[-1]
+    r = pd.concat([np.log(lse[lse.index <= cut1]).diff().dropna(),
+                   np.log(tv[(tv.index >= cut1)]).diff().dropna()[lambda x: x.index > cut1],
+                   np.log(lse[lse.index >= cut2]).diff().dropna()[lambda x: x.index > cut2]])
+    r = r[~r.index.duplicated()].sort_index()
+    if (r.abs() > 0.2).any():
+        raise ValueError(f"{k}: implausible daily move in the chained series")
+    p = float(lse.iloc[0]) * np.exp(r.cumsum())
+    p = pd.concat([pd.Series([float(lse.iloc[0])], index=[lse.index[0]]), p])
+    p = p[p.index.dayofweek < 5]
+    return p[p.index <= TODAY]
+
+
 def load_px(k):
+    if k in EURO:
+        return _euro(k)
     if k in SPLICED:
         return _spliced(k)
     if k == "DX":          # ICE formula; LSE's own DXY candle only starts 2026-06
@@ -84,7 +110,7 @@ def load_px(k):
         return (50.14348112 * legs["6E"] ** -0.576 * legs["6J"] ** 0.136 * legs["6B"] ** -0.119
                 * legs["6C"] ** 0.091 * legs["SEK"] ** 0.042 * legs["6S"] ** 0.036)
     p = _raw(k)
-    return 1.0 / p if M[k][2] else p
+    return 1.0 / p if k in M and M[k][2] else p
 
 
 def load_cot(k):

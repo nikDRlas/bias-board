@@ -27,7 +27,8 @@ PRICES = {
     "ES": ("SPX500/USD", "index"), "NQ": ("NAS100/USD", "index"), "YM": ("US30/USD", "index"),
     "ZC": ("CORN/USD", "commodity"), "ZW": ("WHEAT/USD", "commodity"), "ZS": ("SOYBN/USD", "commodity"),
     "SB": ("SUGAR/USD", "commodity"),
-    "KC": ("COFFEE/USD", "commodity"), "LE": ("CATTLE/USD", "commodity"),          # only needed to rebuild DXY from its legs
+    "KC": ("COFFEE/USD", "commodity"), "LE": ("CATTLE/USD", "commodity"),
+    "DAX": ("DE30/EUR", "index"), "ESTX": ("EU50/EUR", "index"),     # quant strategies only (no CFTC COT)          # only needed to rebuild DXY from its legs
 }
 
 
