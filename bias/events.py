@@ -24,13 +24,21 @@ EVENTS = {
                   "test": "held out of sample on the S&P, Dow and Nasdaq, about 7 vol-units a year"},
     "fomc": {"rule": "Buy at the close two trading days before a scheduled Fed announcement, sell at the close on announcement day.", "name": "FOMC window", "why": "pre-announcement drift before scheduled Fed decisions",
              "test": "the two-day window held out of sample (Nasdaq t 2.5); the day before alone did not"},
+    "gold_cny": {"rule": "Buy at the close of the first trading day on or after 15 December, sell at the close of the last trading day on or before 31 January.",
+                 "name": "Gold Chinese New Year", "why": "physical buying ahead of the Chinese New Year",
+                 "test": "pre-registered 2026-10-16: 2003-21 won 75%, +4.7% a year, t 3.3, beat the drift by +3.7% (t 2.6); untouched 2022-26 won 4 of 4, +7.1%"},
+    "soy_harvest": {"rule": "Sell at the close of the first trading day on or after 1 July, buy back at the close of the last trading day on or before 1 October.",
+                    "name": "Soybeans harvest short", "why": "US harvest supply weighs on price",
+                    "test": "pre-registered 2026-10-16: 2003-21 won 63%, +13.3% a year, t 2.6, beat the drift (t 2.7); untouched 2022-26 won 4 of 5, +5.7%"},
     "harvest": {"rule": "Sell at the close of the first trading day on or after 15 June, buy back at the close of the last trading day on or before 30 September.", "name": "Corn pre-harvest short", "why": "the new crop arrives and hedging pressure weighs on price",
                 "test": "t 3.6 over 50+ years, 5 of 6 decades positive; held out of sample since 2006 (t 2.6)"},
 }
-SIDE = {"harvest": "SELL"}
+SIDE = {"harvest": "SELL", "soy_harvest": "SELL"}
 # which strategies run on which market
 MARKETS = {"tom": ["ES", "NQ", "YM"], "fdom": ["ES", "NQ", "YM"], "halloween": ["ES", "NQ", "YM"],
-           "fomc": ["ES", "NQ", "YM"], "harvest": ["ZC"]}
+           "fomc": ["ES", "NQ", "YM"], "harvest": ["ZC"], "gold_cny": ["GC"], "soy_harvest": ["ZS"]}
+# fixed calendar windows: (month, day) to (month, day)
+DATES = {"harvest": ((6, 15), (9, 30)), "gold_cny": ((12, 15), (1, 31)), "soy_harvest": ((7, 1), (10, 1))}
 
 
 def _bdays(start, n):
@@ -56,10 +64,12 @@ def occurrences(p, kind, until):
             apr = allday[(allday.year == y + 1) & (allday.month == 4)]
             if len(octo) and len(apr):
                 out.append((octo[-1], apr[-1]))
-    elif kind == "harvest":
+    elif kind in DATES:
+        (m1, d1), (m2, d2) = DATES[kind]
         for y in range(idx[0].year, until.year + 2):
-            a = allday[allday >= pd.Timestamp(f"{y}-06-15")]
-            b = allday[allday <= pd.Timestamp(f"{y}-09-30")]
+            y2 = y + (1 if (m2, d2) < (m1, d1) else 0)
+            a = allday[allday >= pd.Timestamp(y, m1, d1)]
+            b = allday[allday <= pd.Timestamp(y2, m2, d2)]
             if len(a) and len(b) and a[0] < b[-1]:
                 out.append((a[0], b[-1]))
     elif kind == "fomc":

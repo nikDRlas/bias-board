@@ -1,0 +1,266 @@
+[
+ {
+  "rule": "yen half-year end",
+  "market": "6J",
+  "side": "long",
+  "cause": "Japanese half-year-end repatriation",
+  "is": {
+   "n": 19,
+   "win": 47.4,
+   "avg": -0.088,
+   "pf": 0.9,
+   "t": -0.17,
+   "excess": -0.114,
+   "excess_t": -0.22
+  },
+  "oos": {
+   "n": 5,
+   "win": 40.0,
+   "avg": -0.45,
+   "pf": 0.62,
+   "t": -0.44,
+   "excess": 0.058,
+   "excess_t": 0.06
+  },
+  "wf_2011": {
+   "n": 16,
+   "win": 18.8,
+   "avg": -1.296,
+   "pf": 0.12,
+   "t": -3.23,
+   "excess": -0.942,
+   "excess_t": -2.37
+  }
+ },
+ {
+  "rule": "yen year-end",
+  "market": "6J",
+  "side": "long",
+  "cause": "Japanese year-end repatriation",
+  "is": {
+   "n": 19,
+   "win": 52.6,
+   "avg": -0.288,
+   "pf": 0.78,
+   "t": -0.43,
+   "excess": -0.316,
+   "excess_t": -0.47
+  },
+  "oos": {
+   "n": 4,
+   "win": 50.0,
+   "avg": 0.323,
+   "pf": 1.22,
+   "t": 0.16,
+   "excess": 0.84,
+   "excess_t": 0.41
+  },
+  "wf_2011": {
+   "n": 15,
+   "win": 60.0,
+   "avg": -0.005,
+   "pf": 1.0,
+   "t": -0.01,
+   "excess": 0.283,
+   "excess_t": 0.39
+  }
+ },
+ {
+  "rule": "dollar late December",
+  "market": "DX",
+  "side": "short",
+  "cause": "year-end dollar funding unwinds",
+  "is": {
+   "n": 18,
+   "win": 72.2,
+   "avg": 0.276,
+   "pf": 1.92,
+   "t": 1.14,
+   "excess": 0.301,
+   "excess_t": 1.25
+  },
+  "oos": {
+   "n": 4,
+   "win": 50.0,
+   "avg": 0.126,
+   "pf": 1.29,
+   "t": 0.19,
+   "excess": 0.193,
+   "excess_t": 0.3
+  },
+  "wf_2011": {
+   "n": 14,
+   "win": 64.3,
+   "avg": 0.322,
+   "pf": 3.56,
+   "t": 2.08,
+   "excess": 0.371,
+   "excess_t": 2.41
+  }
+ },
+ {
+  "rule": "dollar month start",
+  "market": "DX",
+  "side": "short",
+  "cause": "the other side of month-end dollar demand",
+  "is": {
+   "n": 211,
+   "win": 45.0,
+   "avg": -0.026,
+   "pf": 0.92,
+   "t": -0.48,
+   "excess": -0.004,
+   "excess_t": -0.08
+  },
+  "oos": {
+   "n": 57,
+   "win": 45.6,
+   "avg": -0.012,
+   "pf": 0.97,
+   "t": -0.1,
+   "excess": 0.019,
+   "excess_t": 0.16
+  },
+  "wf_2011": {
+   "n": 189,
+   "win": 42.9,
+   "avg": -0.027,
+   "pf": 0.91,
+   "t": -0.47,
+   "excess": 0.015,
+   "excess_t": 0.26
+  }
+ },
+ {
+  "rule": "euro dividend season",
+  "market": "6E",
+  "side": "short",
+  "cause": "European dividends paid out, foreign holders sell euros",
+  "is": {
+   "n": 19,
+   "win": 57.9,
+   "avg": 0.03,
+   "pf": 1.02,
+   "t": 0.03,
+   "excess": 0.035,
+   "excess_t": 0.03
+  },
+  "oos": {
+   "n": 5,
+   "win": 60.0,
+   "avg": 0.335,
+   "pf": 1.7,
+   "t": 0.48,
+   "excess": 0.336,
+   "excess_t": 0.48
+  },
+  "wf_2011": {
+   "n": 16,
+   "win": 56.2,
+   "avg": 0.146,
+   "pf": 1.17,
+   "t": 0.24,
+   "excess": 0.036,
+   "excess_t": 0.06
+  }
+ },
+ {
+  "rule": "AUD fiscal year-end",
+  "market": "6A",
+  "side": "long",
+  "cause": "Australian fiscal-year-end repatriation",
+  "is": {
+   "n": 19,
+   "win": 68.4,
+   "avg": 0.59,
+   "pf": 1.78,
+   "t": 0.96,
+   "excess": 0.466,
+   "excess_t": 0.76
+  },
+  "oos": {
+   "n": 5,
+   "win": 40.0,
+   "avg": -1.231,
+   "pf": 0.21,
+   "t": -1.19,
+   "excess": -1.203,
+   "excess_t": -1.16
+  },
+  "wf_2011": {
+   "n": 16,
+   "win": 62.5,
+   "avg": 0.057,
+   "pf": 1.06,
+   "t": 0.09,
+   "excess": 0.216,
+   "excess_t": 0.34
+  }
+ },
+ {
+  "rule": "franc late-summer risk-off",
+  "market": "6S",
+  "side": "long",
+  "cause": "safe-haven demand in the late-summer risk-off season",
+  "is": {
+   "n": 19,
+   "win": 42.1,
+   "avg": -0.37,
+   "pf": 0.79,
+   "t": -0.36,
+   "excess": -0.761,
+   "excess_t": -0.73
+  },
+  "oos": {
+   "n": 5,
+   "win": 40.0,
+   "avg": -1.495,
+   "pf": 0.36,
+   "t": -0.98,
+   "excess": -1.943,
+   "excess_t": -1.27
+  },
+  "wf_2011": {
+   "n": 16,
+   "win": 43.8,
+   "avg": -0.982,
+   "pf": 0.52,
+   "t": -0.79,
+   "excess": -1.173,
+   "excess_t": -0.94
+  }
+ },
+ {
+  "rule": "pound UK tax year-end",
+  "market": "6B",
+  "side": "long",
+  "cause": "UK tax-year-end flows",
+  "is": {
+   "n": 19,
+   "win": 68.4,
+   "avg": 0.588,
+   "pf": 3.24,
+   "t": 1.64,
+   "excess": 0.634,
+   "excess_t": 1.76
+  },
+  "oos": {
+   "n": 5,
+   "win": 40.0,
+   "avg": 0.223,
+   "pf": 1.47,
+   "t": 0.28,
+   "excess": 0.258,
+   "excess_t": 0.33
+  },
+  "wf_2011": {
+   "n": 16,
+   "win": 68.8,
+   "avg": 0.628,
+   "pf": 2.52,
+   "t": 1.6,
+   "excess": 0.707,
+   "excess_t": 1.81
+  }
+ }
+]
