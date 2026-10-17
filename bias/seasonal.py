@@ -10,7 +10,7 @@ import numpy as np, pandas as pd
 
 DRIFT_N = 252
 START_TD = np.arange(-10, 41)        # entry from 2 weeks ago to 8 weeks ahead
-LEN_TD = np.arange(5, int(os.environ.get("SEAS_MAXLEN", "63")) + 1)   # 5 trading days to about 3 months
+LEN_TD = np.arange(5, int(os.environ.get("SEAS_MAXLEN", "30")) + 1)   # 5 to 30 trading days (about 6 weeks; 63 tested equal per week)
 NY, GATE = 15, 12                    # 15 past years, at least 12 in the trade's direction
 # lookbacks a window may qualify on: (years, wins needed). (15, 12) and (10, 8) are both an 80% win ratio.
 LOOKBACKS = {"15": [(15, 12)], "10": [(10, 8)]}[os.environ.get("SEAS_YEARS", "15")]

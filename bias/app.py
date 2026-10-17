@@ -226,7 +226,7 @@ body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border
     <div id="qboards"></div>
     <section class="panel qpanel" id="qpanel" aria-live="polite"></section>
   </div>
-  <p class="foot">COT: CFTC legacy report via LSE (CFTC history for WTI and natural gas). Prices: LSE daily spot, yen, franc and Canadian dollar in futures direction, dollar index rebuilt from its legs. Seasonal windows: Seasonax-style scan in trading days, 15 prior years, at least five trading days long, win ratio 12 of 15 or better. Move between markets with <span class="kbd">←</span> <span class="kbd">→</span>. A bias is not a trade. Educational, not advice.</p>
+  <p class="foot">COT: CFTC legacy report via LSE (CFTC history for WTI and natural gas). Prices: LSE daily spot, yen, franc and Canadian dollar in futures direction, dollar index rebuilt from its legs. Seasonal windows: Seasonax-style scan in trading days, 15 prior years, 5 to 30 trading days long, win ratio 12 of 15 or better; a window that carries the bias alone must usually move at least 3 normal daily moves. Move between markets with <span class="kbd">←</span> <span class="kbd">→</span>. A bias is not a trade. Educational, not advice.</p>
 </div>
 
 <script>
