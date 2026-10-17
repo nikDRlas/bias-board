@@ -834,6 +834,7 @@ if __name__ == "__main__":
         s = season_block(p, cal0, used)
         s["past"] = past_years(k, s, reader, p)
         cr = reader.read(TODAY)
+        c["index_short_skipped"] = reader.skipped_short     # bearish index COT, not used (research/cot_indices_test.py)
         c["read"] = cr if cr in ("BULLISH", "BEARISH") else "STAND ASIDE"   # the tested read, not the untested tie-breaks
         c["record"] = cot_record(reader, p, cr, k)
         c["speed"] = cot_speed(k, reader, cr)

@@ -382,12 +382,17 @@ function why(m) {
   switch (m.basis) {
     case "COT + calendar": return `Both engines point ${m.verdict.toLowerCase()}: ${g} at extremes, and the calendar agrees (${win}).${turnNote(d)}`;
     case "COT only": return `COT carries the bias alone: ${g} at extremes. ${s.read === "SELF-CANCELLING" ? "The calendar cancels itself out." : "No seasonal window is in play."}`;
-    case "Calendar only": return `The calendar carries the bias alone: ${win}.${turnNote(d)} Positioning has no side.`;
+    case "Calendar only": return `The calendar carries the bias alone: ${win}.${turnNote(d)} Positioning has no side.${shortSkip(m)}`;
   }
   const ag = (s.past && s.past.summary.against) || {n: 0, w: 0};
   if (m.basis === "Calendar over COT") return `COT reads ${title(c.read)} (${g}), against the calendar: ${win}. In the past years when COT was against this window it still paid ${ag.w} of ${ag.n} times, so the calendar stands.`;
   if (m.basis.startsWith("Conflict")) return `No bias. COT reads ${title(c.read)} (${g}) while the calendar says ${title(s.read)} (${win}). ${ag.n >= 3 ? `In past years with COT against it, this window paid only ${ag.w} of ${ag.n} times` : `This window has too few past years with COT against it (${ag.n}) to judge`}, so COT is relevant here and we wait.`;
+  if (c.index_short_skipped) return `No bias.${shortSkip(m)} And ${s.read === "SELF-CANCELLING" ? "the calendar cancels itself out" : "no seasonal window in play is big enough to carry a bias alone (usual move of at least 3 normal daily moves)"}.`;
   return `No bias. The commercials are not at an extreme with retail or funds on the other side, and ${s.read === "SELF-CANCELLING" ? "the calendar cancels itself out" : "no seasonal window in play is big enough to carry a bias alone (usual move of at least 3 normal days)"}.`;
+}
+function shortSkip(m) {
+  // bearish COT on the US indices is not used (research/cot_indices_test.py)
+  return m.cot.index_short_skipped ? " The commercials are at a bearish extreme, but on the US indices bearish COT signals lost money since 2003 (41% won, worse than just holding the index; bullish ones won 68%), so the board does not use them." : "";
 }
 function bestCotRow(m) {
   const e = m.cot.edge;

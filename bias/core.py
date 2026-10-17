@@ -136,6 +136,11 @@ def pctile(s, L):
     return s.rolling(L).apply(lambda w: (w[:-1] < w[-1]).sum() / L * 100.0, raw=True)
 
 
+# markets where a bearish COT signal counts as no side: on the US indices bearish signals lost money (41% won, -0.72%,
+# worse than the index drift, both halves) while bullish ones beat the drift (68% won); research/cot_indices_test.py
+LONG_ONLY = {"ES", "NQ", "YM"}
+
+
 class CotReader:
     """The COT read: commercials at an extreme (>= 2 of their 5 lookbacks at the same extreme) are followed, but only
     when retail or the funds (non-commercials) sit at the OPPOSITE extreme (also >= 2 of 5), and the funds are not at an
@@ -145,6 +150,7 @@ class CotReader:
 
     def __init__(self, k):
         x = load_cot(k)
+        self.k = k
         self.dates = x.index
         self.P = {g: {lb: pctile(x[g], L).to_numpy() for lb, L in LB.items()} for g in ("retail", "comm", "fund")}
         self.last_groups = 0
@@ -159,6 +165,7 @@ class CotReader:
     def read_at(self, i):
         """the read on the i-th weekly report"""
         self.last_groups = 0
+        self.skipped_short = False
         if i < 0:
             return "NEUTRAL"
         c = self.side("comm", i)
@@ -170,6 +177,9 @@ class CotReader:
         n = (self.side("retail", i) == opp) + (self.side("fund", i) == opp)
         if not n:
             return "NEUTRAL"
+        if c == "lo" and self.k in LONG_ONLY:
+            self.skipped_short = True
+            return "NEUTRAL"        # bearish COT on the US indices: no side (research/cot_indices_test.py)
         self.last_groups = int(n)
         return "BULLISH" if c == "hi" else "BEARISH"
 
