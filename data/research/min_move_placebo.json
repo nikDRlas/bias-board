@@ -1,0 +1,361 @@
+{
+ "GC": {
+  "min 0": {
+   "real": 8431,
+   "placebo": 9671.0
+  },
+  "min 2": {
+   "real": 6532,
+   "placebo": 7990.2
+  },
+  "min 3": {
+   "real": 4499,
+   "placebo": 5579.6
+  }
+ },
+ "SI": {
+  "min 0": {
+   "real": 5133,
+   "placebo": 7424.3
+  },
+  "min 2": {
+   "real": 3077,
+   "placebo": 5208.6
+  },
+  "min 3": {
+   "real": 1643,
+   "placebo": 3093.3
+  }
+ },
+ "PL": {
+  "min 0": {
+   "real": 19858,
+   "placebo": 6256.9
+  },
+  "min 2": {
+   "real": 14711,
+   "placebo": 3982.1
+  },
+  "min 3": {
+   "real": 9159,
+   "placebo": 1828.0
+  }
+ },
+ "PA": {
+  "min 0": {
+   "real": 10987,
+   "placebo": 8334.4
+  },
+  "min 2": {
+   "real": 6839,
+   "placebo": 6042.5
+  },
+  "min 3": {
+   "real": 3507,
+   "placebo": 3495.5
+  }
+ },
+ "HG": {
+  "min 0": {
+   "real": 9085,
+   "placebo": 9524.2
+  },
+  "min 2": {
+   "real": 4362,
+   "placebo": 6919.2
+  },
+  "min 3": {
+   "real": 1087,
+   "placebo": 4296.7
+  }
+ },
+ "CL": {
+  "min 0": {
+   "real": 13409,
+   "placebo": 9126.8
+  },
+  "min 2": {
+   "real": 6247,
+   "placebo": 6022.5
+  },
+  "min 3": {
+   "real": 3324,
+   "placebo": 2965.8
+  }
+ },
+ "NG": {
+  "min 0": {
+   "real": 16256,
+   "placebo": 6517.1
+  },
+  "min 2": {
+   "real": 9438,
+   "placebo": 3905.8
+  },
+  "min 3": {
+   "real": 4152,
+   "placebo": 1777.0
+  }
+ },
+ "6E": {
+  "min 0": {
+   "real": 4959,
+   "placebo": 10470.2
+  },
+  "min 2": {
+   "real": 2599,
+   "placebo": 7268.8
+  },
+  "min 3": {
+   "real": 1230,
+   "placebo": 3829.6
+  }
+ },
+ "DX": {
+  "min 0": {
+   "real": 4837,
+   "placebo": 5716.0
+  },
+  "min 2": {
+   "real": 2311,
+   "placebo": 3594.7
+  },
+  "min 3": {
+   "real": 1127,
+   "placebo": 1618.5
+  }
+ },
+ "6B": {
+  "min 0": {
+   "real": 7324,
+   "placebo": 7571.6
+  },
+  "min 2": {
+   "real": 3501,
+   "placebo": 4666.0
+  },
+  "min 3": {
+   "real": 962,
+   "placebo": 2061.8
+  }
+ },
+ "6J": {
+  "min 0": {
+   "real": 11494,
+   "placebo": 9497.5
+  },
+  "min 2": {
+   "real": 8414,
+   "placebo": 6616.9
+  },
+  "min 3": {
+   "real": 5537,
+   "placebo": 3649.3
+  }
+ },
+ "6S": {
+  "min 0": {
+   "real": 10602,
+   "placebo": 7651.5
+  },
+  "min 2": {
+   "real": 8004,
+   "placebo": 5162.9
+  },
+  "min 3": {
+   "real": 4308,
+   "placebo": 2877.7
+  }
+ },
+ "6A": {
+  "min 0": {
+   "real": 5665,
+   "placebo": 9338.5
+  },
+  "min 2": {
+   "real": 2678,
+   "placebo": 6382.2
+  },
+  "min 3": {
+   "real": 634,
+   "placebo": 3549.8
+  }
+ },
+ "6C": {
+  "min 0": {
+   "real": 11774,
+   "placebo": 7451.3
+  },
+  "min 2": {
+   "real": 7170,
+   "placebo": 3814.0
+  },
+  "min 3": {
+   "real": 4945,
+   "placebo": 2280.1
+  }
+ },
+ "6N": {
+  "min 0": {
+   "real": 7652,
+   "placebo": 9576.7
+  },
+  "min 2": {
+   "real": 3218,
+   "placebo": 6541.3
+  },
+  "min 3": {
+   "real": 1274,
+   "placebo": 4166.2
+  }
+ },
+ "ES": {
+  "min 0": {
+   "real": 57522,
+   "placebo": 15480.4
+  },
+  "min 2": {
+   "real": 34840,
+   "placebo": 11791.0
+  },
+  "min 3": {
+   "real": 21753,
+   "placebo": 8239.4
+  }
+ },
+ "NQ": {
+  "min 0": {
+   "real": 58840,
+   "placebo": 22514.5
+  },
+  "min 2": {
+   "real": 37813,
+   "placebo": 19083.8
+  },
+  "min 3": {
+   "real": 21216,
+   "placebo": 14363.0
+  }
+ },
+ "YM": {
+  "min 0": {
+   "real": 47324,
+   "placebo": 17421.8
+  },
+  "min 2": {
+   "real": 30541,
+   "placebo": 14070.1
+  },
+  "min 3": {
+   "real": 20757,
+   "placebo": 10218.0
+  }
+ },
+ "ZC": {
+  "min 0": {
+   "real": 16358,
+   "placebo": 10659.5
+  },
+  "min 2": {
+   "real": 13779,
+   "placebo": 7435.6
+  },
+  "min 3": {
+   "real": 10497,
+   "placebo": 4084.5
+  }
+ },
+ "ZW": {
+  "min 0": {
+   "real": 3284,
+   "placebo": 9893.9
+  },
+  "min 2": {
+   "real": 485,
+   "placebo": 7298.8
+  },
+  "min 3": {
+   "real": 215,
+   "placebo": 4615.4
+  }
+ },
+ "ZS": {
+  "min 0": {
+   "real": 11549,
+   "placebo": 10135.1
+  },
+  "min 2": {
+   "real": 9663,
+   "placebo": 7185.9
+  },
+  "min 3": {
+   "real": 7623,
+   "placebo": 3765.8
+  }
+ },
+ "SB": {
+  "min 0": {
+   "real": 16748,
+   "placebo": 10130.9
+  },
+  "min 2": {
+   "real": 15402,
+   "placebo": 7243.1
+  },
+  "min 3": {
+   "real": 13080,
+   "placebo": 3943.2
+  }
+ },
+ "KC": {
+  "min 0": {
+   "real": 7697,
+   "placebo": 9545.6
+  },
+  "min 2": {
+   "real": 219,
+   "placebo": 6512.9
+  },
+  "min 3": {
+   "real": 22,
+   "placebo": 3387.1
+  }
+ },
+ "LE": {
+  "min 0": {
+   "real": 9429,
+   "placebo": 7200.6
+  },
+  "min 2": {
+   "real": 3417,
+   "placebo": 4527.9
+  },
+  "min 3": {
+   "real": 298,
+   "placebo": 2049.2
+  }
+ },
+ "all": {
+  "min 0": {
+   "real": 376217,
+   "placebo": 237110.5,
+   "ratio": 1.59,
+   "kept_real": 100.0,
+   "kept_placebo": 100.0
+  },
+  "min 2": {
+   "real": 235260,
+   "placebo": 169267.0,
+   "ratio": 1.39,
+   "kept_real": 62.5,
+   "kept_placebo": 71.4
+  },
+  "min 3": {
+   "real": 142849,
+   "placebo": 101734.6,
+   "ratio": 1.4,
+   "kept_real": 38.0,
+   "kept_placebo": 42.9
+  }
+ }
+}
