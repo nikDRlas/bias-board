@@ -42,17 +42,12 @@ if __name__ == "__main__":
         for t in pd.date_range("2019-01-05", end, freq="W-SAT"):
             if t <= busy:
                 continue
-            ws, status = cal.windows(t)
-            seas = ("BULLISH" if ws[0]["side"] == "BUY" else "BEARISH") if status == "driver" else None
             cot = rd.read(t)
             i_rep = rd.dates.searchsorted(t - pd.Timedelta(days=3), "right") - 1
             spd = speed_of(sp, i_rep, cot) if cot in VD.SIDES else None
             if SKIP_SLOW and spd == "slow":
                 cot = "NEUTRAL"
-            ag = None
-            if seas and cot in VD.SIDES and cot != seas:
-                ag = cal.past(t.year, ws[0], rd)["summary"]["against"]
-            v, basis = VD.decide(cot, seas, ag)
+            v, basis, (ws, status) = VD.board_read(cot, cal, t, rd)
             if v not in VD.SIDES:
                 continue
             if VD.horizon(basis) == "window":
@@ -74,7 +69,7 @@ if __name__ == "__main__":
            "by_cell": summary([dict(r, c=r["basis"] + " | " + r["sector"]) for r in rows], "c"),
            "by_sector": summary(rows, "sector"),
            "by_basis_speed": summary([dict(r, bs=r["basis"] + " | " + r["speed"]) for r in rows if r["speed"]], "bs"),
-           "config": {"seas_lb": os.environ.get("SEAS_LB", "15"), "skip_slow": SKIP_SLOW}}
+           "config": {"seas_lb": os.environ.get("SEAS_LB", "15"), "skip_slow": SKIP_SLOW, "solo_min_move": SS.SOLO_MIN_MOVE}}
     os.makedirs(os.path.join(HERE, "..", "data", "research"), exist_ok=True)
     json.dump({**out, "trades": rows}, open(os.path.join(HERE, "..", "data", "research", OUT), "w"), indent=1)
     for key in ("first", "last", "all", "by_basis", "by_sector"):

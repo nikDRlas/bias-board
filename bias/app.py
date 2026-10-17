@@ -365,7 +365,7 @@ function dial(m) {
 }
 function seasStance(m) {
   const s = m.seas;
-  if (s.read !== "BULLISH" && s.read !== "BEARISH") return s.read === "SELF-CANCELLING" ? "the calendar cancels itself out" : "there is no seasonal window in play";
+  if (s.read !== "BULLISH" && s.read !== "BEARISH") return s.read === "SELF-CANCELLING" ? "the calendar cancels itself out" : "no seasonal window in play is big enough to carry a bias alone (usual move of at least 3 normal days)";
   if (m.verdict === "STAND ASIDE") return `the calendar leans ${s.read.toLowerCase()}`;
   return s.read === m.verdict ? "the calendar points the same way" : "the calendar points the other way";
 }
@@ -387,7 +387,7 @@ function why(m) {
   const ag = (s.past && s.past.summary.against) || {n: 0, w: 0};
   if (m.basis === "Calendar over COT") return `COT reads ${title(c.read)} (${g}), against the calendar: ${win}. In the past years when COT was against this window it still paid ${ag.w} of ${ag.n} times, so the calendar stands.`;
   if (m.basis.startsWith("Conflict")) return `No bias. COT reads ${title(c.read)} (${g}) while the calendar says ${title(s.read)} (${win}). ${ag.n >= 3 ? `In past years with COT against it, this window paid only ${ag.w} of ${ag.n} times` : `This window has too few past years with COT against it (${ag.n}) to judge`}, so COT is relevant here and we wait.`;
-  return `No bias. The commercials are not at an extreme with retail or funds on the other side, and ${s.read === "SELF-CANCELLING" ? "the calendar cancels itself out" : "there is no seasonal window in play"}.`;
+  return `No bias. The commercials are not at an extreme with retail or funds on the other side, and ${s.read === "SELF-CANCELLING" ? "the calendar cancels itself out" : "no seasonal window in play is big enough to carry a bias alone (usual move of at least 3 normal days)"}.`;
 }
 function bestCotRow(m) {
   const e = m.cot.edge;
@@ -708,7 +708,7 @@ function testedSection() {
       const c = o => o ? `<td class="n">${o.n}</td><td class="n">${o.win}%</td><td class="n">${sgn(o.avg)}%</td>` : `<td class="n">–</td><td class="n">–</td><td class="n">–</td>`;
       return `<tr><th>${esc(M[k].name)}</th>${c(a)}${c(b)}</tr>`; }).join("")}</tbody></table></div>
     <p class="note">Per market the samples are small (a few dozen trades over 7–10 years), so single rows swing a lot; the pooled rows above are the more reliable read.</p>
-    <p class="note">How the board uses this: each engine may carry the bias alone. In a contradiction the calendar stands if the window already paid in at least 2 of 3 past years when COT was against it (at least 3 such years); otherwise there is no bias. Tested, that split made no difference: the calendar won 50.5% when the window had played out against COT and 50.0% when it had not. In contradictions the calendar won about half the time and COT only slightly more, so neither earns the right to overrule the other. Both edges are small: the COT read, held while lit, wins about 55-60% with a small average and is only clearly above zero pooled across all markets; the seasonal windows have not beaten a coin flip out of sample.</p></details>`;
+    <p class="note">How the board uses this: each engine may carry the bias alone, but a seasonal window that carries it alone (no COT agreeing) must usually move at least 3 normal daily moves of that market (tested: verdicts 57% vs 54% without it); a window that agrees with COT counts at any size. In a contradiction the calendar stands if the window already paid in at least 2 of 3 past years when COT was against it (at least 3 such years); otherwise there is no bias. Tested, that split made no difference: the calendar won 50.5% when the window had played out against COT and 50.0% when it had not. In contradictions the calendar won about half the time and COT only slightly more, so neither earns the right to overrule the other. Both edges are small: the COT read, held while lit, wins about 55-60% with a small average and is only clearly above zero pooled across all markets; the seasonal windows have not beaten a coin flip out of sample.</p></details>`;
 }
 function render(k) {
   const m = M[k], P = $("#panel");

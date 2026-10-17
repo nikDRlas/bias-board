@@ -10,6 +10,28 @@
 SIDES = ("BULLISH", "BEARISH")
 
 
+def _side(ws, status):
+    return ("BULLISH" if ws[0]["side"] == "BUY" else "BEARISH") if status == "driver" else None
+
+
+def board_read(cot, cal, t, reader):
+    """the board's verdict on day t from the COT side (slow signals already removed) and the seasonal calendar.
+    A window that agrees with COT counts at any size ("COT + calendar"). A window that has to carry the bias alone
+    (calendar only, or calendar over COT) must have a usual move of at least seasonal.SOLO_MIN_MOVE normal daily
+    moves; a smaller one is ignored. Returns verdict, basis and the (windows, status) of the calendar used."""
+    import seasonal as SS
+    every = cal.windows(t, min_move=0)
+    if cot in SIDES and _side(*every) == cot:
+        return cot, "COT + calendar", every
+    solo = cal.windows(t, min_move=SS.SOLO_MIN_MOVE) if SS.SOLO_MIN_MOVE > 0 else every
+    seas = _side(*solo)
+    if cot in SIDES and seas == cot:
+        return cot, "COT + calendar", solo
+    ag = cal.past(t.year, solo[0][0], reader)["summary"]["against"] if seas and cot in SIDES and cot != seas else None
+    v, basis = decide(cot, seas, ag)
+    return v, basis, solo
+
+
 def decide(cot, seas, past_against=None):
     cd = cot if cot in SIDES else None
     sd = seas if seas in SIDES else None

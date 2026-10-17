@@ -147,9 +147,8 @@ def paths(p):
             "now": float(by[TODAY.year][-1])}
 
 
-def season_block(p):
-    cal = SS.Calendar(p)
-    wins, status = cal.windows(TODAY)
+def season_block(p, cal, used):
+    wins, status = used
     out = {"windows": wins, **paths(p), "_cal": cal}
     sh = out["shape"]
     out["shape_read"] = ("tracking closely" if sh >= .5 else "loosely tracking" if sh >= .3 else
@@ -199,16 +198,16 @@ def tested_cells():
             "seas_by_sector": r.get("seasonal_by_sector")}
 
 
-def combine(k, reader, s, speed=None):
-    """the board's verdict (bias/verdict.py). A COT signal the commercials crept into slowly counts as no side
-    (tested: research/verdict_test.py with SKIP_SLOW=1 beat keeping them)."""
+def combine(k, reader, cal, speed=None):
+    """the board's verdict (bias/verdict.py board_read). A COT signal the commercials crept into slowly counts as no
+    side (tested: research/verdict_test.py with SKIP_SLOW=1 beat keeping them). A calendar window that carries the
+    bias alone needs a usual move of at least 3 normal daily moves. Returns the calendar windows it used."""
     v = reader.read(TODAY)
     g = reader.last_groups
     if speed == "slow":
         v = "NEUTRAL"
-    ag = ((s.get("past") or {}).get("summary") or {}).get("against")
-    verdict, basis = VD.decide(v, s["read"], ag)
-    return verdict, basis, g
+    verdict, basis, used = VD.board_read(v, cal, TODAY, reader)
+    return verdict, basis, g, used
 
 
 VERDICT = os.path.join(ROOT, "data", "research", "verdict.json")
@@ -827,11 +826,13 @@ if __name__ == "__main__":
     tested = tested_cells()
     for k, m in M.items():
         p = R.load_px(k)
-        c, s = cot_block(k, p), season_block(p)
+        c = cot_block(k, p)
         reader = R.CotReader(k)
-        s["past"] = past_years(k, s, reader, p)
+        cal0 = SS.Calendar(p)
         spd0 = cot_speed(k, reader, reader.read(TODAY))
-        v, why, groups = combine(k, reader, s, spd0["speed"] if spd0 else None)
+        v, why, groups, used = combine(k, reader, cal0, spd0["speed"] if spd0 else None)
+        s = season_block(p, cal0, used)
+        s["past"] = past_years(k, s, reader, p)
         cr = reader.read(TODAY)
         c["read"] = cr if cr in ("BULLISH", "BEARISH") else "STAND ASIDE"   # the tested read, not the untested tie-breaks
         c["record"] = cot_record(reader, p, cr, k)

@@ -15,9 +15,10 @@ NY, GATE = 15, 12                    # 15 past years, at least 12 in the trade's
 # lookbacks a window may qualify on: (years, wins needed). (15, 12) and (10, 8) are both an 80% win ratio.
 LOOKBACKS = {"15": [(15, 12)], "10": [(10, 8)]}[os.environ.get("SEAS_YEARS", "15")]
 OPEN_AHEAD = 10                      # a window may start up to 10 trading days ahead to be the driver
-# minimum usual move, in units of the market's normal daily move (daily volatility over the past year): a window has
-# to be worth trading, so one that usually moves less than this many normal days' moves does not qualify
-MIN_MOVE = float(os.environ.get("SEAS_MIN_MOVE", "0"))
+# minimum usual move, in units of the market's normal daily move (daily volatility over the past year), for a window
+# that has to carry the bias ALONE (calendar only, calendar over COT): it has to be worth trading. A window that agrees
+# with COT needs no minimum. Tested: research/verdict_test.py, research/seasonal_config.json (3 = best of 0/1.5/2/3).
+SOLO_MIN_MOVE = float(os.environ.get("SEAS_MIN_MOVE", "3"))
 
 
 class Calendar:
@@ -110,8 +111,9 @@ class Calendar:
                 "rec": int((dirv[-4:] > 0).sum()),
                 "years": [{"y": y, "r": round(float(v), 2)} for y, v in zip(yrs, dirv)]}
 
-    def windows(self, t, max_picks=4):
-        """the board's windows: driver = best window open now, else best opening within 2 weeks; up to 3 more"""
+    def windows(self, t, max_picks=4, min_move=0.0):
+        """the board's windows: driver = best window open now, else best opening within 2 weeks; up to 3 more.
+        min_move: only windows whose usual move is at least this many normal daily moves"""
         cand, seen, Y, now = [], set(), t.year, self.td(t)
         for ny, gate in LOOKBACKS:
             sc = self.scan(t, ny)
@@ -119,8 +121,8 @@ class Calendar:
                 continue
             S = sc["S"]
             ok = (sc["wins"] >= gate) & ((S[:, None] + LEN_TD[None, :]) > now + 2)
-            if MIN_MOVE > 0:
-                ok &= np.abs(sc["mu"]) >= MIN_MOVE * self.day_vol(t)
+            if min_move > 0:
+                ok &= np.abs(sc["mu"]) >= min_move * self.day_vol(t)
             for i, j in zip(*np.nonzero(ok)):
                 cand.append({"side": "BUY" if sc["up"][i, j] > ny / 2 else "SELL", "wins": int(sc["wins"][i, j]),
                              "ny": ny, "share": float(sc["wins"][i, j]) / ny,

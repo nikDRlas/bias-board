@@ -58,19 +58,13 @@ if __name__ == "__main__":
         lit = C.lit_sides(rd, sp)
         CC = cot_cases(p, lc, rd, lit)
         for t in pd.date_range("2019-01-05", end, freq="W-SAT"):
-            ws, status = cal.windows(t)
-            d = ws[0] if status == "driver" else None
-            seas = ("BULLISH" if d["side"] == "BUY" else "BEARISH") if d else None
             cot = rd.read(t)
             i_rep = rd.dates.searchsorted(t - pd.Timedelta(days=3), "right") - 1
             if cot in VD.SIDES and speed_of(sp, i_rep, cot) == "slow":
                 cot = "NEUTRAL"
-            ag, past = None, None
-            if d:
-                past = cal.past(t.year, d, rd)
-                if cot in VD.SIDES and cot != seas:
-                    ag = past["summary"]["against"]
-            v, basis = VD.decide(cot, seas, ag)
+            v, basis, (ws, status) = VD.board_read(cot, cal, t, rd)
+            d = ws[0] if status == "driver" else None
+            past = cal.past(t.year, d, rd) if d else None
             if v not in VD.SIDES:
                 continue
             ti = p.index.searchsorted(t)
