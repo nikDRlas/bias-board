@@ -2,7 +2,7 @@
 """Is a COT extreme reached FAST a stronger signal than one the commercials crept into?
 
 Signals: the board's COT read (commercials at an extreme with retail or funds opposite), one position per market at a
-time, 8 weeks from the first close after the Friday release, since 2003. For each signal two speed measures:
+time, held while the read stays lit + 1 week (bias/core.py cot_exit), from the first close after the Friday release, since 2003. For each signal two speed measures:
   move4w   change in the commercials' net position over the 4 weeks before the signal, in the direction of the
            extreme, divided by the typical size of a 4-week change (its standard deviation over the prior 3 years)
   weeks    weeks since the commercials' 1-year percentile was last on the other side of 50 (fewer = faster)
@@ -27,14 +27,18 @@ if __name__ == "__main__":
         p1 = rd.P["comm"]["1 yr"]
         lp = np.log(p)
         busy = pd.Timestamp("1900-01-01")
+        lit = C.lit_sides(rd, skip_slow=False)
         for i in range(len(rd.dates)):
-            v = rd.read_at(i)
-            if v not in ("BULLISH", "BEARISH"):
+            v = lit[i]
+            if v is None:
+                continue
+            ex = C.cot_exit(rd.dates, lit, i)
+            if ex is None:
                 continue
             rel = rd.dates[i] + pd.Timedelta(days=3)
             if rel < p.index[0] or rel <= busy:
                 continue
-            a, b = p.index.searchsorted(rel), p.index.searchsorted(rel + pd.Timedelta(weeks=8))
+            a, b = p.index.searchsorted(rel), p.index.searchsorted(ex)
             if b >= len(p) or a < 61:
                 continue
             sg = 1 if v == "BULLISH" else -1           # commercials' side: long extreme -> bullish
@@ -43,7 +47,7 @@ if __name__ == "__main__":
             while j > 0 and np.isfinite(p1[j]) and (p1[j] - 50) * sg > 0:
                 j -= 1
             weeks = i - j
-            vol = lp.diff().iloc[a - 60:a].std() * np.sqrt(b - a)
+            vol = lp.diff().iloc[a - 60:a].std() * np.sqrt(C.COT_REF_DAYS)   # fixed scale: the length depends on the outcome
             rows.append({"m": k, "d": str(rd.dates[i].date()), "move4w": float(mv), "weeks": int(weeks),
                          "r": 100 * sg * float(p.iloc[b] / p.iloc[a] - 1), "z": float(sg * (lp.iloc[b] - lp.iloc[a]) / vol)})
             busy = p.index[b]

@@ -277,7 +277,7 @@ function setupStats(m) {
   const yrs = rel => (s.past ? s.past.years.filter(y => !rel || y.rel === rel) : []);
   const fromYears = (ys, label) => ys.length ? {w: ys.filter(y => y.win).length, n: ys.length, avg: ys.reduce((a, y) => a + y.r, 0) / ys.length, label} : null;
   if (b === "Calendar only" && d) return {w: d.wins, n: d.n || 15, avg: sg * d.avg, label: `this window, last ${d.n || 15} years`};
-  if (b === "COT only" && c.record) return {w: c.record.w, n: c.record.n, avg: c.record.avg, label: `this COT signal on ${m.name} since ${c.record.first}, 8 weeks`};
+  if (b === "COT only" && c.record) return {w: c.record.w, n: c.record.n, avg: c.record.avg, label: `this COT signal on ${m.name} since ${c.record.first}, held while lit + 1 week`};
   if (b === "COT + calendar") return fromYears(yrs("agree"), "years of this window when COT pointed the same way at its start");
   if (b === "Calendar over COT") return fromYears(yrs("against"), "years of this window when COT was against it at its start");
   return null;
@@ -393,10 +393,10 @@ function testedHero(m) {
   if (usesCot && m.cot.read !== "STAND ASIDE") {
     const rc = m.cot.record, c = bestCotRow(m), rows = [];
     const H = {4: "4 weeks", 8: "8 weeks", 13: "3 months", 26: "6 months", 52: "1 year"};
-    if (rc) rows.push(line(`${Math.round(100 * rc.w / rc.n)}%`, `Read ${m.cot.read.toLowerCase()}`, `${rc.w} of ${rc.n} times since ${rc.first} · avg ${sgn(rc.avg)}% over ${rc.hold} weeks · last 4: ${rc.rec}/4`));
-    // the exact current picture (all groups together) on the lookback with the most past cases, 8 weeks
+    if (rc) rows.push(line(`${Math.round(100 * rc.w / rc.n)}%`, `Read ${m.cot.read.toLowerCase()}`, `${rc.w} of ${rc.n} times since ${rc.first} · avg ${sgn(rc.avg)}% held while lit (about ${rc.weeks} weeks) · last 4: ${rc.rec}/4`));
+    // the exact current picture (all groups together) on the lookback with the most past cases, held while it lasts + 1 week
     const tr = (m.cot.track || []).filter(r => r.board && r.r8 && r.dir === m.cot.read).sort((x, y) => y.r8.n - x.r8.n)[0];
-    if (tr) rows.push(line(`${Math.round(100 * tr.r8.w / tr.r8.n)}%`, `${esc(tr.label)} · ${tr.lb}`, `this exact picture ${tr.r8.w} of ${tr.r8.n} times · avg ${sgn(tr.r8.avg)}% over 8 weeks${tr.r8.n < 6 ? " · few cases" : ""}`));
+    if (tr) rows.push(line(`${Math.round(100 * tr.r8.w / tr.r8.n)}%`, `${esc(tr.label)} · ${tr.lb}`, `this exact picture ${tr.r8.w} of ${tr.r8.n} times · avg ${sgn(tr.r8.avg)}% held while it lasted${tr.r8.n < 6 ? " · few cases" : ""}`));
     const sp = m.cot.speed;
     if (sp) rows.push(`<p class="spd"><b class="sp ${sp.speed}">${sp.speed === "fast" ? "Reached fast" : sp.speed === "slow" ? "Crept in slowly · skipped" : "Medium speed"}</b> commercials moved ${sp.move.toFixed(1)}× a typical 4-week change into this extreme. ${title(sp.speed)} signals won ${sp.all.win}% since 2003 and ${sp.recent.win}% since 2016 (fast ${sp.fast_all.win}%, slow ${sp.slow_all.win}%).${sp.speed === "slow" ? " Slow signals are not used for the verdict: skipping them tested better." : ""}</p>`);
     if (rows.length) groups.push(`<div class="isg"><div class="isgh">${fa(m, m.cot.read)}<span>COT</span></div>${rows.join("")}</div>`);
@@ -440,13 +440,13 @@ function seasonPaths(m) {
   return {n, mc, cur, a5: A5, a10: A10, a15: A15, proj, k};
 }
 function cotStats(m) {
-  // like the seasonal window stats: what the live COT signal has done so far, against its usual 8-week path
+  // like the seasonal window stats: what the live COT signal has done so far, against its usual result while lit
   const rc = m.cot.record, lv = rc && rc.live; if (!lv) return "";
   const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
   const cell = (big, small) => `<div><b>${big}</b><span>${small}</span></div>`;
   return `<div class="wstats">
-    ${cell(pc(lv.move), `so far since the signal (report ${fmtD(lv.since)}, entry ${fmtD(lv.entry)}) · ${lv.weeks <= rc.hold ? `${lv.weeks.toFixed(1)} of ${rc.hold} weeks gone` : `running ${lv.weeks.toFixed(0)} weeks, past the ${rc.hold}-week horizon`}`)}
-    ${cell(pc(rc.avg), `usual at the end of ${rc.hold} weeks · went that way ${rc.w} of ${rc.n} times`)}
+    ${cell(pc(lv.move), `so far since the signal (report ${fmtD(lv.since)}, entry ${fmtD(lv.entry)}) · running ${lv.weeks.toFixed(1)} weeks (usually about ${rc.weeks}) · held while the signal stays lit, out ${rc.after} week after it goes dark`)}
+    ${cell(pc(rc.avg), `usual at the exit · went that way ${rc.w} of ${rc.n} times`)}
     ${cell(pc(rc.mfe), "usual best along the way")}
     ${cell(pc(rc.mae), "usual worst along the way")}
   </div>`;
@@ -574,9 +574,9 @@ function trackNow(m) {
   const T = m.cot.track || [];
   if (!T.length) return `<p class="note">No group is at an extreme on any lookback this week.</p>`;
   const cell = o => o ? `<td class="n">${o.w} of ${o.n} (${Math.round(100 * o.w / o.n)}%)</td><td class="n">${o.avg >= 0 ? "+" : ""}${o.avg.toFixed(2)}%</td>` : `<td class="n">–</td><td class="n">–</td>`;
-  return `<div class="tbl"><table><thead><tr><th>Lookback</th><th>Picture now</th><th>Reads</th><th>After 4 weeks</th><th>Avg</th><th>After 8 weeks</th><th>Avg</th></tr></thead><tbody>` +
+  return `<div class="tbl"><table><thead><tr><th>Lookback</th><th>Picture now</th><th>Reads</th><th>After 4 weeks</th><th>Avg</th><th>Held while it lasts</th><th>Avg</th></tr></thead><tbody>` +
     T.map(r => `<tr><th>${r.lb}</th><td>${esc(r.label)}${r.board ? "" : ' <span class="st">not a board signal</span>'}</td><td>${pill(r.dir)}</td>${cell(r.r4)}${cell(r.r8)}</tr>`).join("") +
-    `</tbody></table></div><p class="note">Every past time since the price history starts that the same picture appeared on that lookback (after at least 8 weeks without it), measured from the first close after the Friday release. Direction: follow the commercials when they are at an extreme, otherwise fade retail. Rows marked "not a board signal" have no commercials at an extreme, so the board's COT rule does not use them.</p>`;
+    `</tbody></table></div><p class="note">Every past time since the price history starts that the same picture appeared on that lookback (after at least 8 weeks without it), measured from the first close after the Friday release: after 4 weeks, and held while the picture lasts, out one week after the last report showing it (how the board holds COT). Direction: follow the commercials when they are at an extreme, otherwise fade retail. Rows marked "not a board signal" have no commercials at an extreme, so the board's COT rule does not use them.</p>`;
 }
 function windowsTbl(m) {
   const s = m.seas; if (!s.windows.length) return `<p class="note">No seasonal window opens in the −2 to +8 week horizon.</p>`;
@@ -669,7 +669,7 @@ function testedSection() {
   const hd = `<thead><tr><th></th><th>Trades</th><th>Won</th><th>Avg</th><th>t</th></tr></thead>`;
   const sc = T.seas_by_cot, cs = T.cot_by_seasonal, cc = T.cot;
   return `<details><summary>How the board is tested<small>walk-forward, no hindsight</small></summary>
-    <p class="note">Every Saturday since the data allows, the board's own rules were run with only what was known that day: the COT report released by then and the seasonal windows picked from the 15 years before. One trade per market at a time. Seasonal trades run from the window start (or that Saturday) to the window end; COT trades are held 8 weeks.</p>
+    <p class="note">Every Saturday since the data allows, the board's own rules were run with only what was known that day: the COT report released by then and the seasonal windows picked from the 15 years before. One trade per market at a time. Seasonal trades run from the window start (or that Saturday) to the window end; COT trades are held while the signal stays lit, out one week after the last lit report (tested best against fixed 2, 4 and 8 weeks).</p>
     <h4 class="note" style="font-weight:600;color:var(--ink)">The seasonal window, split by what COT said (${T.first_seas.slice(0, 4)}–${T.last.slice(0, 4)})</h4>
     <div class="tbl"><table>${hd}<tbody>${row("All seasonal trades", T.seas_all)}${row("COT agreed", sc.agree)}${row("COT against", sc.against)}${row("COT no side", sc.neutral)}${row("COT groups disagreed", sc.mixed)}</tbody></table></div>
     <h4 class="note" style="font-weight:600;color:var(--ink);margin-top:12px">The COT read, split by what the calendar said (${T.first_cot.slice(0, 4)}–${T.last.slice(0, 4)})</h4>
@@ -683,7 +683,7 @@ function testedSection() {
       const c = o => o ? `<td class="n">${o.n}</td><td class="n">${o.win}%</td><td class="n">${sgn(o.avg)}%</td>` : `<td class="n">–</td><td class="n">–</td><td class="n">–</td>`;
       return `<tr><th>${esc(M[k].name)}</th>${c(a)}${c(b)}</tr>`; }).join("")}</tbody></table></div>
     <p class="note">Per market the samples are small (a few dozen trades over 7–10 years), so single rows swing a lot; the pooled rows above are the more reliable read.</p>
-    <p class="note">How the board uses this: each engine may carry the bias alone. In a contradiction the calendar stands if the window already paid in at least 2 of 3 past years when COT was against it (at least 3 such years); otherwise there is no bias. Tested, that split made no difference: the calendar won 50.5% when the window had played out against COT and 50.0% when it had not. In contradictions the calendar won about half the time and COT only slightly more, so neither earns the right to overrule the other. Both edges are small: the COT read wins about 54% over 8 weeks and is only clearly above zero pooled across all markets; the seasonal windows have not beaten a coin flip out of sample.</p></details>`;
+    <p class="note">How the board uses this: each engine may carry the bias alone. In a contradiction the calendar stands if the window already paid in at least 2 of 3 past years when COT was against it (at least 3 such years); otherwise there is no bias. Tested, that split made no difference: the calendar won 50.5% when the window had played out against COT and 50.0% when it had not. In contradictions the calendar won about half the time and COT only slightly more, so neither earns the right to overrule the other. Both edges are small: the COT read, held while lit, wins about 55-60% with a small average and is only clearly above zero pooled across all markets; the seasonal windows have not beaten a coin flip out of sample.</p></details>`;
 }
 function render(k) {
   const m = M[k], P = $("#panel");

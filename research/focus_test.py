@@ -4,10 +4,10 @@
 Every Saturday 2019-2026, every market's verdict is rebuilt with only data known that day (shared rule bias/verdict.py,
 slow COT signals skipped, turning calendars in sequence). Each verdict gets its setup's OWN record, as the board shows it:
   calendar verdicts      the window's past years (COT + calendar: only years COT agreed; calendar over COT: years it was against)
-  COT only               the market's past COT signals in that direction, 8 weeks, results known by that day
+  COT only               the market's past COT setups in that direction (one per lit run), held while lit + 1 week, results known by that day
 From those cases: hit rate, average end move, average best move along the way (MFE), average worst move (MAE), all in
 units of the market's normal volatility over the holding period. Each week the top 3 by each score are compared with all
-verdicts. Outcomes: from the next close, calendar verdicts to the window end, COT-led verdicts 8 weeks.
+verdicts. Outcomes: from the next close, calendar verdicts to the window end, COT-led verdicts while the signal stays lit + 1 week.
 Output: data/research/focus.json"""
 import json, os, sys
 import numpy as np, pandas as pd
@@ -29,14 +29,17 @@ def path_stats(lc, a, b, sg):
     return seg[-1], seg.max(), seg.min()
 
 
-def cot_cases(p, lc, rd, sp):
+def cot_cases(p, lc, rd, lit):
     out = []
     for i in range(len(rd.dates)):
-        v = rd.read_at(i)
-        if v not in VD.SIDES or speed_of(sp, i, v) == "slow":
+        v = lit[i]
+        if v is None or (i > 0 and lit[i - 1] == v):
+            continue                                   # one case per lit run, from its first report
+        ex = C.cot_exit(rd.dates, lit, i)
+        if ex is None:
             continue
         rel = rd.dates[i] + pd.Timedelta(days=3)
-        a, b = p.index.searchsorted(rel), p.index.searchsorted(rel + pd.Timedelta(weeks=8))
+        a, b = p.index.searchsorted(rel), p.index.searchsorted(ex)
         if b >= len(p) or a < 1:
             continue
         e, mf, ma = path_stats(lc, a, b, 1 if v == "BULLISH" else -1)
@@ -52,7 +55,8 @@ if __name__ == "__main__":
         lc = np.log(p.to_numpy(float))
         dlc = np.diff(lc, prepend=lc[0])
         cal, rd, sp = SS.Calendar(p), C.CotReader(k), speed_series(k)
-        CC = cot_cases(p, lc, rd, sp)
+        lit = C.lit_sides(rd, sp)
+        CC = cot_cases(p, lc, rd, lit)
         for t in pd.date_range("2019-01-05", end, freq="W-SAT"):
             ws, status = cal.windows(t)
             d = ws[0] if status == "driver" else None
@@ -74,7 +78,7 @@ if __name__ == "__main__":
             # the setup's own cases
             if basis == "COT only":
                 cs = [c for c in CC if c["v"] == v and c["exit"] <= t]
-                cases = [(c["end"], c["mfe"], c["mae"], c["len"]) for c in cs]
+                cases = [(c["end"], c["mfe"], c["mae"], C.COT_REF_DAYS) for c in cs]   # fixed scale: the length depends on the outcome
             else:
                 rel = {"COT + calendar": "agree", "Calendar over COT": "against"}.get(basis)
                 sg = 1 if d["side"] == "BUY" else -1
@@ -96,7 +100,8 @@ if __name__ == "__main__":
             if VD.horizon(basis) == "window":
                 x = ret(p, max(t, pd.Timestamp(d["start"])), pd.Timestamp(d["end"]), v)
             else:
-                x = ret(p, t + pd.Timedelta(days=1), t + pd.Timedelta(weeks=8), v)
+                ex = C.cot_exit(rd.dates, lit, i_rep) if 0 <= i_rep and lit[i_rep] == cot else None
+                x = ret(p, t + pd.Timedelta(days=1), ex, v, C.COT_REF_DAYS) if ex is not None else None
             if not x or pd.Timestamp(x["exit"]) > end:
                 continue
             rows.append({"m": k, "t": str(t.date()), "basis": basis, **score, **x})

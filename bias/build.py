@@ -243,21 +243,20 @@ def setup_profile(k, p, cal, reader, s, basis, verdict):
     sig = np.diff(lc)[-252:].std()
     cases = []
     if basis == "COT only":
-        sp_s = (lambda x: (x["comm"].diff(4) / x["comm"].diff(4).rolling(156, min_periods=52).std().shift(1)).to_numpy())(R.load_cot(k))
-        sp_cut = json.load(open(os.path.join(ROOT, "data", "research", "cot_speed.json")))["move4w"]["cutoffs"]
+        lit = R.lit_sides(reader, R.speed_series(k))         # slow signals count as no side, as on the board
         for i in range(len(reader.dates)):
-            v = reader.read_at(i)
-            if v != verdict:
+            v = lit[i]
+            if v != verdict or (i > 0 and lit[i - 1] == v):
+                continue                                   # one case per lit run, from its first report
+            ex = R.cot_exit(reader.dates, lit, i)
+            if ex is None:
                 continue
-            sv = sp_s[i] * (1 if v == "BULLISH" else -1) if np.isfinite(sp_s[i]) else np.nan
-            if np.isfinite(sv) and sv <= sp_cut[0]:
-                continue                                   # slow signals are skipped, as on the board
             rel = reader.dates[i] + pd.Timedelta(days=3)
-            a, b = p.index.searchsorted(rel), p.index.searchsorted(rel + pd.Timedelta(weeks=8))
-            if b >= len(p) or a < 1:
+            a, b = p.index.searchsorted(rel), p.index.searchsorted(ex)
+            if b >= len(p) or a < 1 or b <= a:
                 continue
             seg = (1 if v == "BULLISH" else -1) * (lc[a:b + 1] - lc[a])
-            cases.append((seg[-1], seg.max(), seg.min(), b - a))
+            cases.append((seg[-1], seg.max(), seg.min(), R.COT_REF_DAYS))   # fixed scale: the length depends on the outcome
     else:
         d = s.get("driver")
         if not d:
@@ -296,8 +295,9 @@ def focus_picks(res, n=3):
 
 def setup_track(k, p, reader):
     """the current COT picture per lookback (which groups are at which extreme), and every past time since prices start
-    that the same picture appeared on that lookback (after 8 weeks without it): result after 4 and 8 weeks from the first
-    close after the Friday release. Direction: follow the commercials if they are at an extreme, else fade retail."""
+    that the same picture appeared on that lookback (after 8 weeks without it): result after 4 weeks, and held while the
+    picture lasts, out one week after the last report showing it (as the board holds COT), from the first close after
+    the Friday release. Direction: follow the commercials if they are at an extreme, else fade retail."""
     i0 = reader.dates.searchsorted(TODAY - pd.Timedelta(days=3), "right") - 1
     lc = np.log(p.to_numpy(float))
     word = {"comm": "Commercials", "retail": "Retail", "fund": "Funds"}
@@ -318,6 +318,7 @@ def setup_track(k, p, reader):
             continue
         label = " · ".join(f'{word[g]} {"long" if s == "hi" else "short"}' for g, s in now.items() if s)
         res4, res8, last = [], [], -10 ** 6
+        same = [pic(j) == now for j in range(len(reader.dates))]
         for j in range(1, i0):
             if pic(j) != now:
                 continue
@@ -329,8 +330,11 @@ def setup_track(k, p, reader):
             a = p.index.searchsorted(rel)
             if rel < p.index[0] or a >= len(p):
                 continue
-            for h, bucket in ((4, res4), (8, res8)):
-                b = p.index.searchsorted(rel + pd.Timedelta(weeks=h))
+            ex = R.cot_exit(reader.dates, same, j)
+            for end, bucket in ((rel + pd.Timedelta(weeks=4), res4), (ex, res8)):
+                if end is None:
+                    continue
+                b = p.index.searchsorted(end)
                 if b < len(p) and p.index[b] <= TODAY:
                     bucket.append(100 * (np.exp(sg * (lc[b] - lc[a])) - 1))
         agg = lambda r: {"n": len(r), "w": int(sum(x > 0 for x in r)), "avg": round(float(np.mean(r)), 2)} if r else None
@@ -393,11 +397,11 @@ def tested_for(k, basis, groups, tested):
         return None
     rec = lambda o, label: dict(o, label=label) if o else None
     if basis == "COT + calendar":
-        return rec(tested["cot_by_seasonal"].get("agree"), "COT reads while the calendar agreed won {win}% over 8 weeks")
+        return rec(tested["cot_by_seasonal"].get("agree"), "COT reads while the calendar agreed won {win}%, held while lit + 1 week")
     if basis == "COT only":
         sec = {"FX": "currency", "Indices": "index", "Agriculture": "agricultural"}.get(sector2(k), "metal and energy")
         return rec(tested["cot"].get(f"{sector2(k)}|{groups}"),
-                   f"{sec} COT reads with {'retail and funds' if groups == 2 else 'one group'} against the commercials won {{win}}% over 8 weeks")
+                   f"{sec} COT reads with {'retail and funds' if groups == 2 else 'one group'} against the commercials won {{win}}%, held while lit + 1 week")
     if basis == "Calendar only":
         return rec(tested["seas_by_cot"].get("neutral"), "seasonal windows with no COT side won {win}% to the window end")
     rel = tested.get("relevance") or {}
@@ -430,25 +434,27 @@ def timing(s):
             "only": False}
 
 
-def cot_record(reader, p, side, hold=8):
-    """every past time this market's COT read switched to `side` (since prices start), and whether price moved
-    that way over the next `hold` weeks, from the first close after the Friday release. The live episode is left out."""
+def cot_record(reader, p, side, k):
+    """every past time this market's COT signal switched to `side` (since prices start; slow signals count as no side,
+    as on the board), and whether price moved that way while the signal stayed lit, out one week after the last lit
+    report (bias/core.py cot_exit), from the first close after the Friday release. The live episode is left out."""
     if side not in ("BULLISH", "BEARISH"):
         return None
     sg = 1 if side == "BULLISH" else -1
-    reads = [reader.read_at(i) for i in range(len(reader.dates))]
+    reads = R.lit_sides(reader, R.speed_series(k))
     cases = []
-    for i in range(1, len(reads)):
-        if reads[i] == side and reads[i - 1] != side:
+    for i in range(len(reads)):
+        if reads[i] == side and (i == 0 or reads[i - 1] != side):
             rel = reader.dates[i] + pd.Timedelta(days=3)
-            if rel < p.index[0]:
+            ex = R.cot_exit(reader.dates, reads, i)
+            if rel < p.index[0] or ex is None:
                 continue
             a = p.index.searchsorted(rel)
-            b = p.index.searchsorted(rel + pd.Timedelta(weeks=hold))
-            if b >= len(p):
+            b = p.index.searchsorted(ex)
+            if b >= len(p) or p.index[b] > TODAY or b <= a:
                 continue                                   # result not known yet (includes the live episode)
             seg = sg * (p.iloc[a:b + 1].to_numpy() / p.iloc[a] - 1)
-            cases.append({"d": str(reader.dates[i].date()), "r": round(100 * float(seg[-1]), 2),
+            cases.append({"d": str(reader.dates[i].date()), "r": round(100 * float(seg[-1]), 2), "weeks": round((b - a) / 5, 1),
                           "mfe": round(100 * float(seg.max()), 2), "mae": round(100 * float(seg.min()), 2)})
     if not cases:
         return None
@@ -457,9 +463,7 @@ def cot_record(reader, p, side, hold=8):
     i0 = reader.dates.searchsorted(TODAY - pd.Timedelta(days=3), "right") - 1
     live = None
     if 0 <= i0 < len(reads) and reads[i0] == side:
-        j = i0
-        while j > 0 and reads[j - 1] == side:
-            j -= 1
+        j = R.lit_start(reads, i0)
         rel = reader.dates[j] + pd.Timedelta(days=3)
         a = p.index.searchsorted(rel)
         if a < len(p):
@@ -468,7 +472,8 @@ def cot_record(reader, p, side, hold=8):
                     "weeks": round(float((p.index[-1] - p.index[a]).days) / 7, 1)}
     return {"n": len(r), "w": int((r > 0).sum()), "avg": round(float(r.mean()), 2), "median": round(float(np.median(r)), 2),
             "mfe": round(float(np.mean([c["mfe"] for c in cases])), 2), "mae": round(float(np.mean([c["mae"] for c in cases])), 2),
-            "rec": int((r[-4:] > 0).sum()), "first": cases[0]["d"][:4], "hold": hold, "cases": cases, "live": live}
+            "weeks": round(float(np.mean([c["weeks"] for c in cases])), 1), "after": R.HOLD_AFTER,
+            "rec": int((r[-4:] > 0).sum()), "first": cases[0]["d"][:4], "cases": cases, "live": live}
 
 
 def cot_speed(k, reader, side):
@@ -799,7 +804,7 @@ if __name__ == "__main__":
         v, why, groups = combine(k, reader, s, spd0["speed"] if spd0 else None)
         cr = reader.read(TODAY)
         c["read"] = cr if cr in ("BULLISH", "BEARISH") else "STAND ASIDE"   # the tested read, not the untested tie-breaks
-        c["record"] = cot_record(reader, p, cr)
+        c["record"] = cot_record(reader, p, cr, k)
         c["speed"] = cot_speed(k, reader, cr)
         c["track"] = setup_track(k, p, reader)
         c["conv"] = {2: "vs retail & funds", 1: "vs one group"}.get(groups, "None") if c["read"] != "STAND ASIDE" else "None"

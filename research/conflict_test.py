@@ -11,7 +11,8 @@ so overlapping weeks of the same window are not counted twice.
 
 A) Seasonal trades: entry at the first close on/after max(Saturday, window start), exit at window end.
    Split by what COT said at entry: agree / against / neutral / groups disagree.
-B) COT trades: entry at the first close after the Saturday, held 8 weeks.
+B) COT trades: entry at the first close after the Saturday, held while the read stays lit, out one week after the
+   last lit report (bias/core.py cot_exit).
    Split by what the seasonal driver said at entry.
 Output: data/research/conflict.json
 """
@@ -24,20 +25,20 @@ import core as C                                     # noqa: E402
 
 import seasonal as SS                                 # noqa: E402
 
-COT_HOLD = 8
 Seas = SS.Calendar          # the board's own trading-day window engine
 
 
 Cot = C.CotReader
 
 
-def ret(p, d0, d1, side):
+def ret(p, d0, d1, side, ref_days=None):
+    """ref_days: scale by this fixed length instead of the trade's own (for exits that depend on the outcome)"""
     i = p.index.searchsorted(d0)
     j = p.index.searchsorted(d1)
     if j >= len(p) or j <= i:
         return None
     r = p.iloc[j] / p.iloc[i] - 1
-    vol = np.log(p).diff().iloc[max(0, i - 60):i].std() * np.sqrt(j - i)      # scale for pooling markets
+    vol = np.log(p).diff().iloc[max(0, i - 60):i].std() * np.sqrt(ref_days or (j - i))      # scale for pooling markets
     s = 1 if side in ("BUY", "BULLISH") else -1
     return {"r": float(100 * s * r), "z": float(s * np.log(1 + r) / vol), "entry": str(p.index[i].date()),
             "exit": str(p.index[j].date())}
@@ -67,6 +68,7 @@ if __name__ == "__main__":
     for k in C.M:
         p = C.load_px(k)
         S, Q = Seas(p), Cot(k)
+        lit = C.lit_sides(Q, skip_slow=False)
         busy_s = busy_c = pd.Timestamp("1900-01-01")
         for t in sats:
             if t <= busy_s and t <= busy_c:
@@ -82,7 +84,9 @@ if __name__ == "__main__":
                               "rel": rel(cr, sd), **x})
                     busy_s = pd.Timestamp(x["exit"])
             if cr in ("BULLISH", "BEARISH") and t > busy_c:
-                x = ret(p, t + pd.Timedelta(days=1), t + pd.Timedelta(weeks=COT_HOLD), cr)
+                i_rep = Q.dates.searchsorted(t - pd.Timedelta(days=3), "right") - 1
+                ex = C.cot_exit(Q.dates, lit, i_rep)
+                x = ret(p, t + pd.Timedelta(days=1), ex, cr, C.COT_REF_DAYS) if ex is not None else None
                 if x and pd.Timestamp(x["exit"]) <= end:
                     B.append({"m": k, "t": str(t.date()), "cot": cr, "groups": Q.last_groups, "seas": sd or ("cancel" if d == "cancel" else "none"),
                               "rel": "none" if sd is None else ("agree" if sd == cr else "against"), **x})

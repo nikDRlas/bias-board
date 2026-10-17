@@ -172,3 +172,61 @@ class CotReader:
             return "NEUTRAL"
         self.last_groups = int(n)
         return "BULLISH" if c == "hi" else "BEARISH"
+
+
+# ---------------------------------------------------------------- how long a COT trade is held
+# Held while the signal stays lit on each new weekly report, out one week after the last lit report's release
+# (research/cot_lit_hold_test.py: best of lit+0/1/2/4 weeks and fixed 2/4/8 weeks, one trade per setup).
+HOLD_AFTER = 1
+# a COT trade's length depends on its outcome (losers tend to stay lit longer), so its result is scaled by this fixed
+# typical length (about 3.5 weeks), never by its own length, which would shrink the long losers
+COT_REF_DAYS = 17
+SPEED_FILE = os.path.join(ROOT, "data", "research", "cot_speed.json")
+
+
+def speed_series(k):
+    """the commercials' 4-week net change in units of its prior 3-year standard deviation, per weekly report"""
+    d4 = load_cot(k)["comm"].diff(4)
+    return (d4 / d4.rolling(156, min_periods=52).std().shift(1)).to_numpy()
+
+
+def speed_cutoffs():
+    return json.load(open(SPEED_FILE))["move4w"]["cutoffs"] if os.path.exists(SPEED_FILE) else None
+
+
+def speed_of(sp, i, side, cut=None):
+    cut = cut or speed_cutoffs()
+    v = sp[i] * (1 if side == "BULLISH" else -1) if 0 <= i < len(sp) and np.isfinite(sp[i]) else np.nan
+    if not np.isfinite(v) or not cut:
+        return None
+    return "fast" if v > cut[1] else "slow" if v <= cut[0] else "medium"
+
+
+def lit_sides(reader, sp=None, skip_slow=True):
+    """the board's COT side on every weekly report (None = no side); slow signals count as no side"""
+    cut = speed_cutoffs() if skip_slow else None
+    out = []
+    for i in range(len(reader.dates)):
+        v = reader.read_at(i)
+        if v not in ("BULLISH", "BEARISH") or (skip_slow and sp is not None and speed_of(sp, i, v, cut) == "slow"):
+            v = None
+        out.append(v)
+    return out
+
+
+def cot_exit(dates, lit, i, after=HOLD_AFTER):
+    """exit date of a COT trade on report i: `after` weeks past the release of the last report of its lit run.
+    None while the run is still lit on the latest report (the exit is not known yet)."""
+    v, j = lit[i], i
+    while j + 1 < len(lit) and lit[j + 1] == v:
+        j += 1
+    if j + 1 >= len(lit):
+        return None
+    return dates[j] + pd.Timedelta(days=3) + pd.Timedelta(weeks=after)
+
+
+def lit_start(lit, i):
+    """first report of the lit run that report i belongs to"""
+    while i > 0 and lit[i - 1] == lit[i]:
+        i -= 1
+    return i

@@ -28,5 +28,6 @@ def decide(cot, seas, past_against=None):
 
 
 def horizon(basis):
-    """how long a verdict is held in the tests: COT-led verdicts 8 weeks, calendar-led ones to the window end"""
-    return "window" if basis in ("Calendar only", "Calendar over COT") else "8w"
+    """how long a verdict is held in the tests: COT-led verdicts while the COT signal stays lit + 1 week (core.cot_exit),
+    calendar-led ones to the window end"""
+    return "window" if basis in ("Calendar only", "Calendar over COT") else "lit"

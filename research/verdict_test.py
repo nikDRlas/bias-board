@@ -4,7 +4,7 @@
 Every Saturday since 2019 (the first year the 15-year seasonal scan has data for), for every market, the board's
 verdict is rebuilt with only what was known that day: the COT report released by then, the seasonal windows from
 the 15 years before, and the shared verdict rule (bias/verdict.py). One position per market at a time.
-A COT-led verdict is held 8 weeks; a calendar-led verdict to the end of its window. Entry at the next close.
+A COT-led verdict is held while the COT signal stays lit, out one week after the last lit report (bias/core.py cot_exit); a calendar-led verdict to the end of its window. Entry at the next close.
 
 Results by verdict type x asset class -> data/research/verdict.json
 Options (environment): SEAS_LB=15 or 15,10 (seasonal lookbacks a window may qualify on), SKIP_SLOW=1 (COT signals the
@@ -26,20 +26,7 @@ SECTOR = lambda k: {"FX": "Currencies", "Indices": "Indices", "Agriculture": "Ag
 LB_CFG = {"15": [(15, 12)], "15,10": [(15, 12), (10, 8)]}[os.environ.get("SEAS_LB", "15")]
 SKIP_SLOW = os.environ.get("SKIP_SLOW") == "1"
 OUT = os.environ.get("OUT", "verdict.json")
-SPEED = json.load(open(os.path.join(HERE, "..", "data", "research", "cot_speed.json")))["move4w"]["cutoffs"]
-
-
-def speed_series(k):
-    x = C.load_cot(k)
-    d4 = x["comm"].diff(4)
-    return (d4 / d4.rolling(156, min_periods=52).std().shift(1)).to_numpy()
-
-
-def speed_of(sp, i, side):
-    v = sp[i] * (1 if side == "BULLISH" else -1) if 0 <= i < len(sp) and np.isfinite(sp[i]) else np.nan
-    if not np.isfinite(v):
-        return None
-    return "fast" if v > SPEED[1] else "slow" if v <= SPEED[0] else "medium"
+speed_series, speed_of = C.speed_series, C.speed_of
 
 
 if __name__ == "__main__":
@@ -50,6 +37,7 @@ if __name__ == "__main__":
         p = C.load_px(k)
         cal, rd = SS.Calendar(p), C.CotReader(k)
         sp = speed_series(k)
+        lit = C.lit_sides(rd, sp, skip_slow=SKIP_SLOW)
         busy = pd.Timestamp("1900-01-01")
         for t in pd.date_range("2019-01-05", end, freq="W-SAT"):
             if t <= busy:
@@ -70,7 +58,10 @@ if __name__ == "__main__":
             if VD.horizon(basis) == "window":
                 x = ret(p, max(t, pd.Timestamp(ws[0]["start"])), pd.Timestamp(ws[0]["end"]), v)
             else:
-                x = ret(p, t + pd.Timedelta(days=1), t + pd.Timedelta(weeks=8), v)
+                ex = C.cot_exit(rd.dates, lit, i_rep) if 0 <= i_rep and lit[i_rep] == cot else None
+                if ex is None:
+                    continue
+                x = ret(p, t + pd.Timedelta(days=1), ex, v, C.COT_REF_DAYS)
             if not x or pd.Timestamp(x["exit"]) > end:
                 continue
             rows.append({"m": k, "t": str(t.date()), "v": v, "basis": basis, "sector": SECTOR(k),
