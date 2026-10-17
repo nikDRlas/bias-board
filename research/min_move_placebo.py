@@ -15,16 +15,17 @@ import core as C                                       # noqa: E402
 import seasonal as SS                                  # noqa: E402
 
 GATES = (0, 2, 3)
-N_PLACEBO = 20
+N_PLACEBO = int(os.environ.get("N_PLACEBO", "20"))
 
 
 def count(cal, dates):
     out = np.zeros(len(GATES))
     for t in dates:
-        sc = cal.scan(t)
+        ny, gate = SS.LOOKBACKS[0]
+        sc = cal.scan(t, ny)
         if sc is None:
             continue
-        ok = sc["wins"] >= SS.GATE
+        ok = sc["wins"] >= gate
         vol = cal.day_vol(t)
         for i, g in enumerate(GATES):
             out[i] += (ok & (np.abs(sc["mu"]) >= g * vol)).sum()
@@ -50,5 +51,5 @@ if __name__ == "__main__":
     res["all"] = {f"min {g}": {"real": int(a), "placebo": round(float(b), 1), "ratio": round(float(a / b), 2),
                                "kept_real": round(100 * float(a / R[0]), 1), "kept_placebo": round(100 * float(b / P[0]), 1)}
                   for g, a, b in zip(GATES, R, P)}
-    json.dump(res, open(os.path.join(HERE, "..", "data", "research", "min_move_placebo.json"), "w"), indent=1)
+    json.dump(res, open(os.path.join(HERE, "..", "data", "research", os.environ.get("OUT", "min_move_placebo.json")), "w"), indent=1)
     print(json.dumps(res["all"], indent=1))

@@ -5,15 +5,19 @@ trading days, so weekends and holidays never stretch or shrink a window. Seasona
 win ratio = years in which price moved the trade's way over the window (raw, no trend removal); the
 trend-removed count is reported alongside.
 """
+import os
 import numpy as np, pandas as pd
 
 DRIFT_N = 252
 START_TD = np.arange(-10, 41)        # entry from 2 weeks ago to 8 weeks ahead
-LEN_TD = np.arange(5, 64)            # 5 trading days to about 3 months
+LEN_TD = np.arange(5, int(os.environ.get("SEAS_MAXLEN", "63")) + 1)   # 5 trading days to about 3 months
 NY, GATE = 15, 12                    # 15 past years, at least 12 in the trade's direction
 # lookbacks a window may qualify on: (years, wins needed). (15, 12) and (10, 8) are both an 80% win ratio.
-LOOKBACKS = [(15, 12)]
+LOOKBACKS = {"15": [(15, 12)], "10": [(10, 8)]}[os.environ.get("SEAS_YEARS", "15")]
 OPEN_AHEAD = 10                      # a window may start up to 10 trading days ahead to be the driver
+# minimum usual move, in units of the market's normal daily move (daily volatility over the past year): a window has
+# to be worth trading, so one that usually moves less than this many normal days' moves does not qualify
+MIN_MOVE = float(os.environ.get("SEAS_MIN_MOVE", "0"))
 
 
 class Calendar:
@@ -77,7 +81,13 @@ class Calendar:
         mu = s1 / ny
         sd = np.sqrt(np.maximum(s2 / ny - mu ** 2, 1e-18) * ny / (ny - 1))
         return {"Y": Y, "now": now, "S": S, "up": up, "wins": np.maximum(up, ny - up), "ny": ny,
-                "t": np.abs(mu) / sd * np.sqrt(ny)}
+                "t": np.abs(mu) / sd * np.sqrt(ny), "mu": mu}
+
+    def day_vol(self, t):
+        """normal daily move (standard deviation of daily log returns over the past year) up to t"""
+        i = int(self.dates.searchsorted(t, "right"))
+        d = np.diff(self.lc[max(0, i - 253):i])
+        return float(d.std()) if len(d) > 20 else np.nan
 
     def stats(self, Y, s, L, side, ny=NY):
         """Seasonax-style statistics of one window over the `ny` years before Y"""
@@ -109,6 +119,8 @@ class Calendar:
                 continue
             S = sc["S"]
             ok = (sc["wins"] >= gate) & ((S[:, None] + LEN_TD[None, :]) > now + 2)
+            if MIN_MOVE > 0:
+                ok &= np.abs(sc["mu"]) >= MIN_MOVE * self.day_vol(t)
             for i, j in zip(*np.nonzero(ok)):
                 cand.append({"side": "BUY" if sc["up"][i, j] > ny / 2 else "SELL", "wins": int(sc["wins"][i, j]),
                              "ny": ny, "share": float(sc["wins"][i, j]) / ny,

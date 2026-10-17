@@ -23,7 +23,7 @@ from conflict_test import ret, summary                 # noqa: E402
 
 SECTOR = lambda k: {"FX": "Currencies", "Indices": "Indices", "Agriculture": "Agriculture"}.get(C.M[k][3], "Metals & energy")
 
-LB_CFG = {"15": [(15, 12)], "15,10": [(15, 12), (10, 8)]}[os.environ.get("SEAS_LB", "15")]
+LB_CFG = {"15": [(15, 12)], "10": [(10, 8)], "15,10": [(15, 12), (10, 8)]}[os.environ.get("SEAS_LB", os.environ.get("SEAS_YEARS", "15"))]
 SKIP_SLOW = os.environ.get("SKIP_SLOW") == "1"
 OUT = os.environ.get("OUT", "verdict.json")
 speed_series, speed_of = C.speed_series, C.speed_of
