@@ -476,6 +476,36 @@ def cot_record(reader, p, side, k):
             "rec": int((r[-4:] > 0).sum()), "first": cases[0]["d"][:4], "cases": cases, "live": live}
 
 
+def move_done(c, s, basis):
+    """has the running setup already made its usual move? COT: move since the signal's entry against the average end
+    move of all past cases of this signal (in-sample record); calendar: move since the window start this year against
+    the window's 15-year average move. Tested (research/move_done_test.py): calendar windows that had already made
+    their usual move earned nothing from there on; COT setups still earned a little, less than ones not there yet."""
+    out = {}
+    rc = c.get("record") or {}
+    lv = rc.get("live")
+    if lv and rc.get("avg") is not None:
+        out["cot"] = _done_state(lv["move"], rc["avg"], rc.get("mfe"))
+    d, r = s.get("driver"), s.get("remaining")
+    if d and r and r.get("started") and r.get("so_far") is not None:
+        sg = 1 if d["side"] == "BUY" else -1
+        out["seas"] = _done_state(sg * r["so_far"], sg * d["avg"], None)
+    lead = {"COT only": ["cot"], "COT + calendar": ["cot", "seas"], "Calendar only": ["seas"],
+            "Calendar over COT": ["seas"]}.get(basis, [])
+    out["flag"] = any(out.get(e, {}).get("state") == "done" for e in lead)
+    return out
+
+
+def _done_state(so_far, usual, best):
+    so_far, usual = round(float(so_far), 2), round(float(usual), 2)
+    if usual <= 0:
+        state = "no positive usual move"
+    else:
+        state = "done" if so_far >= usual else "against" if so_far < 0 else "not yet"
+    return {"so_far": so_far, "usual": usual, "share": round(100 * so_far / usual) if usual > 0 else None,
+            "beyond_best": bool(best is not None and best > 0 and so_far >= best), "state": state}
+
+
 def cot_speed(k, reader, side):
     """how fast the commercials moved into their extreme: their 4-week net change before the latest released report,
     in units of a typical 4-week change (3-year standard deviation), with the tested record of that speed third
@@ -815,6 +845,7 @@ if __name__ == "__main__":
                   "confidence": None, "setup": setup_record(k, why),
                   "profile": setup_profile(k, p, cal_obj, reader, s, why, v),
                   "cycle": presidential_cycle(p) if k in ("ES", "NQ", "YM") else None,
+                  "done": move_done(c, s, why),
                   "tested": tested_for(k, why, groups, tested)}
         d = s.get("driver")
         print(f"{k:3s} COT {c['read']:11s} {c['conv']:8s} | seas {s['read']:15s} "
@@ -828,7 +859,10 @@ if __name__ == "__main__":
                 quant.append({"id": f"{kind}-{k}", "market": k, "market_name": M[k][0], **EV.strategy(R.load_px(k), kind, TODAY)})
     vt = json.load(open(VERDICT)) if os.path.exists(VERDICT) else None
     vsum = {k2: vt[k2] for k2 in ("first", "last", "all", "by_basis", "by_cell", "by_sector")} if vt else None
+    mdp = os.path.join(ROOT, "data", "research", "move_done.json")
+    md_test = json.load(open(mdp)) if os.path.exists(mdp) else None
     json.dump({"asof": str(ASOF.date()), "today": str(TODAY.date()), "tested": tested, "verdict_test": vsum, "focus": focus,
+               "move_done_test": md_test,
                "markets": res, "quant": quant},
               open(f"{ROOT}/data/live/outlook.json", "w"), indent=1, default=float)
     os.makedirs(f"{ROOT}/site", exist_ok=True)

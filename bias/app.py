@@ -167,6 +167,8 @@ body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border
 .dots i{width:7px;height:7px;border-radius:50%;background:var(--line);display:block}
 .dots i.on{background:var(--ink)}
 .sbadge{font:600 11px/1 var(--mono);padding:4px 6px;border-radius:999px;border:1px solid var(--line);color:var(--mute)}
+.dbadge{font:600 11px/1 var(--body);padding:4px 7px;border-radius:999px;background:var(--q-soft);color:var(--q-deep);border:1px solid var(--q-line)}
+.wstats div.done{background:var(--q-soft)} .wstats div.done b{color:var(--q-deep)}
 .sbadge.new{font-family:var(--body)}
 .dots em{font:600 11px/1 var(--mono);font-style:normal;color:var(--mute);margin-left:4px}
 .dots.big em{font-size:13px}
@@ -208,6 +210,7 @@ body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border
     <button class="chip" id="f-STAND ASIDE" aria-pressed="false">Stand aside</button>
     <button class="chip" id="f-both" aria-pressed="false">Both engines agree</button>
     <button class="chip" id="f-hot" aria-pressed="false">Window ending</button>
+    <button class="chip" id="f-done" aria-pressed="false">Move done</button>
     <a class="chip" href="outlook.html" style="text-decoration:none">Full report</a>
   </div>
 </div></div>
@@ -287,6 +290,26 @@ function setupBadge(m) {
   const tip = `${st.w} of ${st.n} · avg ${st.avg >= 0 ? "+" : ""}${st.avg.toFixed(2)}% — ${st.label}`;
   return `<span class="sbadge" title="${esc(tip)}">${st.w}/${st.n} · ${st.avg >= 0 ? "+" : ""}${st.avg.toFixed(1)}%</span>`;
 }
+function doneBadge(m) {
+  const d = m.done; if (!d || !d.flag || m.verdict === "STAND ASIDE") return "";
+  const parts = ["cot", "seas"].filter(e => d[e] && d[e].state === "done").map(e => `${e === "cot" ? "COT" : "calendar"}: ${sgn(d[e].so_far)}% done vs usual ${sgn(d[e].usual)}%`);
+  return `<span class="dbadge" title="${esc("Usual move already made · " + parts.join(" · "))}">move done</span>`;
+}
+function doneCell(x, kind) {
+  // how much of the usual move the running setup has already made (usual = in-sample average of all past cases)
+  if (!x) return "";
+  const T = (D.move_done_test || {});
+  const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+  if (x.state === "no positive usual move") return `<div><b>–</b><span>no positive usual move to measure against</span></div>`;
+  if (x.state === "done") {
+    const t = kind === "seas" ? (T.seasonal_first || {}).done : (T.cot || {}).done;
+    const a = t && (t.all || t);
+    const note = kind === "seas" ? `setup done: windows past their usual move earned ${a ? `${sgn(a.avg)}% from there (${a.win}% won)` : "nothing more"} in the test`
+                                 : `usual move done${x.beyond_best ? ", beyond its usual best" : ""}: COT setups past it still earned ${a ? `${sgn(a.avg)}% from there` : "a little"}, less than ones not there yet`;
+    return `<div class="done"><b>${x.share}%</b><span>of the usual move already made (${pc(x.so_far)} of ${pc(x.usual)}) · ${note}</span></div>`;
+  }
+  return `<div><b>${x.share}%</b><span>of the usual move made so far (${pc(x.so_far)} of ${pc(x.usual)})${x.state === "against" ? " · so far against the setup" : ""}</span></div>`;
+}
 function dots(m, big) {
   const c = m.confidence; if (!c || m.verdict === "STAND ASIDE") return "";
   const tip = `Confidence ${c.dots}/5: ${c.scope} won ${c.win}% (${c.n} trades, avg ${sgn(c.avg)}%, t ${c.t.toFixed(1)}) in the walk-forward test ${c.first}–${c.last}`;
@@ -320,7 +343,7 @@ function boards() {
     const m = M[k];
     return `<button class="tile" id="t-${k}" data-k="${k}" aria-current="false">${ring(m)}
       <div><div class="nm">${esc(m.name)}</div><div class="tk">${k}</div></div>
-      <div class="row">${pill(m.verdict)}${setupBadge(m)}</div>
+      <div class="row">${pill(m.verdict)}${setupBadge(m)}${doneBadge(m)}</div>
       <div class="basis">${basisIcon(m)}${esc(m.basis)}</div>${spark(m)}</button>`;
   }).join("") + `</div>`).join("");
   document.querySelectorAll(".tile").forEach(b => b.addEventListener("click", () => select(b.dataset.k, true)));
@@ -448,6 +471,7 @@ function cotStats(m) {
     ${cell(pc(lv.move), `so far since the signal (report ${fmtD(lv.since)}, entry ${fmtD(lv.entry)}) · running ${lv.weeks.toFixed(1)} weeks (usually about ${rc.weeks}) · held while the signal stays lit, out ${rc.after} week after it goes dark`)}
     ${cell(pc(rc.avg), `usual at the exit · went that way ${rc.w} of ${rc.n} times`)}
     ${cell(pc(rc.mfe), "usual best along the way")}
+    ${doneCell(m.done && m.done.cot, "cot")}
     ${cell(pc(rc.mae), "usual worst along the way")}
   </div>`;
 }
@@ -459,6 +483,7 @@ function windowStats(m) {
     ${cell(pc(d.avg), `usual move over the whole window, ${fmtD(d.start)} – ${fmtD(d.end)}`)}
     ${cell(pc(r.avg), `${r.started ? "still to come" : "expected"} over the ${r.days} trading days ${r.started ? "left" : "of the window"} · went that way ${r.wins} of 15 years`)}
     ${r.so_far == null ? "" : cell(pc(r.so_far), "this year so far in the window")}
+    ${doneCell(m.done && m.done.seas, "seas")}
   </div>`;
 }
 function seasonChart(m) {
@@ -799,7 +824,7 @@ $("#v-quant").addEventListener("click", () => setView("quant", true));
 function filt(f) {
   document.querySelectorAll(".filters .chip").forEach(b => b.setAttribute("aria-pressed", b.id === "f-" + f));
   document.querySelectorAll(".tile").forEach(t => {
-    const m = M[t.dataset.k], on = f === "all" || m.verdict === f || (f === "hot" && m.timing && (m.timing.closing || m.timing.flip)) || (f === "both" && m.basis === "COT + calendar");
+    const m = M[t.dataset.k], on = f === "all" || m.verdict === f || (f === "hot" && m.timing && (m.timing.closing || m.timing.flip)) || (f === "both" && m.basis === "COT + calendar") || (f === "done" && m.done && m.done.flag);
     t.classList.toggle("dim", !on);
   });
 }
