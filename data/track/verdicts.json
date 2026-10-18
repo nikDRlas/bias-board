@@ -1,0 +1,92 @@
+[
+ {
+  "week": "2026-10-17",
+  "m": "PL",
+  "name": "Platinum",
+  "verdict": "BULLISH",
+  "basis": "COT + calendar",
+  "report": "2026-10-13",
+  "entry_from": "2026-10-18",
+  "window_end": null
+ },
+ {
+  "week": "2026-10-17",
+  "m": "NG",
+  "name": "Natural Gas",
+  "verdict": "BULLISH",
+  "basis": "COT only",
+  "report": "2026-10-13",
+  "entry_from": "2026-10-18",
+  "window_end": null
+ },
+ {
+  "week": "2026-10-17",
+  "m": "6E",
+  "name": "Euro FX",
+  "verdict": "BEARISH",
+  "basis": "Calendar only",
+  "report": "2026-10-13",
+  "entry_from": "2026-10-18",
+  "window_end": "2026-11-09"
+ },
+ {
+  "week": "2026-10-17",
+  "m": "DX",
+  "name": "US Dollar Index",
+  "verdict": "BULLISH",
+  "basis": "Calendar only",
+  "report": "2026-10-13",
+  "entry_from": "2026-10-18",
+  "window_end": "2026-11-09"
+ },
+ {
+  "week": "2026-10-17",
+  "m": "6J",
+  "name": "Japanese Yen",
+  "verdict": "BEARISH",
+  "basis": "Calendar only",
+  "report": "2026-10-13",
+  "entry_from": "2026-10-18",
+  "window_end": "2026-11-09"
+ },
+ {
+  "week": "2026-10-17",
+  "m": "6C",
+  "name": "Canadian Dollar",
+  "verdict": "BEARISH",
+  "basis": "Calendar only",
+  "report": "2026-10-13",
+  "entry_from": "2026-10-18",
+  "window_end": "2026-11-19"
+ },
+ {
+  "week": "2026-10-17",
+  "m": "6N",
+  "name": "NZ Dollar",
+  "verdict": "BULLISH",
+  "basis": "COT + calendar",
+  "report": "2026-10-13",
+  "entry_from": "2026-10-18",
+  "window_end": null
+ },
+ {
+  "week": "2026-10-17",
+  "m": "ES",
+  "name": "S&P 500",
+  "verdict": "BULLISH",
+  "basis": "Calendar only",
+  "report": "2026-10-13",
+  "entry_from": "2026-10-18",
+  "window_end": "2026-11-09"
+ },
+ {
+  "week": "2026-10-17",
+  "m": "YM",
+  "name": "Dow Jones",
+  "verdict": "BULLISH",
+  "basis": "Calendar only",
+  "report": "2026-10-13",
+  "entry_from": "2026-10-18",
+  "window_end": "2026-11-06"
+ }
+]

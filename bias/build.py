@@ -17,6 +17,7 @@ from core import DRIFT_N                           # noqa: E402
 import seasonal as SS                              # noqa: E402
 import events as EV                                # noqa: E402
 import verdict as VD                               # noqa: E402
+import track as TR                                 # noqa: E402
 
 ASOF, TODAY, M = R.ASOF, R.TODAY, R.M
 LB, HIST = R.LB, R.HIST
@@ -903,10 +904,13 @@ if __name__ == "__main__":
                 quant.append({"id": f"{kind}-{k}", "market": k, "market_name": M[k][0], **EV.strategy(R.load_px(k), kind, TODAY)})
     vt = json.load(open(VERDICT)) if os.path.exists(VERDICT) else None
     vsum = {k2: vt[k2] for k2 in ("first", "last", "all", "by_basis", "by_cell", "by_sector")} if vt else None
+    if os.environ.get("TRACK") == "1":            # the scheduled Saturday run records this week's verdicts
+        TR.record(res, TODAY, ASOF)
+    track = TR.summary(TODAY)
     mdp = os.path.join(ROOT, "data", "research", "move_done.json")
     md_test = json.load(open(mdp)) if os.path.exists(mdp) else None
     json.dump({"asof": str(ASOF.date()), "today": str(TODAY.date()), "tested": tested, "verdict_test": vsum, "focus": focus,
-               "move_done_test": md_test,
+               "move_done_test": md_test, "track": track,
                "markets": res, "quant": quant},
               open(f"{ROOT}/data/live/outlook.json", "w"), indent=1, default=float)
     os.makedirs(f"{ROOT}/site", exist_ok=True)

@@ -183,6 +183,10 @@ body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border
 .sp.fast{background:var(--bull-soft);color:var(--bull)} .sp.slow{background:var(--bear-soft);color:var(--bear)}
 .focus{margin-top:22px;padding:16px;border-radius:18px;border:1.5px solid var(--ink);background:var(--card);box-shadow:var(--shadow)}
 .fhead{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.live{margin:0 0 18px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.live .lh{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline} .live .lh b{font:700 15px var(--body);color:var(--ink)}
+.live .lst{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px} .live .lst span{font:600 11px var(--mono);padding:3px 7px;border-radius:999px;border:1px solid var(--line);color:var(--mute)}
+.live .lst span.r{color:var(--bull);border-color:var(--bull-soft)} .live .lst span.w{color:var(--bear);border-color:var(--bear-soft)}
 .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px}
 .fcard{position:relative;text-align:left;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px 12px 12px 44px;cursor:pointer;display:flex;flex-direction:column;gap:10px;min-width:0;transition:transform .18s cubic-bezier(.3,1.6,.5,1)}
 .fcard:hover{transform:translateY(-3px)} .fcard:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
@@ -219,6 +223,7 @@ body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border
 <div class="wrap">
   <div id="outlook-view">
     <section class="focus" id="focus"></section>
+    <section class="live" id="live"></section>
     <div id="boards"></div>
     <section class="panel" id="panel" aria-live="polite"></section>
   </div>
@@ -324,6 +329,19 @@ function dots(m, big) {
   const c = m.confidence; if (!c || m.verdict === "STAND ASIDE") return "";
   const tip = `Confidence ${c.dots}/5: ${c.scope} won ${c.win}% (${c.n} trades, avg ${sgn(c.avg)}%, t ${c.t.toFixed(1)}) in the walk-forward test ${c.first}–${c.last}`;
   return `<span class="dots${big ? " big" : ""}" title="${esc(tip)}" aria-label="${esc(tip)}">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= c.dots ? "on" : ""}"></i>`).join("")}<em>${Math.round(c.win)}%</em></span>`;
+}
+function liveRecord() {
+  // the board's own verdicts as given each Saturday, scored when their exit has passed (bias/track.py)
+  const L = D.track, el = $("#live"); if (!el) return;
+  if (!L || !L.since) { el.innerHTML = `<div class="lh"><b>Live record</b><span class="note" style="margin:0">Starts with the next scheduled Saturday run: every verdict is saved as given and scored once its exit has passed, the clean test of the board on weeks its rules have never seen.</span></div>`; return; }
+  const d = L.done, pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+  const head = d ? `${d.right} of ${d.n} right (${Math.round(100 * d.right / d.n)}%) · avg ${pc(d.avg_dir)} in the bias's direction` : "no verdict finished yet";
+  const by = Object.entries(L.by_basis || {}).filter(([, o]) => o).map(([b, o]) => `${esc(b)} ${o.right}/${o.n}`).join(" · ");
+  const recent = (L.recent || []).map(r => `<span class="${r.right ? "r" : "w"}" title="${esc(r.name)} · ${esc(r.basis)} · ${r.entry} → ${r.exit} · price ${pc(r.move)}">${r.m} ${r.verdict === "BULLISH" ? "▲" : "▼"} ${pc(r.move)}</span>`).join("");
+  const open = (L.open || []).map(r => `<span title="${esc(r.name)} · ${esc(r.basis)} · since ${r.entry || r.entry_from}">${r.m} ${r.verdict === "BULLISH" ? "▲" : "▼"} ${r.move != null ? pc(r.move) : "waiting"}</span>`).join("");
+  el.innerHTML = `<div class="lh"><b>Live record since ${fmtD(L.since)}</b><span>${head}</span>${by ? `<span class="note" style="margin:0">${by}</span>` : ""}</div>
+    ${recent ? `<div class="lst">${recent}</div>` : ""}${open ? `<p class="note" style="margin:8px 0 0">Open: </p><div class="lst">${open}</div>` : ""}
+    <p class="note" style="margin:8px 0 0">Every verdict saved as given on its Saturday and scored when its exit passes (calendar: window end; COT: one week after the signal goes dark), one position per market at a time; price moves shown as + up / − down. The replay numbers elsewhere were tested on 2019–26; this record is the board on weeks its rules have never seen.</p>`;
 }
 function focusStrip() {
   const F = D.focus; if (!F || !F.keys.length) { $("#focus").hidden = true; return; }
@@ -891,7 +909,7 @@ addEventListener("keydown", e => {
 });
 
 $("#meta").textContent = `Week of ${new Date(D.today + "T00:00:00").toLocaleDateString("en-GB", {day: "numeric", month: "long", year: "numeric"})} · COT as of ${D.asof}`;
-focusStrip(); boards(); qboards();
+focusStrip(); liveRecord(); boards(); qboards();
 let start = (location.hash || "").slice(1);
 if (start.startsWith("q-")) { qselect(start.slice(2), false); setView("quant", false); start = ""; }
 if (!M[start]) start = KEYS.find(k => M[k].timing && M[k].timing.closing && M[k].timing.flip) || KEYS[0];
