@@ -515,7 +515,7 @@ function seasonChart(m) {
   s.windows.forEach(w => {
     // windows are placed by trading day, like the price paths (samples are every 2nd trading day)
     const xs = w.s != null ? X(Math.min(n - 1, w.s / 2)) : XD(w.start), xe = w.s != null ? X(Math.min(n - 1, (w.s + w.len) / 2)) : XD(w.end);
-    const x0 = xs, x1 = xe, main = !!(s.driver && w.start === s.driver.start && w.side === s.driver.side), col = w.side === "BUY" ? "var(--bull)" : "var(--bear)";
+    const x0 = xs, x1 = xe, main = !!(s.driver && !s.small_only && w.start === s.driver.start && w.side === s.driver.side), col = w.side === "BUY" ? "var(--bull)" : "var(--bear)";
     const flip = m.timing && m.timing.flip && m.timing.flip.start === w.start;
     if (!main && !flip) return;
     bands += `<rect x="${x0}" y="${T}" width="${Math.max(2, x1 - x0)}" height="${H - T - B}" fill="${col}" opacity="${main ? .13 : .07}" ${flip ? 'stroke="' + col + '" stroke-dasharray="4 4" stroke-opacity=".6"' : ""} rx="4"/>
