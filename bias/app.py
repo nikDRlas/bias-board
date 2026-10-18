@@ -168,6 +168,7 @@ body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border
 .dots i.on{background:var(--ink)}
 .sbadge{font:600 11px/1 var(--mono);padding:4px 6px;border-radius:999px;border:1px solid var(--line);color:var(--mute)}
 .dbadge{font:600 11px/1 var(--body);padding:4px 7px;border-radius:999px;background:var(--q-soft);color:var(--q-deep);border:1px solid var(--q-line)}
+.upnext b.up{color:var(--bull)} .upnext b.dn{color:var(--bear)}
 .wstats div.done{background:var(--q-soft)} .wstats div.done b{color:var(--q-deep)}
 .sbadge.new{font-family:var(--body)}
 .dots em{font:600 11px/1 var(--mono);font-style:normal;color:var(--mute);margin-left:4px}
@@ -480,6 +481,11 @@ function cotStats(m) {
     ${cell(pc(rc.mae), "usual worst along the way")}
   </div>`;
 }
+function upcomingNote(m) {
+  const U = m.seas.upcoming || []; if (!U.length) return "";
+  const it = w => `<b class="${w.side === "BUY" ? "up" : "dn"}">${w.side === "BUY" ? "Buy" : "Sell"}</b> ${fmtD(w.start)} – ${fmtD(w.end)} · ${w.wins} of ${w.n} · avg ${sgn(w.avg)}%${w.small ? ` · small (${w.move_days} normal days; can only back COT, not carry a bias alone)` : ""}`;
+  return `<p class="note upnext">Next windows: ${U.map(it).join(" · then ")}. Shown for planning only, not part of this week's verdict.</p>`;
+}
 function windowStats(m) {
   const s = m.seas, d = s.driver, r = s.remaining; if (!d || !r) return "";
   const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
@@ -508,6 +514,14 @@ function seasonChart(m) {
     bands += `<rect x="${x0}" y="${T}" width="${Math.max(2, x1 - x0)}" height="${H - T - B}" fill="${col}" opacity="${main ? .13 : .07}" ${flip ? 'stroke="' + col + '" stroke-dasharray="4 4" stroke-opacity=".6"' : ""} rx="4"/>
       <text x="${x0 + 5}" y="${T + (main ? 13 : 29)}" style="font:600 11px var(--body);fill:${col}">${main ? "◀ driver · " : "next · "}${w.side.toLowerCase()} ${w.wins}/15</text>`;
   });
+  // the next two windows after today, however far ahead (display only); drawn when they fall inside this year's chart
+  (s.upcoming || []).forEach((w, i) => {
+    const shown = s.windows.some(v => v.side === w.side && v.s <= w.s + w.len && w.s <= v.s + v.len && ((s.driver && v.start === s.driver.start) || (m.timing && m.timing.flip && m.timing.flip.start === v.start)));
+    if (shown || +w.start.slice(0, 4) > TODAY.getFullYear()) return;
+    const x0 = X(Math.min(n - 1.5, w.s / 2)), x1 = X(Math.min(n - 1, (w.s + w.len) / 2)), col = w.side === "BUY" ? "var(--bull)" : "var(--bear)";
+    bands += `<rect x="${x0}" y="${T}" width="${Math.max(2, x1 - x0)}" height="${H - T - B}" fill="${col}" opacity=".06" stroke="${col}" stroke-dasharray="2 4" stroke-opacity=".5" rx="4"/>
+      <text x="${x0 > W - 110 ? W - R - 4 : x0 + 5}" y="${T + 45 + 16 * i}" text-anchor="${x0 > W - 110 ? "end" : "start"}" style="font:600 11px var(--body);fill:${col};opacity:.85">${i ? "then" : "next"} · ${w.side.toLowerCase()} ${w.wins}/15</text>`;
+  });
   const tx = X(sp.mc - 1);
   const months = "JFMAMJJASOND".split("").map((c, i) => `<text x="${X((i + .5) / 12 * (n - 1))}" y="${H - 8}" text-anchor="middle">${c}</text>`).join("");
   const tv = [0, 1, 2, 3, 4].map(j => lo + (hi - lo) * (j + .5) / 5);
@@ -525,7 +539,7 @@ function seasonChart(m) {
     <circle cx="${cur[cur.length - 1][0]}" cy="${cur[cur.length - 1][1]}" r="5" fill="var(--sun)" class="pulse"/>
     <circle cx="${cur[cur.length - 1][0]}" cy="${cur[cur.length - 1][1]}" r="4" fill="var(--sun)" stroke="var(--card)" stroke-width="2"/>
     <rect class="hit" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/></svg><div class="tip"></div></div>
-    ${windowStats(m)}
+    ${windowStats(m)}${upcomingNote(m)}
     <div class="legend"><span><i style="background:var(--ink)"></i>${TODAY.getFullYear()} price</span><span><i style="background:${pcol}"></i>usual path to the window's end</span><span><i style="background:var(--mute)"></i>15-yr avg</span><span><i style="background:var(--flat)"></i>10-yr</span><span><i style="background:var(--line)"></i>5-yr</span><span><i style="background:var(--sun)"></i>today</span>${sp.k > 1 ? `<span>seasonal paths stretched ×${sp.k.toFixed(1)} to compare shape; the numbers above are real</span>` : ""}</div>`;
 }
 function cotChart(m, grp, lb) {

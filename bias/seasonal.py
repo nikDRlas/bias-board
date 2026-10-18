@@ -57,7 +57,7 @@ class Calendar:
         ys = list(range(Y - ny, Y))
         return ys if all(y in self.first for y in ys) else None
 
-    def scan(self, t, ny=NY, lens=None):
+    def scan(self, t, ny=NY, lens=None, starts=None):
         """win counts for every (start, length) around t, from the `ny` years before t's year"""
         lens = LEN_TD if lens is None else lens
         Y = t.year
@@ -65,7 +65,7 @@ class Calendar:
         now = self.td(t)
         if ys is None or now < 0:
             return None
-        S = now + START_TD
+        S = now + START_TD if starts is None else starts
         up = np.zeros((len(S), len(lens)))
         s1 = np.zeros_like(up)
         s2 = np.zeros_like(up)
@@ -180,6 +180,40 @@ class Calendar:
                                              "wins": first["wins"]}}
             return [lead, first] + others, "driver"
         return [drv] + rest, "driver"
+
+    def upcoming(self, t, n=2):
+        """for the chart: the next `n` windows that start after t, however far ahead (as long as all 15 past years
+        cover them), one after the other. Display only, not part of the verdict."""
+        Y, now = t.year, self.td(t)
+        ny, gate = LOOKBACKS[0]
+        if Y - 1 not in self.first or now < 0:
+            return []
+        last = self.n - 1 - self.first[Y - 1][0] - int(LEN_TD.max())   # the latest past year must cover the window
+        starts = np.arange(now + 1, max(now + 2, last))
+        sc = self.scan(t, ny, starts=starts)
+        if sc is None:
+            return []
+        vol = self.day_vol(t)
+        ok = sc["wins"] >= gate
+        cand = [{"s": int(starts[i]), "len": int(LEN_TD[j]), "side": "BUY" if sc["up"][i, j] > ny / 2 else "SELL",
+                 "wins": int(sc["wins"][i, j]), "t": float(sc["t"][i, j]), "mu": float(sc["mu"][i, j])}
+                for i, j in zip(*np.nonzero(ok))]
+        out, cursor = [], now
+        while len(out) < n:
+            rest = [w for w in cand if w["s"] > cursor]
+            if not rest:
+                break
+            s0 = min(w["s"] for w in rest)
+            best = max((w for w in rest if w["s"] <= s0 + 5), key=lambda w: (w["wins"], w["t"]))
+            st = self.stats(Y, best["s"], best["len"], best["side"], ny)
+            move = abs(best["mu"]) / vol if vol else None
+            out.append({"side": best["side"], "wins": best["wins"], "n": ny, "s": best["s"], "len": best["len"],
+                        "avg": st["avg"], "start": str(self.date(Y, best["s"]).date()),
+                        "end": str(self.date(Y, best["s"] + best["len"]).date()),
+                        "move_days": round(move, 1) if move else None,
+                        "small": bool(move is not None and move < SOLO_MIN_MOVE)})
+            cursor = best["s"] + best["len"]
+        return out
 
     def driver(self, t):
         """for the tests: the driver window as of t, 'cancel', or None"""

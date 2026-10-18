@@ -149,7 +149,7 @@ def paths(p):
 
 def season_block(p, cal, used):
     wins, status = used
-    out = {"windows": wins, **paths(p), "_cal": cal}
+    out = {"windows": wins, **paths(p), "_cal": cal, "upcoming": cal.upcoming(TODAY)}
     sh = out["shape"]
     out["shape_read"] = ("tracking closely" if sh >= .5 else "loosely tracking" if sh >= .3 else
                          "off-pattern" if sh >= 0 else "counter-seasonal")
