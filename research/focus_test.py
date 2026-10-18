@@ -49,6 +49,9 @@ def cot_cases(p, lc, rd, lit):
 
 if __name__ == "__main__":
     end = C.TODAY - pd.Timedelta(days=1)
+    import macro as MC
+    _cal = MC.load_calendar()
+    MACRO = {k: MC.market_scores(_cal, k, pd.date_range("2015-06-01", C.TODAY))["total"] for k in VD.US_DRIVEN}
     rows = []
     for k in C.M:
         p = C.load_px(k)
@@ -65,6 +68,12 @@ if __name__ == "__main__":
             if cot in VD.SIDES and not C.cot_big_enough(k, cot, t):
                 cot = "NEUTRAL"
             v, basis, (ws, status) = VD.board_read(cot, cal, t, rd)
+            if v in VD.SIDES:
+                ms = None
+                if k in MACRO:
+                    s_ = MACRO[k][MACRO[k].index <= t]
+                    ms = int(np.sign(s_.iloc[-1])) if len(s_) else None
+                v, basis = VD.final_read(k, v, basis, t, p, cal, ws, rd, lit, ms)
             d = ws[0] if status == "driver" else None
             past = cal.past(t.year, d, rd) if d else None
             if v not in VD.SIDES:

@@ -349,7 +349,9 @@ function liveRecord() {
     <p class="note" style="margin:8px 0 0">Every verdict saved as given on its Saturday and scored when its exit passes (calendar: window end; COT: one week after the signal goes dark), one position per market at a time; price moves shown as + up / − down. The replay numbers elsewhere were tested on 2019–26; this record is the board on weeks its rules have never seen.</p>`;
 }
 function focusStrip() {
-  const F = D.focus; if (!F || !F.keys.length) { $("#focus").hidden = true; return; }
+  // switched off: with the board's final rules the focus picks no longer beat the other verdicts
+  // (research/focus_test.py: 58.5% won, +0.93% vs 59.1%, +0.97% for all verdicts)
+  const F = D.focus; if (true || !F || !F.keys.length) { $("#focus").hidden = true; return; }
   const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
   const card = (k, i) => { const m = M[k], p0 = m.profile, bw = bestPx(p0.mfe, p0.mae, m.verdict), f = {...p0, end: raw(p0.end, m.verdict), mfe: bw[0], mae: bw[1]};
     return `<button class="fcard" data-k="${k}"><span class="frank">${i + 1}</span>
@@ -376,7 +378,7 @@ function boards() {
     const m = M[k];
     return `<button class="tile" id="t-${k}" data-k="${k}" aria-current="false">${ring(m)}
       <div><div class="nm">${esc(m.name)}</div><div class="tk">${k}</div></div>
-      <div class="row">${pill(m.verdict)}${setupBadge(m)}${doneBadge(m)}${macroBadge(m)}</div>
+      <div class="row">${pill(m.verdict)}${setupBadge(m)}</div>
       <div class="basis">${basisIcon(m)}${esc(m.basis)}</div>${spark(m)}</button>`;
   }).join("") + `</div>`).join("");
   document.querySelectorAll(".tile").forEach(b => b.addEventListener("click", () => select(b.dataset.k, true)));
@@ -409,6 +411,18 @@ function turnNote(d) {
   return "";
 }
 function why(m) {
+  const pre = m.pre;
+  if (pre && m.basis === "Macro against") {
+    const x = m.macro || {};
+    return `No bias. The board would read ${pre.verdict.toLowerCase()} (${esc(pre.basis.toLowerCase())}), but the US macro score (${x.total > 0 ? "+" : ""}${x.total}) points the other way. On US indices, gold and silver such verdicts made about nothing above simply holding the market (2016–26), while those with macro agreeing won about 78%. So there is no edge to take this week.`;
+  }
+  if (pre && m.basis === "Move done") {
+    const d = m.done || {}, x = d.cot && d.cot.state === "done" ? d.cot : d.seas;
+    return `No bias. The board would read ${pre.verdict.toLowerCase()} (${esc(pre.basis.toLowerCase())}), but this setup has already made ${x ? `${x.share}% of its usual ${d.cot && d.cot.state === "done" ? "winning " : ""}move` : "its usual move"}. In the test, setups past that point had nothing left (calendar windows −0.17% afterwards, COT setups +0.04%).`;
+  }
+  return whyMain(m);
+}
+function whyMain(m) {
   const c = m.cot, s = m.seas, d = s.driver;
   const win = d ? `${title(d.side)} window ${fmtD(d.start)}–${fmtD(d.end)}, ${d.wins} of 15 years` : "";
   const g = m.groups === 2 ? "commercials, with retail and funds on the other side" : "commercials, with retail or funds on the other side";
@@ -738,6 +752,8 @@ function pastYears(m) {
 function chartTag(m, which) {
   const b = m.basis, drive = '<span class="tag">drives the bias</span>', off = t => `<span class="tag ctx">${t}</span>`;
   if (b.startsWith("Conflict")) return '<span class="tag conflict">in conflict · no bias</span>';
+  if (b === "Macro against") return off(which === "macro" ? "cancels the bias" : "bias cancelled by US macro");
+  if (b === "Move done") return off("usual move already made");
   if (b === "COT + calendar") return drive;
   if (which === "seas" && m.seas.small_only) return off("too small to carry a bias alone");
   if (which === "cot" && m.cot.small_record) return off("record too small · not used");
@@ -799,7 +815,7 @@ function testedSection() {
       const c = o => o ? `<td class="n">${o.n}</td><td class="n">${o.win}%</td><td class="n">${sgn(o.avg)}%</td>` : `<td class="n">–</td><td class="n">–</td><td class="n">–</td>`;
       return `<tr><th>${esc(M[k].name)}</th>${c(a)}${c(b)}</tr>`; }).join("")}</tbody></table></div>
     <p class="note">Per market the samples are small (a few dozen trades over 7–10 years), so single rows swing a lot; the pooled rows above are the more reliable read.</p>
-    <p class="note">How the board uses this: each engine may carry the bias alone, but a seasonal window that carries it alone (no COT agreeing) must usually move at least 3 normal daily moves of that market (tested: verdicts 57% vs 54% without it); a window that agrees with COT counts at any size. A COT signal only counts if its past setups on that market usually moved at least 0.5 normal daily moves in its direction (tested on a grid of thresholds: chosen on 2019–22, confirmed on 2023–26, 63.5% won vs 59.5% without it); on the US indices only bullish COT signals count. In a contradiction the calendar stands if the window already paid in at least 2 of 3 past years when COT was against it (at least 3 such years); otherwise there is no bias. Tested, that split made no difference: the calendar won 50.5% when the window had played out against COT and 50.0% when it had not. In contradictions the calendar won about half the time and COT only slightly more, so neither earns the right to overrule the other. Both edges are small: the COT read, held while lit, wins about 55-60% with a small average and is only clearly above zero pooled across all markets; the seasonal windows have not beaten a coin flip out of sample.</p></details>`;
+    <p class="note">How the board uses this: each engine may carry the bias alone, but a seasonal window that carries it alone (no COT agreeing) must usually move at least 3 normal daily moves of that market (tested: verdicts 57% vs 54% without it); a window that agrees with COT counts at any size. A COT signal only counts if its past setups on that market usually moved at least 0.5 normal daily moves in its direction (tested on a grid of thresholds: chosen on 2019–22, confirmed on 2023–26, 63.5% won vs 59.5% without it); on the US indices only bullish COT signals count. Finally, a bias becomes no bias when nothing is left in it: on US indices, gold and silver when the US macro score points the other way, and anywhere when the setup has already made its usual move. In a contradiction the calendar stands if the window already paid in at least 2 of 3 past years when COT was against it (at least 3 such years); otherwise there is no bias. Tested, that split made no difference: the calendar won 50.5% when the window had played out against COT and 50.0% when it had not. In contradictions the calendar won about half the time and COT only slightly more, so neither earns the right to overrule the other. Both edges are small: the COT read, held while lit, wins about 55-60% with a small average and is only clearly above zero pooled across all markets; the seasonal windows have not beaten a coin flip out of sample.</p></details>`;
 }
 function render(k) {
   const m = M[k], P = $("#panel");
@@ -809,7 +825,7 @@ function render(k) {
   const extra = [];
   P.style.animation = "none"; void P.offsetWidth; P.style.animation = "";
   P.innerHTML = `<div class="hero"><div><h1>${esc(m.name)}</h1><div class="sub">${k} · ${m.sector} · ${pill(m.verdict)} <span style="margin-left:6px">${m.basis}</span></div>
-      <p class="why">${why(m)}${smallRecord(m)}${m.macro && m.macro.rel && m.verdict !== "STAND ASIDE" ? ` US macro (score ${m.macro.total > 0 ? "+" : ""}${m.macro.total}) is ${m.macro.rel === "agrees" ? "<b>with</b>" : m.macro.rel === "against" ? "<b>against</b>" : "neutral on"} this bias${m.macro.rel === "against" ? ", which historically made such biases on US indices, gold and silver much weaker" : m.macro.rel === "agrees" ? ", which historically made them clearly stronger" : ""}.` : ""}</p>${testedHero(m)}</div>${dial(m)}</div>${banner(m)}
+      <p class="why">${why(m)}${smallRecord(m)}${m.macro && m.macro.rel === "agrees" && m.verdict !== "STAND ASIDE" ? ` US macro (score ${m.macro.total > 0 ? "+" : ""}${m.macro.total}) is ${m.macro.rel === "agrees" ? "<b>with</b>" : m.macro.rel === "against" ? "<b>against</b>" : "neutral on"} this bias${m.macro.rel === "against" ? ", which historically made such biases on US indices, gold and silver much weaker" : m.macro.rel === "agrees" ? ", which historically made them clearly stronger" : ""}.` : ""}</p>${testedHero(m)}</div>${dial(m)}</div>${banner(m)}
     <div class="engines"><div class="eng ${cEss ? "lead" : ""}">${ICON.cot.replace("<svg", '<svg width="16" height="16"')}<span class="k">COT</span><b>${c_read(m)}</b>${m.cot.conv}</div>
       <div class="eng ${sEss ? "lead" : ""}">${ICON.cal.replace("<svg", '<svg width="16" height="16"')}<span class="k">Seasonality</span><b>${title(m.seas.read)}</b>${m.seas.strength ? title(m.seas.strength) : "–"}</div></div>
     <div class="charts">${cards.filter(Boolean).join("")}</div>${extra.join("")}
@@ -915,7 +931,7 @@ $("#v-quant").addEventListener("click", () => setView("quant", true));
 function filt(f) {
   document.querySelectorAll(".filters .chip").forEach(b => b.setAttribute("aria-pressed", b.id === "f-" + f));
   document.querySelectorAll(".tile").forEach(t => {
-    const m = M[t.dataset.k], on = f === "all" || m.verdict === f || (f === "hot" && m.timing && (m.timing.closing || m.timing.flip)) || (f === "both" && m.basis === "COT + calendar") || (f === "done" && m.done && m.done.flag);
+    const m = M[t.dataset.k], on = f === "all" || m.verdict === f || (f === "hot" && m.timing && (m.timing.closing || m.timing.flip)) || (f === "both" && m.basis === "COT + calendar") || (f === "done" && m.basis === "Move done");
     t.classList.toggle("dim", !on);
   });
 }

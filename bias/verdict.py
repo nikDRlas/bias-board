@@ -7,6 +7,8 @@
   where COT was against it (>= 3 such years)   -> calendar       "Calendar over COT"
   they contradict otherwise              -> no bias              "Conflict · COT relevant"
 """
+import numpy as np, pandas as pd
+
 SIDES = ("BULLISH", "BEARISH")
 
 
@@ -53,3 +55,39 @@ def horizon(basis):
     """how long a verdict is held in the tests: COT-led verdicts while the COT signal stays lit + 1 week (core.cot_exit),
     calendar-led ones to the window end"""
     return "window" if basis in ("Calendar only", "Calendar over COT") else "lit"
+
+
+US_DRIVEN = ("ES", "NQ", "YM", "GC", "SI")
+COT_DONE_AT = 1.5          # COT setup done at 150% of its usual winning move (research/cot_done_yardstick_test.py)
+
+
+def final_read(k, v, basis, t, p, cal, ws, rd, lit, macro_sign=None):
+    """the validated 'nothing left' situations turn a bias into no bias:
+      macro against   on US indices, gold and silver the US macro score points the other way (or is flat):
+                      such verdicts made about nothing above holding the market (research/tools_macro_align.py)
+      move done       the calendar window already made its usual move this year, or the COT setup already made 150%
+                      of its usual winning move (research/move_done_test.py, research/cot_done_yardstick_test.py)"""
+    if v not in SIDES:
+        return v, basis
+    sg = 1 if v == "BULLISH" else -1
+    if k in US_DRIVEN and macro_sign is not None and macro_sign != sg:
+        return "STAND ASIDE", "Macro against"
+    if horizon(basis) == "window":
+        d = ws[0]
+        r = cal.remaining(t, d)
+        if r and r["started"] and r["so_far"] is not None and sg * d["avg"] > 0 and sg * r["so_far"] >= sg * d["avg"]:
+            return "STAND ASIDE", "Move done"
+    else:
+        import core as C
+        i = rd.dates.searchsorted(t - pd.Timedelta(days=3), "right") - 1
+        if 0 <= i < len(lit) and lit[i] == v:
+            j = C.lit_start(lit, i)
+            a = p.index.searchsorted(rd.dates[j] + pd.Timedelta(days=3))
+            c = p.index.searchsorted(t, "right") - 1
+            cs, _ = C.cot_cases(k)
+            wins = [x["end"] for x in cs if x["side"] == v and x["exit"] <= t and x["end"] > 0]
+            if wins and c > a:
+                so_far = 100 * sg * (p.iloc[c] / p.iloc[a] - 1)
+                if so_far >= COT_DONE_AT * float(np.mean(wins)):
+                    return "STAND ASIDE", "Move done"
+    return v, basis

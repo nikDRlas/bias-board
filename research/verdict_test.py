@@ -26,12 +26,19 @@ SECTOR = lambda k: {"FX": "Currencies", "Indices": "Indices", "Agriculture": "Ag
 LB_CFG = {"15": [(15, 12)], "10": [(10, 8)], "15,10": [(15, 12), (10, 8)]}[os.environ.get("SEAS_LB", os.environ.get("SEAS_YEARS", "15"))]
 SKIP_SLOW = os.environ.get("SKIP_SLOW") == "1"
 OUT = os.environ.get("OUT", "verdict.json")
+GATES = os.environ.get("GATES", "macro,done")          # the final 'nothing left' rules (bias/verdict.py final_read)
 speed_series, speed_of = C.speed_series, C.speed_of
 LONG_LENS = np.arange(31, 64)
 
 
 if __name__ == "__main__":
     SS.LOOKBACKS = LB_CFG
+    MACRO = {}
+    if "macro" in GATES:
+        import macro as MC
+        _cal = MC.load_calendar()
+        _days = pd.date_range("2015-06-01", C.TODAY)
+        MACRO = {k: MC.market_scores(_cal, k, _days)["total"] for k in VD.US_DRIVEN}
     end = C.TODAY - pd.Timedelta(days=1)
     rows = []
     for k in C.M:
@@ -51,6 +58,15 @@ if __name__ == "__main__":
             if cot in VD.SIDES and not C.cot_big_enough(k, cot, t):
                 cot = "NEUTRAL"
             v, basis, (ws, status) = VD.board_read(cot, cal, t, rd)
+            if v in VD.SIDES and GATES:
+                ms = None
+                if "macro" in GATES and k in MACRO:
+                    s_ = MACRO[k][MACRO[k].index <= t]
+                    ms = int(np.sign(s_.iloc[-1])) if len(s_) else None
+                v2, b2 = VD.final_read(k, v, basis, t, p, cal, ws, rd, lit, ms)
+                if b2 == "Move done" and "done" not in GATES:
+                    v2, b2 = v, basis
+                v, basis = v2, b2
             if v not in VD.SIDES:
                 continue
             if VD.horizon(basis) == "window":
@@ -81,7 +97,7 @@ if __name__ == "__main__":
            "by_cell": summary([dict(r, c=r["basis"] + " | " + r["sector"]) for r in rows], "c"),
            "by_sector": summary(rows, "sector"),
            "by_basis_speed": summary([dict(r, bs=r["basis"] + " | " + r["speed"]) for r in rows if r["speed"]], "bs"),
-           "config": {"seas_lb": os.environ.get("SEAS_LB", "15"), "skip_slow": SKIP_SLOW, "solo_min_move": SS.SOLO_MIN_MOVE}}
+           "config": {"seas_lb": os.environ.get("SEAS_LB", "15"), "skip_slow": SKIP_SLOW, "solo_min_move": SS.SOLO_MIN_MOVE, "gates": GATES}}
     os.makedirs(os.path.join(HERE, "..", "data", "research"), exist_ok=True)
     json.dump({**out, "trades": rows}, open(os.path.join(HERE, "..", "data", "research", OUT), "w"), indent=1)
     for key in ("first", "last", "all", "by_basis", "by_sector"):

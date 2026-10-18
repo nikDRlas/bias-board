@@ -844,6 +844,12 @@ if __name__ == "__main__":
         cal0 = SS.Calendar(p)
         spd0 = cot_speed(k, reader, reader.read(TODAY))
         v, why, groups, used = combine(k, reader, cal0, spd0["speed"] if spd0 else None)
+        pre_v, pre_why = v, why                       # the read before the final 'nothing left' rules
+        msign = None
+        if mcal is not None and k in VD.US_DRIVEN:
+            mt = MC.market_scores(mcal, k, pd.date_range(TODAY - pd.Timedelta(days=400), TODAY))["total"]
+            msign = int(np.sign(mt.iloc[-1]))
+        v, why = VD.final_read(k, v, why, TODAY, p, cal0, used[0], reader, R.lit_sides(reader, R.speed_series(k)), msign)
         small_only = False
         if used[1] != "driver":                          # nothing big enough to stand alone: still show the windows
             every = cal0.windows(TODAY, min_move=0)
@@ -897,7 +903,8 @@ if __name__ == "__main__":
                   "profile": setup_profile(k, p, cal_obj, reader, s, why, v),
                   "cycle": presidential_cycle(p) if k in ("ES", "NQ", "YM") else None,
                   "done": move_done(c, s, why),
-                  "macro": MC.board_macro(mcal, k, TODAY, v if v in VD.SIDES else None) if mcal is not None else None,
+                  "macro": MC.board_macro(mcal, k, TODAY, pre_v if pre_v in VD.SIDES else None) if mcal is not None else None,
+                  "pre": {"verdict": pre_v, "basis": pre_why} if why in ("Macro against", "Move done") else None,
                   "tested": tested_for(k, why, groups, tested)}
         d = s.get("driver")
         print(f"{k:3s} COT {c['read']:11s} {c['conv']:8s} | seas {s['read']:15s} "
