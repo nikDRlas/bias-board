@@ -271,7 +271,8 @@ class Calendar:
             best = max((w for w in rest if w["s"] <= s0 + 5), key=lambda w: (w["wins"], w["t"]))
             st = self.stats(Y, best["s"], best["len"], best["side"], ny)
             move = abs(best["mu"]) / vol if vol else None
-            out.append({"side": best["side"], "wins": best["wins"], "n": ny, "s": best["s"], "len": best["len"],
+            out.append({**{k2: v2 for k2, v2 in st.items() if k2 not in ("wins", "n")},
+                        "side": best["side"], "wins": best["wins"], "n": ny, "ny": ny, "s": best["s"], "len": best["len"],
                         "avg": st["avg"], "start": str(self.date(Y, best["s"]).date()),
                         "end": str(self.date(Y, best["s"] + best["len"]).date()),
                         "move_days": round(move, 1) if move else None,

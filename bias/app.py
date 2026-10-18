@@ -514,13 +514,15 @@ function seasonChart(m) {
     bands += `<rect x="${x0}" y="${T}" width="${Math.max(2, x1 - x0)}" height="${H - T - B}" fill="${col}" opacity="${main ? .13 : .07}" ${flip ? 'stroke="' + col + '" stroke-dasharray="4 4" stroke-opacity=".6"' : ""} rx="4"/>
       <text x="${x0 + 5}" y="${T + (main ? 13 : 29)}" style="font:600 11px var(--body);fill:${col}">${main ? "◀ driver · " : "next · "}${w.side.toLowerCase()} ${w.wins}/15</text>`;
   });
-  // the next two windows after today, however far ahead (display only); drawn when they fall inside this year's chart
-  (s.upcoming || []).forEach((w, i) => {
-    const shown = s.windows.some(v => v.side === w.side && v.s <= w.s + w.len && w.s <= v.s + v.len && ((s.driver && v.start === s.driver.start) || (m.timing && m.timing.flip && m.timing.flip.start === v.start)));
-    if (shown || +w.start.slice(0, 4) > TODAY.getFullYear()) return;
+  // every other window running now or coming, however far ahead (display only), lighter and dotted
+  let li = 0;
+  (s.table || []).forEach(w => {
+    const isMain = s.windows.some(v => v.side === w.side && v.start === w.start && ((s.driver && v.start === s.driver.start && !s.small_only) || (m.timing && m.timing.flip && m.timing.flip.start === v.start)));
+    if (isMain || +w.start.slice(0, 4) > TODAY.getFullYear()) return;
     const x0 = X(Math.min(n - 1.5, w.s / 2)), x1 = X(Math.min(n - 1, (w.s + w.len) / 2)), col = w.side === "BUY" ? "var(--bull)" : "var(--bear)";
+    const lab = `${w.days_to <= 0 ? "running" : "in " + w.days_to + "d"} · ${w.side.toLowerCase()} ${w.wins}/15${w.small ? " · small" : ""}`;
     bands += `<rect x="${x0}" y="${T}" width="${Math.max(2, x1 - x0)}" height="${H - T - B}" fill="${col}" opacity=".06" stroke="${col}" stroke-dasharray="2 4" stroke-opacity=".5" rx="4"/>
-      <text x="${x0 > W - 110 ? W - R - 4 : x0 + 5}" y="${T + 45 + 16 * i}" text-anchor="${x0 > W - 110 ? "end" : "start"}" style="font:600 11px var(--body);fill:${col};opacity:.85">${i ? "then" : "next"} · ${w.side.toLowerCase()} ${w.wins}/15</text>`;
+      <text x="${x0 > W - 130 ? W - R - 4 : x0 + 5}" y="${T + 45 + 16 * (li++ % 4)}" text-anchor="${x0 > W - 130 ? "end" : "start"}" style="font:600 11px var(--body);fill:${col};opacity:.85">${lab}</text>`;
   });
   const tx = X(sp.mc - 1);
   const months = "JFMAMJJASOND".split("").map((c, i) => `<text x="${X((i + .5) / 12 * (n - 1))}" y="${H - 8}" text-anchor="middle">${c}</text>`).join("");
@@ -539,7 +541,7 @@ function seasonChart(m) {
     <circle cx="${cur[cur.length - 1][0]}" cy="${cur[cur.length - 1][1]}" r="5" fill="var(--sun)" class="pulse"/>
     <circle cx="${cur[cur.length - 1][0]}" cy="${cur[cur.length - 1][1]}" r="4" fill="var(--sun)" stroke="var(--card)" stroke-width="2"/>
     <rect class="hit" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/></svg><div class="tip"></div></div>
-    ${windowStats(m)}${upcomingNote(m)}
+    ${windowStats(m)}
     <div class="legend"><span><i style="background:var(--ink)"></i>${TODAY.getFullYear()} price</span><span><i style="background:${pcol}"></i>usual path to the window's end</span><span><i style="background:var(--mute)"></i>15-yr avg</span><span><i style="background:var(--flat)"></i>10-yr</span><span><i style="background:var(--line)"></i>5-yr</span><span><i style="background:var(--sun)"></i>today</span>${sp.k > 1 ? `<span>seasonal paths stretched ×${sp.k.toFixed(1)} to compare shape; the numbers above are real</span>` : ""}</div>`;
 }
 function cotChart(m, grp, lb) {
@@ -630,11 +632,15 @@ function trackNow(m) {
     `</tbody></table></div><p class="note">Every past time since the price history starts that the same picture appeared on that lookback (after at least 8 weeks without it), measured from the first close after the Friday release: after 4 weeks, and held while the picture lasts, out one week after the last report showing it (how the board holds COT). Direction: follow the commercials when they are at an extreme, otherwise fade retail. Rows marked "not a board signal" have no commercials at an extreme, so the board's COT rule does not use them.</p>`;
 }
 function windowsTbl(m) {
-  const s = m.seas; if (!s.windows.length) return `<p class="note">No seasonal window opens in the −2 to +8 week horizon.</p>`;
+  const s = m.seas, rows = s.table || [];
+  if (!rows.length) return `<p class="note">No seasonal window with 12 of 15 years or better in the coming months.</p>`;
   const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
-  return `<div class="tbl"><table><thead><tr><th>Trade</th><th>Window</th><th>Trading days</th><th>Win ratio</th><th>Avg</th><th>Median</th><th>Annualised</th><th>Best / worst</th><th>Trend removed</th><th>Last 4</th></tr></thead><tbody>` +
-    s.windows.map(w => `<tr><td>${pill(sideV(w.side), title(w.side))}${s.driver && w.start === s.driver.start ? ' <span class="st live">driver</span>' : ""}</td><td>${fmtD(w.start)} – ${fmtD(w.end)}</td><td class="n">${w.len}</td><td class="n">${w.wins} of 15</td><td class="n">${pc(w.avg)}</td><td class="n">${pc(w.median)}</td><td class="n">${w.annual >= 0 ? "+" : ""}${w.annual}%</td><td class="n">${pc(w.best)} / ${pc(w.worst)}</td><td class="n">${w.wins_true} of 15</td><td class="n">${w.rec}/4</td></tr>`).join("") +
-    `</tbody></table></div><p class="note">Seasonax-style statistics over the last 15 years, counted in trading days. Win ratio: years in which price moved the trade's way over the window. Avg, median and annualised are price moves (negative is good for a sell window); best and worst are in the trade's direction. Trend removed: the same count after taking out each year's trend.</p>`;
+  const when = w => w.days_to <= 0 ? `<span class="st live">running</span>` : `in ${w.days_to} trading days`;
+  const role = w => s.driver && w.start === s.driver.start && w.side === s.driver.side && !s.small_only ? `<span class="st live">driver</span>`
+    : w.small ? `<span class="st" title="usual move below 3 normal days: can only back a COT signal">small · ${w.move_days}d</span>` : `<span class="st">${w.move_days}d · can stand alone</span>`;
+  return `<div class="tbl"><table><thead><tr><th>Trade</th><th>Window</th><th>When</th><th>Size</th><th>Trading days</th><th>Win ratio</th><th>Avg</th><th>Median</th><th>Best / worst</th><th>Trend removed</th><th>Last 4</th></tr></thead><tbody>` +
+    rows.map(w => `<tr><td>${pill(sideV(w.side), title(w.side))}</td><td>${fmtD(w.start)} – ${fmtD(w.end)}</td><td>${when(w)}</td><td>${role(w)}</td><td class="n">${w.len}</td><td class="n">${w.wins} of 15</td><td class="n">${pc(w.avg)}</td><td class="n">${w.median != null ? pc(w.median) : "–"}</td><td class="n">${w.best != null ? `${pc(w.best)} / ${pc(w.worst)}` : "–"}</td><td class="n">${w.wins_true != null ? `${w.wins_true} of 15` : "–"}</td><td class="n">${w.rec != null ? `${w.rec}/4` : "–"}</td></tr>`).join("") +
+    `</tbody></table></div><p class="note">Every window with at least 12 of 15 years in its direction that is running now or comes next, however far ahead, counted in trading days over the last 15 years. Size: the usual move in normal daily moves of this market; a window needs at least 3 to carry a bias alone, a smaller one can only back a COT signal pointing the same way. Only the driver is part of this week's verdict. Avg and median are price moves (negative is good for a sell window); best and worst are in the trade's direction; trend removed counts the years after taking out the market's normal drift.</p>`;
 }
 function eventsCard(m) {
   const ev = m.events; if (!ev) return "";
@@ -757,7 +763,7 @@ function render(k) {
       <div class="eng ${sEss ? "lead" : ""}">${ICON.cal.replace("<svg", '<svg width="16" height="16"')}<span class="k">Seasonality</span><b>${title(m.seas.read)}</b>${m.seas.strength ? title(m.seas.strength) : "–"}</div></div>
     <div class="charts">${cards.filter(Boolean).join("")}</div>${extra.join("")}
     <details><summary>Track record<small>the current COT picture, and what it did before</small></summary>${trackNow(m)}</details>
-    ${m.seas.windows.length ? `<details><summary>Windows in play<small>entry −2 to +8 weeks</small></summary>${windowsTbl(m)}<h4 class="note" style="margin-top:12px">Neighbour test</h4>${nbrs(m)}</details>` : ""}
+    <details open><summary>Seasonal windows<small>running now and coming next</small></summary>${windowsTbl(m)}${m.seas.neigh ? `<h4 class="note" style="margin-top:12px">Neighbour test</h4>${nbrs(m)}` : ""}</details>
     <details><summary>Years most like this one<small>analog cross-check</small></summary>${analogs(m)}</details>${testedSection()}`;
   requestAnimationFrame(() => requestAnimationFrame(() => { const n = $("#needle"); if (n) n.style.transform = `rotate(${n.dataset.a}deg)`; }));
   hookTips(P, m); hookCot(m); hookFit(m);

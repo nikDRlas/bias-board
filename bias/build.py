@@ -838,9 +838,22 @@ if __name__ == "__main__":
                 used, small_only = every, True
         s = season_block(p, cal0, used)
         s["small_only"] = small_only
+        vol0 = cal0.day_vol(TODAY)
         if s.get("driver"):
-            vol0 = cal0.day_vol(TODAY)
             s["driver"]["move_days"] = round(abs(s["driver"]["avg"]) / 100 / vol0, 1) if vol0 else None
+        # every window to show, running now or coming, however far ahead (display only): the windows in play of any
+        # size, plus the next ones after them
+        now0 = cal0.td(TODAY)
+        shown = [dict(w) for w in cal0.windows(TODAY, min_move=0)[0]]
+        for u in s.get("upcoming") or []:
+            if not any(u["side"] == w["side"] and u["s"] < w["s"] + w["len"] and w["s"] < u["s"] + u["len"] for w in shown):
+                shown.append(dict(u))
+        for w in shown:
+            w["move_days"] = round(abs(w["avg"]) / 100 / vol0, 1) if vol0 else None
+            w["small"] = bool(w["move_days"] is not None and w["move_days"] < SS.SOLO_MIN_MOVE)
+            w["days_to"] = int(w["s"] - now0)
+            w.pop("years", None)
+        s["table"] = sorted(shown, key=lambda w: w["s"])
         s["past"] = past_years(k, s, reader, p)
         cr = reader.read(TODAY)
         c["index_short_skipped"] = reader.skipped_short     # bearish index COT, not used (research/cot_indices_test.py)
