@@ -559,6 +559,13 @@ function cotChart(m, grp, lb) {
   const years = []; sr.dates.forEach((d, i) => { if (i && d.slice(0, 4) !== sr.dates[i - 1].slice(0, 4)) years.push(`<line x1="${X(i)}" x2="${X(i)}" y1="${T}" y2="${H - B}" stroke-dasharray="2 4"/><text x="${X(i) + 4}" y="${H - 8}">${d.slice(0, 4)}</text>`); });
   const lines = gs.map(g => poly(sr[g].map((v, i) => [X(i), Y(v)]), GC[g], g === grp ? 3 : 1.4, g === grp ? "" : 'opacity=".45"')).join("");
   const last = [X(n - 1), Y(sr[grp][n - 1])];
+  // where the board's live COT signal started (it can be lit on shorter lookbacks long before this one)
+  const lv = c.record && c.record.live;
+  if (lv) {
+    const i = sr.dates.findIndex(x => x >= lv.since);
+    if (i >= 0) marks += `<line x1="${X(i)}" x2="${X(i)}" y1="${T}" y2="${H - B}" stroke="var(--sun)" stroke-width="1.6" stroke-dasharray="3 3"/>
+      <text x="${X(i) - 4}" y="${T + 12}" text-anchor="end" style="font:600 11px var(--body);fill:var(--sun)">signal since ${fmtD(lv.since)}</text>`;
+  }
   return `<div class="chart" data-kind="cot" data-g="${grp}"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Net positions">
     <rect x="${bx}" y="${Y(band[1])}" width="${X(n - 1) - bx}" height="${Math.max(1, Y(band[0]) - Y(band[1]))}" fill="${GC[grp]}" opacity=".08"/>
     <line x1="${bx}" x2="${X(n - 1)}" y1="${Y(band[1])}" y2="${Y(band[1])}" stroke="${GC[grp]}" stroke-dasharray="5 4" stroke-width="1.4"/>
@@ -656,10 +663,16 @@ function analogs(m) {
 
 /* ---------- panel ---------- */
 let state = {k: null, grp: null, lb: null};
+function longestLit(m, g) {
+  // the lit lookback whose extreme has been running the longest (ties: the longer lookback)
+  const rows = m.cot.groups[g].filter(r => r.side);
+  if (!rows.length) return null;
+  return rows.reduce((a, r) => ((r.weeks_in ?? -1) >= (a.weeks_in ?? -1) ? r : a)).lb;
+}
 function defaultCot(m) {
-  const lead = ["comm", "retail"].filter(g => m.cot.info[g].lit).sort((a, b) => m.cot.info[b].lit - m.cot.info[a].lit)[0] || "comm";
-  const lit = m.cot.groups[lead].filter(r => r.side).map(r => r.lb);
-  return {grp: lead, lb: lit.length ? lit[lit.length - 1] : "Multi-yr"};
+  // the board's COT signal follows the commercials, so open on them when they are at an extreme
+  const lead = m.cot.info.comm.lit ? "comm" : ["retail"].filter(g => m.cot.info[g].lit)[0] || "comm";
+  return {grp: lead, lb: longestLit(m, lead) || "Multi-yr"};
 }
 function cotCard(m, essential) {
   const c = m.cot;
@@ -759,7 +772,7 @@ function hookFit(m) {
 const c_read = m => m.cot.read === "STAND ASIDE" ? "Neutral" : title(m.cot.read);
 function hookCot(m) {
   document.querySelectorAll("#panel #cotcard").forEach(card => {
-    card.querySelectorAll("[data-g]").forEach(b => b.addEventListener("click", () => { state.grp = b.dataset.g; const lit = m.cot.groups[state.grp].filter(r => r.side).map(r => r.lb); state.lb = lit.length ? lit[lit.length - 1] : state.lb; refreshCot(m, card); }));
+    card.querySelectorAll("[data-g]").forEach(b => b.addEventListener("click", () => { state.grp = b.dataset.g; state.lb = longestLit(m, state.grp) || state.lb; refreshCot(m, card); }));
     card.querySelectorAll("[data-lb]").forEach(b => b.addEventListener("click", () => { state.lb = b.dataset.lb; refreshCot(m, card); }));
   });
 }
