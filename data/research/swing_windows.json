@@ -1,0 +1,87 @@
+{
+ "scan 12/15 (board)": {
+  "all": {
+   "n": 1118,
+   "win": 57.6,
+   "avg": 0.52,
+   "t": 2.6
+  },
+  "calendar-alone": {
+   "n": 324,
+   "win": 59.6,
+   "avg": 0.72,
+   "t": 1.8
+  },
+  "COT + calendar": {
+   "n": 317,
+   "win": 55.8,
+   "avg": 0.35,
+   "t": 0.82
+  }
+ },
+ "swing 12/15 detrended": {
+  "all": {
+   "n": 959,
+   "win": 57.1,
+   "avg": 0.43,
+   "t": 2.18
+  },
+  "calendar-alone": {
+   "n": 80,
+   "win": 57.5,
+   "avg": 0.07,
+   "t": 0.2
+  },
+  "COT + calendar": {
+   "n": 24,
+   "win": 62.5,
+   "avg": 1.57,
+   "t": 2.82
+  }
+ },
+ "swing 10/15 detrended": {
+  "all": {
+   "n": 1006,
+   "win": 56.1,
+   "avg": 0.4,
+   "t": 2.14
+  },
+  "calendar-alone": {
+   "n": 148,
+   "win": 52.0,
+   "avg": -0.18,
+   "t": -0.58
+  },
+  "COT + calendar": {
+   "n": 76,
+   "win": 57.9,
+   "avg": 1.02,
+   "t": 2.44
+  }
+ },
+ "swing 10/15 raw": {
+  "all": {
+   "n": 994,
+   "win": 55.5,
+   "avg": 0.35,
+   "t": 1.84
+  },
+  "calendar-alone": {
+   "n": 135,
+   "win": 47.4,
+   "avg": -0.32,
+   "t": -1.16
+  },
+  "COT + calendar": {
+   "n": 73,
+   "win": 54.8,
+   "avg": 0.32,
+   "t": 0.84
+  }
+ },
+ "weeks_with_driver_window": {
+  "scan 12/15": 80,
+  "swing 12/15": "6-7",
+  "swing 10/15": "17-18"
+ }
+}

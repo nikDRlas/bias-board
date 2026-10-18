@@ -19,6 +19,12 @@ OPEN_AHEAD = 10                      # a window may start up to 10 trading days 
 # that has to carry the bias ALONE (calendar only, calendar over COT): it has to be worth trading. A window that agrees
 # with COT needs no minimum. Tested: research/verdict_test.py, research/seasonal_config.json (3 = best of 0/1.5/2/3).
 SOLO_MIN_MOVE = float(os.environ.get("SEAS_MIN_MOVE", "3"))
+# how windows are found: "scan" = every start and length (Seasonax-style screener), "swing" = from a turning point of
+# the 15-year average path to the next one (low to high = buy, high to low = sell); research/swing_windows_test.py
+MODE = os.environ.get("SEAS_MODE", "scan")
+SWING = float(os.environ.get("SEAS_SWING", "1.5"))           # a turn = the average path reverses this many normal days
+GATE_OVERRIDE = os.environ.get("SEAS_GATE")
+SWING_DETREND = os.environ.get("SEAS_SWING_DETREND", "0") == "1"   # find turns on the path without its average drift
 
 
 class Calendar:
@@ -112,11 +118,69 @@ class Calendar:
                 "rec": int((dirv[-4:] > 0).sum()),
                 "years": [{"y": y, "r": round(float(v), 2)} for y, v in zip(yrs, dirv)]}
 
+    def swing_cands(self, t, ny, gate, min_move=0.0, lens=None):
+        """windows from one turning point of the average path of the `ny` past years to the next"""
+        lens = LEN_TD if lens is None else lens
+        Y, now = t.year, self.td(t)
+        ys = self._years(Y, ny)
+        if ys is None or now < 0:
+            return []
+        lo = max(0, now + int(START_TD.min()) - 60)
+        hi = now + int(START_TD.max()) + int(lens.max()) + 60
+        if any(self.first[y][0] + hi >= self.n for y in ys):
+            return []
+        P = np.mean([self.lc[self.first[y][0] + lo:self.first[y][0] + hi] - self.lc[self.first[y][0] + lo] for y in ys], axis=0)
+        vol = self.day_vol(t)
+        if SWING_DETREND:                                # remove the 15 years' average daily drift
+            drift = np.mean([self.lc[self.first[y][0] + self.first[y][1] - 1] - self.lc[self.first[y][0]] for y in ys]) / 252
+            P = P - drift * np.arange(len(P))
+        thr = SWING * vol
+        piv, trend, ext, lo_i, hi_i = [], 0, 0, 0, 0
+        for i in range(1, len(P)):
+            if trend == 0:
+                lo_i = i if P[i] < P[lo_i] else lo_i
+                hi_i = i if P[i] > P[hi_i] else hi_i
+                if P[i] - P[lo_i] >= thr:
+                    piv, trend, ext = [lo_i], 1, i
+                elif P[hi_i] - P[i] >= thr:
+                    piv, trend, ext = [hi_i], -1, i
+            elif trend == 1:
+                if P[i] > P[ext]:
+                    ext = i
+                elif P[ext] - P[i] >= thr:
+                    piv.append(ext)
+                    trend, ext = -1, i
+            else:
+                if P[i] < P[ext]:
+                    ext = i
+                elif P[i] - P[ext] >= thr:
+                    piv.append(ext)
+                    trend, ext = 1, i
+        out = []
+        for a, b in zip(piv[:-1], piv[1:]):
+            s0, L = lo + a, b - a
+            if L < lens.min() or L > lens.max() or not (now + START_TD.min() <= s0 <= now + START_TD.max()) or s0 + L <= now + 2:
+                continue
+            r = np.array([self.lc[self.first[y][0] + s0 + L] - self.lc[self.first[y][0] + s0] for y in ys])
+            side = "BUY" if P[b] > P[a] else "SELL"
+            sg = 1 if side == "BUY" else -1
+            w = int((sg * r > 0).sum())
+            mu, sd = float(r.mean()), float(r.std(ddof=1)) or 1e-9
+            if w < gate or (min_move > 0 and abs(mu) < min_move * vol):
+                continue
+            out.append({"side": side, "wins": w, "ny": ny, "share": w / ny, "t": abs(mu) / sd * np.sqrt(ny),
+                        "s": int(s0), "len": int(L)})
+        return out
+
     def windows(self, t, max_picks=4, min_move=0.0, lens=None):
         """the board's windows: driver = best window open now, else best opening within 2 weeks; up to 3 more.
         min_move: only windows whose usual move is at least this many normal daily moves"""
         cand, seen, Y, now = [], set(), t.year, self.td(t)
         for ny, gate in LOOKBACKS:
+            gate = int(GATE_OVERRIDE) if GATE_OVERRIDE else gate
+            if MODE == "swing":
+                cand += self.swing_cands(t, ny, gate, min_move, lens)
+                continue
             sc = self.scan(t, ny, lens)
             if sc is None:
                 continue
