@@ -844,10 +844,21 @@ if __name__ == "__main__":
         # every window to show, running now or coming, however far ahead (display only): the windows in play of any
         # size, plus the next ones after them
         now0 = cal0.td(TODAY)
-        shown = [dict(w) for w in cal0.windows(TODAY, min_move=0)[0]]
-        for u in s.get("upcoming") or []:
-            if not any(u["side"] == w["side"] and u["s"] < w["s"] + w["len"] and w["s"] < u["s"] + u["len"] for w in shown):
-                shown.append(dict(u))
+        pool = [dict(w) for w in cal0.windows(TODAY, min_move=0)[0]] + [dict(u) for u in s.get("upcoming") or []]
+        drv = s.get("driver")
+        is_drv = lambda w: bool(drv) and w["start"] == drv["start"] and w["side"] == drv["side"]
+        def clash(a, b):
+            ov = min(a["s"] + a["len"], b["s"] + b["len"]) - max(a["s"], b["s"])
+            return ov > 0 and (a["side"] == b["side"] or ov > 0.5 * min(a["len"], b["len"]))
+        # one rule for the whole list: the current driver first, then the strongest windows (most years, then most
+        # consistent), skipping any that overlap a chosen one in the same direction (or by more than half)
+        shown = [w for w in pool if is_drv(w)][:1]
+        for w in sorted(pool, key=lambda w: (-w["wins"], -w.get("t", 0))):
+            if is_drv(w):
+                continue
+            # the driver never hides a stronger window over the same days
+            if not any(clash(w, q) for q in shown if not (is_drv(q) and w["wins"] > q["wins"])):
+                shown.append(w)
         for w in shown:
             w["move_days"] = round(abs(w["avg"]) / 100 / vol0, 1) if vol0 else None
             w["small"] = bool(w["move_days"] is not None and w["move_days"] < SS.SOLO_MIN_MOVE)

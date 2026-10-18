@@ -245,15 +245,16 @@ class Calendar:
             return [lead, first] + others, "driver"
         return [drv] + rest, "driver"
 
-    def upcoming(self, t, n=2):
-        """for the chart: the next `n` windows that start after t, however far ahead (as long as all 15 past years
-        cover them), one after the other. Display only, not part of the verdict."""
+    def upcoming(self, t, n=50, ahead=90):
+        """for the chart and table: every window starting within `ahead` trading days after t (as far as all 15 past
+        years cover it), strongest first (most years, then most consistent), skipping windows that overlap one
+        already listed in the same direction or by more than half. Display only, not part of the verdict."""
         Y, now = t.year, self.td(t)
         ny, gate = LOOKBACKS[0]
         if Y - 1 not in self.first or now < 0:
             return []
         last = self.n - 1 - self.first[Y - 1][0] - int(LEN_TD.max())   # the latest past year must cover the window
-        starts = np.arange(now + 1, max(now + 2, last))
+        starts = np.arange(now + 1, max(now + 2, min(last, now + ahead + 1)))
         sc = self.scan(t, ny, starts=starts)
         if sc is None:
             return []
@@ -262,22 +263,26 @@ class Calendar:
         cand = [{"s": int(starts[i]), "len": int(LEN_TD[j]), "side": "BUY" if sc["up"][i, j] > ny / 2 else "SELL",
                  "wins": int(sc["wins"][i, j]), "t": float(sc["t"][i, j]), "mu": float(sc["mu"][i, j])}
                 for i, j in zip(*np.nonzero(ok))]
-        out, cursor = [], now
-        while len(out) < n:
-            rest = [w for w in cand if w["s"] > cursor]
-            if not rest:
+        cand.sort(key=lambda w: (-w["wins"], -w["t"]))
+        picks = []
+        for w in cand:
+            if any(min(w["s"] + w["len"], q["s"] + q["len"]) - max(w["s"], q["s"]) > 0 and
+                   (q["side"] == w["side"] or min(w["s"] + w["len"], q["s"] + q["len"]) - max(w["s"], q["s"]) > 0.5 * min(w["len"], q["len"]))
+                   for q in picks):
+                continue
+            picks.append(w)
+            if len(picks) == n:
                 break
-            s0 = min(w["s"] for w in rest)
-            best = max((w for w in rest if w["s"] <= s0 + 5), key=lambda w: (w["wins"], w["t"]))
+        out = []
+        for best in sorted(picks, key=lambda w: w["s"]):
             st = self.stats(Y, best["s"], best["len"], best["side"], ny)
             move = abs(best["mu"]) / vol if vol else None
             out.append({**{k2: v2 for k2, v2 in st.items() if k2 not in ("wins", "n")},
                         "side": best["side"], "wins": best["wins"], "n": ny, "ny": ny, "s": best["s"], "len": best["len"],
-                        "avg": st["avg"], "start": str(self.date(Y, best["s"]).date()),
+                        "t": round(best["t"], 2), "avg": st["avg"], "start": str(self.date(Y, best["s"]).date()),
                         "end": str(self.date(Y, best["s"] + best["len"]).date()),
                         "move_days": round(move, 1) if move else None,
                         "small": bool(move is not None and move < SOLO_MIN_MOVE)})
-            cursor = best["s"] + best["len"]
         return out
 
     def driver(self, t):
