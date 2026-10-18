@@ -27,6 +27,7 @@ LB_CFG = {"15": [(15, 12)], "10": [(10, 8)], "15,10": [(15, 12), (10, 8)]}[os.en
 SKIP_SLOW = os.environ.get("SKIP_SLOW") == "1"
 OUT = os.environ.get("OUT", "verdict.json")
 speed_series, speed_of = C.speed_series, C.speed_of
+LONG_LENS = np.arange(31, 64)
 
 
 if __name__ == "__main__":
@@ -59,8 +60,17 @@ if __name__ == "__main__":
                 x = ret(p, t + pd.Timedelta(days=1), ex, v, C.COT_REF_DAYS)
             if not x or pd.Timestamp(x["exit"]) > end:
                 continue
+            opp = {}
+            if basis == "COT only":
+                # calendar windows pointing against COT that the rule ignored: up to 30 days but too small to stand alone,
+                # and longer ones (31-63 days) the board does not scan
+                for nm, lens in (("opp_short", None), ("opp_long", LONG_LENS)):
+                    w2, st2 = cal.windows(t, min_move=0, lens=lens)
+                    opp[nm] = bool(st2 == "driver" and ("BULLISH" if w2[0]["side"] == "BUY" else "BEARISH") != v)
+                    if opp[nm]:
+                        opp[nm + "_move"] = round(abs(w2[0]["avg"]) / 100 / cal.day_vol(t), 2)
             rows.append({"m": k, "t": str(t.date()), "v": v, "basis": basis, "sector": SECTOR(k),
-                         "speed": spd if basis.startswith("COT") or basis == "Calendar over COT" else None, **x})
+                         "speed": spd if basis.startswith("COT") or basis == "Calendar over COT" else None, **opp, **x})
             busy = pd.Timestamp(x["exit"])
         print(k, sum(r["m"] == k for r in rows), flush=True)
     out = {"first": min(r["t"] for r in rows), "last": max(r["exit"] for r in rows),

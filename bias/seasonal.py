@@ -57,22 +57,23 @@ class Calendar:
         ys = list(range(Y - ny, Y))
         return ys if all(y in self.first for y in ys) else None
 
-    def scan(self, t, ny=NY):
+    def scan(self, t, ny=NY, lens=None):
         """win counts for every (start, length) around t, from the `ny` years before t's year"""
+        lens = LEN_TD if lens is None else lens
         Y = t.year
         ys = self._years(Y, ny)
         now = self.td(t)
         if ys is None or now < 0:
             return None
         S = now + START_TD
-        up = np.zeros((len(S), len(LEN_TD)))
+        up = np.zeros((len(S), len(lens)))
         s1 = np.zeros_like(up)
         s2 = np.zeros_like(up)
         for y in ys:
             a = self.first[y][0] + S
             if a.min() < DRIFT_N + 1:
                 return None
-            b = a[:, None] + LEN_TD[None, :]
+            b = a[:, None] + lens[None, :]
             if b.max() >= self.n:
                 return None
             r = self.lc[b] - self.lc[a][:, None]
@@ -81,7 +82,7 @@ class Calendar:
             s2 += r * r
         mu = s1 / ny
         sd = np.sqrt(np.maximum(s2 / ny - mu ** 2, 1e-18) * ny / (ny - 1))
-        return {"Y": Y, "now": now, "S": S, "up": up, "wins": np.maximum(up, ny - up), "ny": ny,
+        return {"Y": Y, "now": now, "S": S, "up": up, "lens": lens, "wins": np.maximum(up, ny - up), "ny": ny,
                 "t": np.abs(mu) / sd * np.sqrt(ny), "mu": mu}
 
     def day_vol(self, t):
@@ -111,22 +112,22 @@ class Calendar:
                 "rec": int((dirv[-4:] > 0).sum()),
                 "years": [{"y": y, "r": round(float(v), 2)} for y, v in zip(yrs, dirv)]}
 
-    def windows(self, t, max_picks=4, min_move=0.0):
+    def windows(self, t, max_picks=4, min_move=0.0, lens=None):
         """the board's windows: driver = best window open now, else best opening within 2 weeks; up to 3 more.
         min_move: only windows whose usual move is at least this many normal daily moves"""
         cand, seen, Y, now = [], set(), t.year, self.td(t)
         for ny, gate in LOOKBACKS:
-            sc = self.scan(t, ny)
+            sc = self.scan(t, ny, lens)
             if sc is None:
                 continue
-            S = sc["S"]
-            ok = (sc["wins"] >= gate) & ((S[:, None] + LEN_TD[None, :]) > now + 2)
+            S, LL = sc["S"], sc["lens"]
+            ok = (sc["wins"] >= gate) & ((S[:, None] + LL[None, :]) > now + 2)
             if min_move > 0:
                 ok &= np.abs(sc["mu"]) >= min_move * self.day_vol(t)
             for i, j in zip(*np.nonzero(ok)):
                 cand.append({"side": "BUY" if sc["up"][i, j] > ny / 2 else "SELL", "wins": int(sc["wins"][i, j]),
                              "ny": ny, "share": float(sc["wins"][i, j]) / ny,
-                             "t": float(sc["t"][i, j]), "s": int(S[i]), "len": int(LEN_TD[j])})
+                             "t": float(sc["t"][i, j]), "s": int(S[i]), "len": int(LL[j])})
         if not cand:
             return [], "none"
         cand.sort(key=lambda w: (-w["share"], -w["t"], -w["ny"]))
