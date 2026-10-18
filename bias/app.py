@@ -256,6 +256,12 @@ const ICON = {
 const basisIcon = m => m.basis === "COT + calendar" ? ICON.both : (m.basis === "Calendar only" || m.basis === "Calendar over COT") ? ICON.cal : cotLed(m) ? ICON.cot : m.basis.startsWith("Conflict") ? ICON.both : ICON.none;
 const T = D.tested;
 const sgn = v => (v >= 0 ? "+" : "") + v;
+// every move on the page is the actual price move (+ = price up, - = price down), whatever the trade's direction;
+// records are stored in the trade's direction, so a short setup's numbers are flipped back to price moves
+const dirSg = side => (side === "BEARISH" || side === "SELL") ? -1 : 1;
+const raw = (v, side) => v == null ? v : dirSg(side) * v;
+const pcx = v => v == null || isNaN(v) ? "–" : `${v >= 0 ? "+" : ""}${(+v).toFixed(2)}%`;
+const bestPx = (mfe, mae, side) => dirSg(side) > 0 ? [mfe, mae] : [-mfe, -mae];   // [best for the trade, worst] as price moves
 const warnLevel = t => !t ? null : (t.closing && t.flip) ? "hot" : (t.closing || t.flip) ? "warn" : "calm";
 
 /* ---------- tiles ---------- */
@@ -279,24 +285,25 @@ function setupStats(m) {
   // the record of exactly this setup: the window's own years, the COT signal's own cases, or the years both lined up
   const s = m.seas, d = s.driver, c = m.cot, b = m.basis, sg = d && d.side === "SELL" ? -1 : 1;
   const yrs = rel => (s.past ? s.past.years.filter(y => !rel || y.rel === rel) : []);
-  const fromYears = (ys, label) => ys.length ? {w: ys.filter(y => y.win).length, n: ys.length, avg: ys.reduce((a, y) => a + y.r, 0) / ys.length, label} : null;
-  if (b === "Calendar only" && d) return {w: d.wins, n: d.n || 15, avg: sg * d.avg, label: `this window, last ${d.n || 15} years`};
-  if (b === "COT only" && c.record) return {w: c.record.w, n: c.record.n, avg: c.record.avg, label: `this COT signal on ${m.name} since ${c.record.first}, held while lit + 1 week`};
+  const fromYears = (ys, label) => ys.length ? {w: ys.filter(y => y.win).length, n: ys.length, avg: sg * ys.reduce((a, y) => a + y.r, 0) / ys.length, label} : null;
+  if (b === "Calendar only" && d) return {w: d.wins, n: d.n || 15, avg: d.avg, label: `this window, last ${d.n || 15} years`};
+  if (b === "COT only" && c.record) return {w: c.record.w, n: c.record.n, avg: raw(c.record.avg, m.cot.read), label: `this COT signal on ${m.name} since ${c.record.first}, held while lit + 1 week`};
   if (b === "COT + calendar") return fromYears(yrs("agree"), "years of this window when COT pointed the same way at its start");
   if (b === "Calendar over COT") return fromYears(yrs("against"), "years of this window when COT was against it at its start");
   return null;
 }
 function setupBadge(m) {
   const st = setupStats(m); if (!st || m.verdict === "STAND ASIDE") return "";
-  const tip = `${st.w} of ${st.n} · avg ${st.avg >= 0 ? "+" : ""}${st.avg.toFixed(2)}% — ${st.label}`;
+  const tip = `${st.w} of ${st.n} went the bias's way · average price move ${st.avg >= 0 ? "+" : ""}${st.avg.toFixed(2)}% — ${st.label}`;
   return `<span class="sbadge" title="${esc(tip)}">${st.w}/${st.n} · ${st.avg >= 0 ? "+" : ""}${st.avg.toFixed(1)}%</span>`;
 }
 function doneBadge(m) {
   const d = m.done; if (!d || !d.flag || m.verdict === "STAND ASIDE") return "";
-  const parts = ["cot", "seas"].filter(e => d[e] && d[e].state === "done").map(e => `${e === "cot" ? "COT" : "calendar"}: ${sgn(d[e].so_far)}% done vs usual ${sgn(d[e].usual)}%`);
+  const sideOf = e => e === "cot" ? m.cot.read : m.seas.driver && m.seas.driver.side;
+  const parts = ["cot", "seas"].filter(e => d[e] && d[e].state === "done").map(e => `${e === "cot" ? "COT" : "calendar"}: price ${sgn(+raw(d[e].so_far, sideOf(e)).toFixed(2))}% so far vs usual ${sgn(+raw(d[e].usual, sideOf(e)).toFixed(2))}%`);
   return `<span class="dbadge" title="${esc("Usual move already made · " + parts.join(" · "))}">move done</span>`;
 }
-function doneCell(x, kind) {
+function doneCell(x, kind, side) {
   // how much of the usual move the running setup has already made (usual = in-sample average of all past cases)
   if (!x) return "";
   const T = (D.move_done_test || {});
@@ -307,9 +314,9 @@ function doneCell(x, kind) {
     const a = t && (t.all || t);
     const note = kind === "seas" ? `setup done: windows past their usual move earned ${a ? `${sgn(a.avg)}% from there (${a.win}% won)` : "nothing more"} in the test`
                                  : `usual move done${x.beyond_best ? ", beyond its usual best" : ""}: COT setups past it still earned ${a ? `${sgn(a.avg)}% from there` : "a little"}, less than ones not there yet`;
-    return `<div class="done"><b>${x.share}%</b><span>of the usual move already made (${pc(x.so_far)} of ${pc(x.usual)}) · ${note}</span></div>`;
+    return `<div class="done"><b>${x.share}%</b><span>of the usual move already made (price ${pc(raw(x.so_far, side))} so far, usual ${pc(raw(x.usual, side))}) · ${note}</span></div>`;
   }
-  return `<div><b>${x.share}%</b><span>of the usual move made so far (${pc(x.so_far)} of ${pc(x.usual)})${x.state === "against" ? " · so far against the setup" : ""}</span></div>`;
+  return `<div><b>${x.share}%</b><span>of the usual move made so far (price ${pc(raw(x.so_far, side))} so far, usual ${pc(raw(x.usual, side))})${x.state === "against" ? " · so far against the setup" : ""}</span></div>`;
 }
 function dots(m, big) {
   const c = m.confidence; if (!c || m.verdict === "STAND ASIDE") return "";
@@ -319,10 +326,10 @@ function dots(m, big) {
 function focusStrip() {
   const F = D.focus; if (!F || !F.keys.length) { $("#focus").hidden = true; return; }
   const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
-  const card = (k, i) => { const m = M[k], f = m.profile;
+  const card = (k, i) => { const m = M[k], p0 = m.profile, bw = bestPx(p0.mfe, p0.mae, m.verdict), f = {...p0, end: raw(p0.end, m.verdict), mfe: bw[0], mae: bw[1]};
     return `<button class="fcard" data-k="${k}"><span class="frank">${i + 1}</span>
       <div class="fh"><div><div class="nm">${esc(m.name)}</div><div class="tk">${k} · ${esc(m.basis)}</div></div>${pill(m.verdict)}</div>
-      <div class="fs"><div><b>${f.hit}%</b><span>hit rate · ${f.n} cases</span></div><div><b>${pc(f.end)}</b><span>avg at the end</span></div>
+      <div class="fs"><div><b>${f.hit}%</b><span>hit rate · ${f.n} cases</span></div><div><b>${pc(f.end)}</b><span>avg price move at the end</span></div>
       <div><b>${pc(f.mfe)}</b><span>best along the way</span></div><div><b>${pc(f.mae)}</b><span>worst along the way</span></div></div></button>`; };
   const meth = F.method, all = F.all && F.all.all;
   $("#focus").innerHTML = `<div class="fhead"><h2 class="sec" style="margin:0">Focus this week</h2>
@@ -415,24 +422,23 @@ function testedHero(m) {
   const usesCot = m.basis.startsWith("COT") || m.basis === "Calendar over COT" || m.basis.startsWith("Conflict") || (m.cot.speed && m.cot.speed.speed === "slow");
   const line = (big, title, txt) => `<div class="isc"><b>${big}</b><span><b class="tl">${title}</b> ${txt}</span></div>`;
   if (usesCal && d) {
-    const dirAvg = d.side === "BUY" ? d.avg : -d.avg;
     groups.push(`<div class="isg"><div class="isgh">${fa(m, d.side === "BUY" ? "BULLISH" : "BEARISH")}<span>Seasonality</span></div>
-      ${line(`${Math.round(100 * d.wins / 15)}%`, "Window", `${d.wins} of 15 years · avg ${sgn(+dirAvg.toFixed(2))}% · last 4: ${d.rec}/4`)}</div>`);
+      ${line(`${Math.round(100 * d.wins / 15)}%`, "Window", `${d.wins} of 15 years · avg price move ${sgn(+d.avg.toFixed(2))}% · last 4: ${d.rec}/4`)}</div>`);
   }
   if (usesCot && m.cot.read !== "STAND ASIDE") {
     const rc = m.cot.record, c = bestCotRow(m), rows = [];
     const H = {4: "4 weeks", 8: "8 weeks", 13: "3 months", 26: "6 months", 52: "1 year"};
-    if (rc) rows.push(line(`${Math.round(100 * rc.w / rc.n)}%`, `Read ${m.cot.read.toLowerCase()}`, `${rc.w} of ${rc.n} times since ${rc.first} · avg ${sgn(rc.avg)}% held while lit (about ${rc.weeks} weeks) · last 4: ${rc.rec}/4`));
+    if (rc) rows.push(line(`${Math.round(100 * rc.w / rc.n)}%`, `Read ${m.cot.read.toLowerCase()}`, `${rc.w} of ${rc.n} times since ${rc.first} · avg price move ${sgn(+raw(rc.avg, m.cot.read).toFixed(2))}% held while lit (about ${rc.weeks} weeks) · last 4: ${rc.rec}/4`));
     // the exact current picture (all groups together) on the lookback with the most past cases, held while it lasts + 1 week
     const tr = (m.cot.track || []).filter(r => r.board && r.r8 && r.dir === m.cot.read).sort((x, y) => y.r8.n - x.r8.n)[0];
-    if (tr) rows.push(line(`${Math.round(100 * tr.r8.w / tr.r8.n)}%`, `${esc(tr.label)} · ${tr.lb}`, `this exact picture ${tr.r8.w} of ${tr.r8.n} times · avg ${sgn(tr.r8.avg)}% held while it lasted${tr.r8.n < 6 ? " · few cases" : ""}`));
+    if (tr) rows.push(line(`${Math.round(100 * tr.r8.w / tr.r8.n)}%`, `${esc(tr.label)} · ${tr.lb}`, `this exact picture ${tr.r8.w} of ${tr.r8.n} times · avg price move ${sgn(+raw(tr.r8.avg, tr.dir).toFixed(2))}% held while it lasted${tr.r8.n < 6 ? " · few cases" : ""}`));
     const sp = m.cot.speed;
     if (sp) rows.push(`<p class="spd"><b class="sp ${sp.speed}">${sp.speed === "fast" ? "Reached fast" : sp.speed === "slow" ? "Crept in slowly · skipped" : "Medium speed"}</b> commercials moved ${sp.move.toFixed(1)}× a typical 4-week change into this extreme. ${title(sp.speed)} signals won ${sp.all.win}% since 2003 and ${sp.recent.win}% since 2016 (fast ${sp.fast_all.win}%, slow ${sp.slow_all.win}%).${sp.speed === "slow" ? " Slow signals are not used for the verdict: skipping them tested better." : ""}</p>`);
     if (rows.length) groups.push(`<div class="isg"><div class="isgh">${fa(m, m.cot.read)}<span>COT</span></div>${rows.join("")}</div>`);
   }
   if (!groups.length && !cf) return "";
   const su = m.setup, st = setupStats(m);
-  const wf = (st || su) ? `<p class="wf">${st ? `<b>This setup:</b> won ${st.w} of ${st.n} (${Math.round(100 * st.w / st.n)}%), average ${st.avg >= 0 ? "+" : ""}${st.avg.toFixed(2)}% in the trade's direction — ${esc(st.label)}. ` : ""}${su && su.all ? `Board's walk-forward record for ${esc(m.basis)} verdicts across all markets ${su.first}–${su.last}: ${su.all.win}% of ${su.all.n}.` : ""}</p>` : "";
+  const wf = (st || su) ? `<p class="wf">${st ? `<b>This setup:</b> won ${st.w} of ${st.n} (${Math.round(100 * st.w / st.n)}%), average price move ${st.avg >= 0 ? "+" : ""}${st.avg.toFixed(2)}% — ${esc(st.label)}. ` : ""}${su && su.all ? `Board's walk-forward record for ${esc(m.basis)} verdicts across all markets ${su.first}–${su.last}: ${su.all.win}% of ${su.all.n}.` : ""}</p>` : "";
   return `<div class="tested">${groups.length ? `<div class="iscs">${groups.join("")}</div>` : ""}${wf}</div>`;
 }
 function banner(m) {
@@ -471,14 +477,15 @@ function seasonPaths(m) {
 function cotStats(m) {
   // like the seasonal window stats: what the live COT signal has done so far, against its usual result while lit
   const rc = m.cot.record, lv = rc && rc.live; if (!lv) return "";
+  const sd = m.cot.read, bw = bestPx(rc.mfe, rc.mae, sd);
   const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
   const cell = (big, small) => `<div><b>${big}</b><span>${small}</span></div>`;
   return `<div class="wstats">
-    ${cell(pc(lv.move), `so far since the signal (report ${fmtD(lv.since)}, entry ${fmtD(lv.entry)}) · running ${lv.weeks.toFixed(1)} weeks (usually about ${rc.weeks}) · held while the signal stays lit, out ${rc.after} week after it goes dark`)}
-    ${cell(pc(rc.avg), `usual at the exit · went that way ${rc.w} of ${rc.n} times`)}
-    ${cell(pc(rc.mfe), "usual best along the way")}
-    ${doneCell(m.done && m.done.cot, "cot")}
-    ${cell(pc(rc.mae), "usual worst along the way")}
+    ${cell(pc(raw(lv.move, sd)), `price so far since the ${sd.toLowerCase()} signal (report ${fmtD(lv.since)}, entry ${fmtD(lv.entry)}) · running ${lv.weeks.toFixed(1)} weeks (usually about ${rc.weeks}) · held while the signal stays lit, out ${rc.after} week after it goes dark`)}
+    ${cell(pc(raw(rc.avg, sd)), `usual price move at the exit · went the signal's way ${rc.w} of ${rc.n} times`)}
+    ${cell(pc(bw[0]), "usual best point for the signal along the way")}
+    ${doneCell(m.done && m.done.cot, "cot", m.cot.read)}
+    ${cell(pc(bw[1]), "usual worst point for the signal along the way")}
   </div>`;
 }
 function upcomingNote(m) {
@@ -494,7 +501,7 @@ function windowStats(m) {
     ${cell(pc(d.avg), `usual move over the whole window, ${fmtD(d.start)} – ${fmtD(d.end)}`)}
     ${cell(pc(r.avg), `${r.started ? "still to come" : "expected"} over the ${r.days} trading days ${r.started ? "left" : "of the window"} · went that way ${r.wins} of 15 years`)}
     ${r.so_far == null ? "" : cell(pc(r.so_far), "this year so far in the window")}
-    ${doneCell(m.done && m.done.seas, "seas")}
+    ${doneCell(m.done && m.done.seas, "seas", m.seas.driver && m.seas.driver.side)}
   </div>`;
 }
 function seasonChart(m) {
@@ -612,7 +619,7 @@ function track(m, h) {
   ["retail", "comm"].forEach(g => m.cot.groups[g].forEach(r => {
     if (!r.dir) return; const x = r.h[h];
     rows.push(`<tr class="${x.ok ? "ok" : ""}"><th>${GN[g]} · ${r.lb}</th><td><span class="st ${x.past ? "" : "live"}">${x.past ? "past" : "live"}</span> ${r.weeks_in}w</td>` +
-      (x.n ? `<td class="n">${Math.round(100 * x.w / x.n)}%</td><td class="n">${x.w} of ${x.n}</td><td class="n">${x.avg >= 0 ? "+" : ""}${x.avg.toFixed(2)}%</td>` : `<td colspan="3" style="color:var(--mute)">no comparable cases</td>`) +
+      (x.n ? `<td class="n">${Math.round(100 * x.w / x.n)}%</td><td class="n">${x.w} of ${x.n}</td><td class="n">${pcx(raw(x.avg, r.dir))}</td>` : `<td colspan="3" style="color:var(--mute)">no comparable cases</td>`) +
       `<td class="n" style="color:var(--mute)">${r.hist} yrs</td></tr>`);
   }));
   return rows.length ? `<div class="tbl"><table><thead><tr><th>${h}-week result</th><th>Weeks in</th><th>Win</th><th>Cases</th><th>Avg</th><th>History</th></tr></thead><tbody>${rows.join("")}</tbody></table></div>` : `<p class="note">No retail or commercial lookback is at an extreme.</p>`;
@@ -620,15 +627,16 @@ function track(m, h) {
 function edge(m) {
   const e = m.cot.edge, H = {4: "4 weeks", 8: "8 weeks", 13: "3 months", 26: "6 months", 52: "1 year"};
   if (m.cot.read === "STAND ASIDE") return "The positioning read is neutral this week, so there is no direction to test.";
-  return e ? `Strongest read: the ${e.lb.toLowerCase()} lookback on ${GN[e.group].toLowerCase()}, ${Math.round(100 * e.w / e.n)}% over ${H[e.h]}, ${e.w} of ${e.n} cases, ${e.avg >= 0 ? "+" : ""}${e.avg.toFixed(2)}% average.`
+  const er = e && (m.cot.groups[e.group] || []).find(r => r.lb === e.lb);
+  return e ? `Strongest read: the ${e.lb.toLowerCase()} lookback on ${GN[e.group].toLowerCase()}, ${Math.round(100 * e.w / e.n)}% over ${H[e.h]}, ${e.w} of ${e.n} cases, average price move ${pcx(raw(e.avg, er && er.dir))}.`
            : `Nothing in ${m.name} clears the bar (six cases, 60%, positive average). Treat the bias as context, not a tested edge.`;
 }
 function trackNow(m) {
   const T = m.cot.track || [];
   if (!T.length) return `<p class="note">No group is at an extreme on any lookback this week.</p>`;
-  const cell = o => o ? `<td class="n">${o.w} of ${o.n} (${Math.round(100 * o.w / o.n)}%)</td><td class="n">${o.avg >= 0 ? "+" : ""}${o.avg.toFixed(2)}%</td>` : `<td class="n">–</td><td class="n">–</td>`;
+  const cell = (o, dir) => o ? `<td class="n">${o.w} of ${o.n} (${Math.round(100 * o.w / o.n)}%)</td><td class="n">${pcx(raw(o.avg, dir))}</td>` : `<td class="n">–</td><td class="n">–</td>`;
   return `<div class="tbl"><table><thead><tr><th>Lookback</th><th>Picture now</th><th>Reads</th><th>After 4 weeks</th><th>Avg</th><th>Held while it lasts</th><th>Avg</th></tr></thead><tbody>` +
-    T.map(r => `<tr><th>${r.lb}</th><td>${esc(r.label)}${r.board ? "" : ' <span class="st">not a board signal</span>'}</td><td>${pill(r.dir)}</td>${cell(r.r4)}${cell(r.r8)}</tr>`).join("") +
+    T.map(r => `<tr><th>${r.lb}</th><td>${esc(r.label)}${r.board ? "" : ' <span class="st">not a board signal</span>'}</td><td>${pill(r.dir)}</td>${cell(r.r4, r.dir)}${cell(r.r8, r.dir)}</tr>`).join("") +
     `</tbody></table></div><p class="note">Every past time since the price history starts that the same picture appeared on that lookback (after at least 8 weeks without it), measured from the first close after the Friday release: after 4 weeks, and held while the picture lasts, out one week after the last report showing it (how the board holds COT). Direction: follow the commercials when they are at an extreme, otherwise fade retail. Rows marked "not a board signal" have no commercials at an extreme, so the board's COT rule does not use them.</p>`;
 }
 function windowsTbl(m) {
@@ -639,8 +647,8 @@ function windowsTbl(m) {
   const role = w => s.driver && w.start === s.driver.start && w.side === s.driver.side && !s.small_only ? `<span class="st live">driver</span>`
     : w.small ? `<span class="st" title="usual move below 3 normal days: can only back a COT signal">small · ${w.move_days}d</span>` : `<span class="st">${w.move_days}d · can stand alone</span>`;
   return `<div class="tbl"><table><thead><tr><th>Trade</th><th>Window</th><th>When</th><th>Size</th><th>Trading days</th><th>Win ratio</th><th>Avg</th><th>Median</th><th>Best / worst</th><th>Trend removed</th><th>Last 4</th></tr></thead><tbody>` +
-    rows.map(w => `<tr><td>${pill(sideV(w.side), title(w.side))}</td><td>${fmtD(w.start)} – ${fmtD(w.end)}</td><td>${when(w)}</td><td>${role(w)}</td><td class="n">${w.len}</td><td class="n">${w.wins} of 15</td><td class="n">${pc(w.avg)}</td><td class="n">${w.median != null ? pc(w.median) : "–"}</td><td class="n">${w.best != null ? `${pc(w.best)} / ${pc(w.worst)}` : "–"}</td><td class="n">${w.wins_true != null ? `${w.wins_true} of 15` : "–"}</td><td class="n">${w.rec != null ? `${w.rec}/4` : "–"}</td></tr>`).join("") +
-    `</tbody></table></div><p class="note">Every window with at least 12 of 15 years in its direction that is running now or comes next, however far ahead, counted in trading days over the last 15 years. Size: the usual move in normal daily moves of this market; a window needs at least 3 to carry a bias alone, a smaller one can only back a COT signal pointing the same way. Only the driver is part of this week's verdict. Avg and median are price moves (negative is good for a sell window); best and worst are in the trade's direction; trend removed counts the years after taking out the market's normal drift.</p>`;
+    rows.map(w => `<tr><td>${pill(sideV(w.side), title(w.side))}</td><td>${fmtD(w.start)} – ${fmtD(w.end)}</td><td>${when(w)}</td><td>${role(w)}</td><td class="n">${w.len}</td><td class="n">${w.wins} of 15</td><td class="n">${pc(w.avg)}</td><td class="n">${w.median != null ? pc(w.median) : "–"}</td><td class="n">${w.best != null ? (([b0, w0]) => `${pc(b0)} / ${pc(w0)}`)(bestPx(w.best, w.worst, w.side)) : "–"}</td><td class="n">${w.wins_true != null ? `${w.wins_true} of 15` : "–"}</td><td class="n">${w.rec != null ? `${w.rec}/4` : "–"}</td></tr>`).join("") +
+    `</tbody></table></div><p class="note">Every window with at least 12 of 15 years in its direction that is running now or comes next, however far ahead, counted in trading days over the last 15 years. Size: the usual move in normal daily moves of this market; a window needs at least 3 to carry a bias alone, a smaller one can only back a COT signal pointing the same way. Only the driver is part of this week's verdict. All moves are price moves (+ = up, − = down; a sell window wants −); best and worst are the best and worst year for the trade, as price moves; trend removed counts the years after taking out the market's normal drift.</p>`;
 }
 function eventsCard(m) {
   const ev = m.events; if (!ev) return "";
@@ -691,7 +699,7 @@ function cotCard(m, essential) {
 function pastYears(m) {
   const P = m.seas.past; if (!P || !P.years.length) return "";
   const side = m.seas.driver.side === "BUY" ? "BULLISH" : "BEARISH";
-  const cells = P.years.map(x => `<div class="yr ${x.rel}" title="${x.y}: COT ${title(x.cot)} · window ${x.win ? "paid" : "failed"} ${sgn(x.r)}%">
+  const cells = P.years.map(x => `<div class="yr ${x.rel}" title="${x.y}: COT ${title(x.cot)} · window ${x.win ? "paid" : "failed"} · price ${sgn(+raw(x.r, m.seas.driver.side).toFixed(2))}%">
       <span class="dot ${x.win ? "w" : "l"}">${x.win ? "✓" : "✗"}</span><span>${String(x.y).slice(2)}</span></div>`).join("");
   const S = P.summary, f = (o) => o.n ? `${o.w} of ${o.n}` : "none";
   return `<h4 class="note" style="margin:14px 0 6px;font-weight:600;color:var(--ink)">This window in its past years, and what COT said at its start</h4>
