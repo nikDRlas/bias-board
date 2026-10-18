@@ -247,6 +247,7 @@ def lit_start(lit, i):
 # finished by then) usually moved at least COT_MIN_MOVE normal daily moves (research/cot_record_size_test.py; grid
 # -0.25..1 in data/research/cot_min_grid.json: plateau 0-0.5, 0.5 chosen on 2019-22 and confirmed on 2023-26).
 COT_MIN_MOVE = float(os.environ.get("COT_MIN_MOVE", "0.5"))
+COT_REC_YEARS = int(os.environ.get("COT_REC_YEARS", "0"))      # 0 = the whole history since 2003
 _CASES = {}
 
 
@@ -280,7 +281,8 @@ def cot_usual(k, side, t, min_cases=5):
     """usual end move of market k's earlier COT setups in `side`, finished by t, in normal daily moves; None if fewer
     than `min_cases`"""
     cs, p = cot_cases(k)
-    prior = [c["end"] for c in cs if c["side"] == side and c["exit"] <= t]
+    since = t - pd.DateOffset(years=COT_REC_YEARS) if COT_REC_YEARS else pd.Timestamp("1900-01-01")
+    prior = [c["end"] for c in cs if c["side"] == side and since <= c["start"] and c["exit"] <= t]
     if len(prior) < min_cases:
         return None
     ti = p.index.searchsorted(t)
