@@ -18,6 +18,7 @@ import seasonal as SS                              # noqa: E402
 import events as EV                                # noqa: E402
 import verdict as VD                               # noqa: E402
 import track as TR                                 # noqa: E402
+import macro as MC                                 # noqa: E402
 
 ASOF, TODAY, M = R.ASOF, R.TODAY, R.M
 LB, HIST = R.LB, R.HIST
@@ -831,6 +832,11 @@ svg .band.b {{ fill:var(--bull-bg) }} svg .band.s {{ fill:var(--bear-bg) }} svg 
 if __name__ == "__main__":
     res = {}
     tested = tested_cells()
+    try:
+        mcal = MC.load_calendar()
+    except Exception as e:                        # the board still builds without the macro data
+        print("macro calendar unavailable:", e)
+        mcal = None
     for k, m in M.items():
         p = R.load_px(k)
         c = cot_block(k, p)
@@ -891,6 +897,7 @@ if __name__ == "__main__":
                   "profile": setup_profile(k, p, cal_obj, reader, s, why, v),
                   "cycle": presidential_cycle(p) if k in ("ES", "NQ", "YM") else None,
                   "done": move_done(c, s, why),
+                  "macro": MC.board_macro(mcal, k, TODAY, v if v in VD.SIDES else None) if mcal is not None else None,
                   "tested": tested_for(k, why, groups, tested)}
         d = s.get("driver")
         print(f"{k:3s} COT {c['read']:11s} {c['conv']:8s} | seas {s['read']:15s} "
@@ -907,10 +914,15 @@ if __name__ == "__main__":
     if os.environ.get("TRACK") == "1":            # the scheduled Saturday run records this week's verdicts
         TR.record(res, TODAY, ASOF)
     track = TR.summary(TODAY)
+    mtp = os.path.join(ROOT, "data", "research", "tools_macro_align.json")
+    macro_test = None
+    if os.path.exists(mtp):
+        mt = json.load(open(mtp))
+        macro_test = {t: mt[t]["US indices + gold/silver"] for t in ("Board verdict", "COT", "Calendar") if t in mt}
     mdp = os.path.join(ROOT, "data", "research", "move_done.json")
     md_test = json.load(open(mdp)) if os.path.exists(mdp) else None
     json.dump({"asof": str(ASOF.date()), "today": str(TODAY.date()), "tested": tested, "verdict_test": vsum, "focus": focus,
-               "move_done_test": md_test, "track": track,
+               "move_done_test": md_test, "track": track, "macro_test": macro_test,
                "markets": res, "quant": quant},
               open(f"{ROOT}/data/live/outlook.json", "w"), indent=1, default=float)
     os.makedirs(f"{ROOT}/site", exist_ok=True)

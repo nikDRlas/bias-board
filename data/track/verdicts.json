@@ -7,7 +7,8 @@
   "basis": "COT + calendar",
   "report": "2026-10-13",
   "entry_from": "2026-10-18",
-  "window_end": null
+  "window_end": null,
+  "macro": null
  },
  {
   "week": "2026-10-17",
@@ -17,7 +18,8 @@
   "basis": "COT only",
   "report": "2026-10-13",
   "entry_from": "2026-10-18",
-  "window_end": null
+  "window_end": null,
+  "macro": null
  },
  {
   "week": "2026-10-17",
@@ -27,7 +29,8 @@
   "basis": "Calendar only",
   "report": "2026-10-13",
   "entry_from": "2026-10-18",
-  "window_end": "2026-11-09"
+  "window_end": "2026-11-09",
+  "macro": null
  },
  {
   "week": "2026-10-17",
@@ -37,7 +40,8 @@
   "basis": "Calendar only",
   "report": "2026-10-13",
   "entry_from": "2026-10-18",
-  "window_end": "2026-11-09"
+  "window_end": "2026-11-09",
+  "macro": null
  },
  {
   "week": "2026-10-17",
@@ -47,7 +51,8 @@
   "basis": "Calendar only",
   "report": "2026-10-13",
   "entry_from": "2026-10-18",
-  "window_end": "2026-11-09"
+  "window_end": "2026-11-09",
+  "macro": null
  },
  {
   "week": "2026-10-17",
@@ -57,7 +62,8 @@
   "basis": "Calendar only",
   "report": "2026-10-13",
   "entry_from": "2026-10-18",
-  "window_end": "2026-11-19"
+  "window_end": "2026-11-19",
+  "macro": null
  },
  {
   "week": "2026-10-17",
@@ -67,7 +73,8 @@
   "basis": "COT + calendar",
   "report": "2026-10-13",
   "entry_from": "2026-10-18",
-  "window_end": null
+  "window_end": null,
+  "macro": null
  },
  {
   "week": "2026-10-17",
@@ -77,7 +84,8 @@
   "basis": "Calendar only",
   "report": "2026-10-13",
   "entry_from": "2026-10-18",
-  "window_end": "2026-11-09"
+  "window_end": "2026-11-09",
+  "macro": "against"
  },
  {
   "week": "2026-10-17",
@@ -87,6 +95,7 @@
   "basis": "Calendar only",
   "report": "2026-10-13",
   "entry_from": "2026-10-18",
-  "window_end": "2026-11-06"
+  "window_end": "2026-11-06",
+  "macro": "against"
  }
 ]

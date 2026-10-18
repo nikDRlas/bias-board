@@ -302,6 +302,11 @@ function setupBadge(m) {
   const tip = `${st.w} of ${st.n} went the bias's way · average price move ${st.avg >= 0 ? "+" : ""}${st.avg.toFixed(2)}% — ${st.label}`;
   return `<span class="sbadge" title="${esc(tip)}">${st.w}/${st.n} · ${st.avg >= 0 ? "+" : ""}${st.avg.toFixed(1)}%</span>`;
 }
+function macroBadge(m) {
+  const x = m.macro; if (!x || !x.rel || x.rel === "flat" || m.verdict === "STAND ASIDE") return "";
+  return x.rel === "against" ? `<span class="dbadge" title="US macro score ${x.total}: against the bias. Tested: verdicts against macro on US indices, gold and silver won about 60% vs 78% when it agreed.">macro ✗</span>`
+                             : `<span class="sbadge" title="US macro score ${x.total}: agrees with the bias">macro ✓</span>`;
+}
 function doneBadge(m) {
   const d = m.done; if (!d || !d.flag || m.verdict === "STAND ASIDE") return "";
   const sideOf = e => e === "cot" ? m.cot.read : m.seas.driver && m.seas.driver.side;
@@ -336,7 +341,7 @@ function liveRecord() {
   if (!L || !L.since) { el.innerHTML = `<div class="lh"><b>Live record</b><span class="note" style="margin:0">Starts with the next scheduled Saturday run: every verdict is saved as given and scored once its exit has passed, the clean test of the board on weeks its rules have never seen.</span></div>`; return; }
   const d = L.done, pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
   const head = d ? `${d.right} of ${d.n} right (${Math.round(100 * d.right / d.n)}%) · avg ${pc(d.avg_dir)} in the bias's direction` : "no verdict finished yet";
-  const by = Object.entries(L.by_basis || {}).filter(([, o]) => o).map(([b, o]) => `${esc(b)} ${o.right}/${o.n}`).join(" · ");
+  const by = Object.entries(L.by_basis || {}).filter(([, o]) => o).map(([b, o]) => `${esc(b)} ${o.right}/${o.n}`).concat(Object.entries(L.by_macro || {}).filter(([, o]) => o).map(([b, o]) => `macro ${b} ${o.right}/${o.n}`)).join(" · ");
   const recent = (L.recent || []).map(r => `<span class="${r.right ? "r" : "w"}" title="${esc(r.name)} · ${esc(r.basis)} · ${r.entry} → ${r.exit} · price ${pc(r.move)}">${r.m} ${r.verdict === "BULLISH" ? "▲" : "▼"} ${pc(r.move)}</span>`).join("");
   const open = (L.open || []).map(r => `<span title="${esc(r.name)} · ${esc(r.basis)} · since ${r.entry || r.entry_from}">${r.m} ${r.verdict === "BULLISH" ? "▲" : "▼"} ${r.move != null ? pc(r.move) : "waiting"}</span>`).join("");
   el.innerHTML = `<div class="lh"><b>Live record since ${fmtD(L.since)}</b><span>${head}</span>${by ? `<span class="note" style="margin:0">${by}</span>` : ""}</div>
@@ -371,7 +376,7 @@ function boards() {
     const m = M[k];
     return `<button class="tile" id="t-${k}" data-k="${k}" aria-current="false">${ring(m)}
       <div><div class="nm">${esc(m.name)}</div><div class="tk">${k}</div></div>
-      <div class="row">${pill(m.verdict)}${setupBadge(m)}${doneBadge(m)}</div>
+      <div class="row">${pill(m.verdict)}${setupBadge(m)}${doneBadge(m)}${macroBadge(m)}</div>
       <div class="basis">${basisIcon(m)}${esc(m.basis)}</div>${spark(m)}</button>`;
   }).join("") + `</div>`).join("");
   document.querySelectorAll(".tile").forEach(b => b.addEventListener("click", () => select(b.dataset.k, true)));
@@ -741,6 +746,20 @@ function chartTag(m, which) {
   if (b === "Calendar over COT") return which === "seas" ? drive : off("overruled by the calendar");
   return off("no side");
 }
+function macroWord(x) { return x.rel === "agrees" ? "agrees with the bias" : x.rel === "against" ? "against the bias" : x.rel === "flat" ? "neutral" : title(x.side); }
+function macroCard(m) {
+  // US data surprises (EdgeFinder-replica rules, rebuilt from the LSE calendar): context for US indices, gold, silver
+  const x = m.macro; if (!x) return "";
+  const T = (D.macro_test || {})["Board verdict"] || {}, ag = T["macro agrees"], an = T["macro against"];
+  const g = x.groups, sg = v => (v > 0 ? "+" : "") + v;
+  const inv = x.inverted === "inflation" ? "Hotter inflation counts against stocks." : x.inverted === "all" ? "For gold and silver everything counts the other way: weak US data is bullish." : "";
+  const rows = (x.latest || []).slice(0, 8).map(l => `<tr><td>${fmtD(l.date)}</td><td>${esc(l.indicator)}</td><td class="n">${esc(l.actual || "–")}</td><td class="n">${esc(l.consensus || l.previous || "–")}</td><td class="n" style="color:${l.effect > 0 ? "var(--bull)" : l.effect < 0 ? "var(--bear)" : "var(--mute)"}">${l.effect > 0 ? "▲ +1" : l.effect < 0 ? "▼ −1" : "0"}</td></tr>`).join("");
+  return `<div class="card"><h3>US macro <span class="tag ${x.rel === "against" ? "conflict" : "ctx"}">${x.rel ? macroWord(x) : "context"}</span> ${pill(x.side === "NEUTRAL" ? "flat" : x.side, title(x.side))}</h3>
+    <p class="note">The latest US data surprises, scored like the EdgeFinder: each release +1 above consensus, −1 below (unemployment and jobless claims the other way round), plus the 2-year yield's 20-day direction; summed into growth, inflation and labour. ${inv}</p>
+    <div class="wstats"><div><b>${sg(x.total)}</b><span>macro score for ${esc(m.name)}</span></div><div><b>${sg(g.growth)}</b><span>growth</span></div><div><b>${sg(g.inflation)}</b><span>inflation${x.inverted ? " (as it counts here)" : ""}</span></div><div><b>${sg(g.labour)}</b><span>labour</span></div></div>
+    <div class="tbl"><table><thead><tr><th>Released</th><th>Indicator</th><th>Actual</th><th>Consensus</th><th>For ${esc(m.name)}</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <p class="note">Tested on S&P, Nasdaq, Dow, gold and silver (2016–26, verdicts held 4 weeks): when macro agreed with the board's bias it won ${ag ? `${ag.win}%, ${sgn(ag.vs_drift)}% above simply holding the market` : "clearly more"}; when it was against, ${an ? `${an.win}%, ${sgn(an.vs_drift)}%` : "about nothing"}. On other markets macro made no difference, so it is shown only here. It marks the bias, it does not change it.</p></div>`;
+}
 function cycleCard(m) {
   const c = m.cycle; if (!c) return "";
   const sw = c.sweet, pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
@@ -786,11 +805,11 @@ function render(k) {
   const m = M[k], P = $("#panel");
   const cEss = cotLed(m) || m.basis.startsWith("Conflict"), sEss = seasonLed(m) || m.basis.startsWith("Conflict");
   const evc = "";
-  const cards = (m.basis === "Calendar only" || m.basis === "Calendar over COT") ? [seasonCard(m, true), cycleCard(m), evc, cotCard(m, m.basis !== "Calendar only")] : [cotCard(m, cEss), seasonCard(m, sEss), cycleCard(m), evc];
+  const cards = (m.basis === "Calendar only" || m.basis === "Calendar over COT") ? [seasonCard(m, true), macroCard(m), cycleCard(m), evc, cotCard(m, m.basis !== "Calendar only")] : [cotCard(m, cEss), seasonCard(m, sEss), macroCard(m), cycleCard(m), evc];
   const extra = [];
   P.style.animation = "none"; void P.offsetWidth; P.style.animation = "";
   P.innerHTML = `<div class="hero"><div><h1>${esc(m.name)}</h1><div class="sub">${k} · ${m.sector} · ${pill(m.verdict)} <span style="margin-left:6px">${m.basis}</span></div>
-      <p class="why">${why(m)}${smallRecord(m)}</p>${testedHero(m)}</div>${dial(m)}</div>${banner(m)}
+      <p class="why">${why(m)}${smallRecord(m)}${m.macro && m.macro.rel && m.verdict !== "STAND ASIDE" ? ` US macro (score ${m.macro.total > 0 ? "+" : ""}${m.macro.total}) is ${m.macro.rel === "agrees" ? "<b>with</b>" : m.macro.rel === "against" ? "<b>against</b>" : "neutral on"} this bias${m.macro.rel === "against" ? ", which historically made such biases on US indices, gold and silver much weaker" : m.macro.rel === "agrees" ? ", which historically made them clearly stronger" : ""}.` : ""}</p>${testedHero(m)}</div>${dial(m)}</div>${banner(m)}
     <div class="engines"><div class="eng ${cEss ? "lead" : ""}">${ICON.cot.replace("<svg", '<svg width="16" height="16"')}<span class="k">COT</span><b>${c_read(m)}</b>${m.cot.conv}</div>
       <div class="eng ${sEss ? "lead" : ""}">${ICON.cal.replace("<svg", '<svg width="16" height="16"')}<span class="k">Seasonality</span><b>${title(m.seas.read)}</b>${m.seas.strength ? title(m.seas.strength) : "–"}</div></div>
     <div class="charts">${cards.filter(Boolean).join("")}</div>${extra.join("")}

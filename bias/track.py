@@ -70,6 +70,7 @@ def record(res, today, asof):
         cal = VD.horizon(m["basis"]) == "window"
         start = max(today, pd.Timestamp(d["start"])) if cal and d.get("start") else today
         entries.append({"week": week, "m": k, "name": m["name"], "verdict": v, "basis": m["basis"],
+                        "macro": (m.get("macro") or {}).get("rel"),
                         "report": str(asof.date()), "entry_from": str((start + pd.Timedelta(days=1 if start == today else 0)).date()),
                         "window_end": d.get("end") if cal else None})
     os.makedirs(os.path.dirname(FILE), exist_ok=True)
@@ -89,5 +90,6 @@ def summary(today):
                 "avg_dir": round(float(np.mean([s * r["move"] for s, r in zip(sg, rs)])), 2)}
     return {"since": min((r["week"] for r in rows), default=None), "done": agg(done),
             "by_basis": {b: agg([r for r in done if r["basis"] == b]) for b in sorted({r["basis"] for r in done})},
+            "by_macro": {x: agg([r for r in done if r.get("macro") == x]) for x in ("agrees", "against", "flat")},
             "open": [r for r in rows if r["status"] in ("open", "waiting")],
             "recent": sorted(done, key=lambda r: r["exit"], reverse=True)[:12]}

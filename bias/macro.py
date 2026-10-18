@@ -88,14 +88,22 @@ Y2 = {"USD": "US2Y", "EUR": "DE2Y", "GBP": "UK2Y", "JPY": "JP2Y", "AUD": "AU2Y",
 RATE_DAYS = 20                                          # matched on the replica: 2-year yield vs 20 trading days earlier
 
 
+US2Y = os.path.join(ROOT, "data", "macro", "us2y_lse.csv")      # current US 2-year (sovereign series), pulled weekly
+
+
 def rate_cell(cur, days):
     """the inflation group's rate cell: +1 when the country's 2-year yield is above its level 20 trading days earlier,
-    -1 below; 0 where there are no yields (LSE's yield table stops on 10 Sep 2026)"""
-    if not os.path.exists(YIELDS):
+    -1 below; 0 where there are no yields. US: the current sovereign series (pulled weekly); others: LSE's yield table,
+    which stops on 10 Sep 2026"""
+    if cur == "USD" and os.path.exists(US2Y):
+        y = pd.read_csv(US2Y)
+        y = pd.Series(y.value.values, index=pd.to_datetime(y.date)).astype(float)
+    elif os.path.exists(YIELDS):
+        y = pd.read_csv(YIELDS)
+        y = y[y.symbol == Y2[cur]]
+        y = pd.Series(y.close.values, index=pd.to_datetime(y.date)).astype(float)
+    else:
         return pd.Series(0.0, index=days)
-    y = pd.read_csv(YIELDS)
-    y = y[y.symbol == Y2[cur]]
-    y = pd.Series(y.close.values, index=pd.to_datetime(y.date)).astype(float)
     y = y[~y.index.duplicated()].sort_index()
     cell = np.sign(y - y.shift(RATE_DAYS))
     cell.index = pd.DatetimeIndex(cell.index).astype("datetime64[ns]")
@@ -127,3 +135,41 @@ def market_scores(cal, k, days):
     g = sg * g
     g["total"] = g.sum(axis=1)
     return g
+
+
+US_DRIVEN = ("ES", "NQ", "YM", "GC", "SI")    # where the US macro score tested useful (research/tools_macro_align.py)
+LABEL = {"GDP": "GDP", "Retail": "Retail sales", "MfgPMI": "Manufacturing PMI", "SvcPMI": "Services PMI",
+         "ConsConf": "Consumer confidence", "CPI": "CPI", "PPI": "PPI", "PCE": "PCE prices", "NFP": "Payrolls",
+         "ADP": "ADP employment", "Claims": "Jobless claims", "JOLTS": "JOLTS openings", "Unemp": "Unemployment rate"}
+
+
+def board_macro(cal, k, today, side=None):
+    """the macro reading for the board page of a US-driven market: score, groups, latest US releases, relation to
+    the board's side"""
+    if k not in US_DRIVEN:
+        return None
+    days = pd.date_range(today - pd.Timedelta(days=400), today)
+    g = market_scores(cal, k, days).iloc[-1]
+    total = int(g["total"])
+    sg = int(np.sign(total))
+    rel = None
+    if side in ("BULLISH", "BEARISH"):
+        rel = "flat" if sg == 0 else ("agrees" if sg == (1 if side == "BULLISH" else -1) else "against")
+    cur, inf, all_ = MARKET[k]
+    ev = EVENTS.get(cur, {})
+    rec = cal[(cal.region_code == REGION[cur]) & (cal.event.isin(ev.values())) & (cal.day <= today)].sort_values(["day", "time"])
+    inv = {v: i for i, v in ev.items()}
+    latest = []
+    for e, x in rec.groupby("event"):
+        r = x.iloc[-1]
+        ind = inv[e]
+        cell = -r.surprise if ind in INVERT else r.surprise
+        grp = next(gg for gg, inds in GROUPS.items() if ind in inds)
+        effect = all_ * (inf if grp == "inflation" else 1) * cell
+        latest.append({"indicator": LABEL.get(ind, ind), "group": grp, "date": str(r.day.date()), "actual": r.actual,
+                       "consensus": r.consensus if isinstance(r.consensus, str) else None, "previous": r.previous,
+                       "surprise": int(r.surprise), "effect": int(effect)})
+    latest.sort(key=lambda x: x["date"], reverse=True)
+    return {"total": total, "side": "BULLISH" if sg > 0 else "BEARISH" if sg < 0 else "NEUTRAL", "rel": rel,
+            "groups": {x: int(g[x]) for x in ("growth", "inflation", "labour")}, "latest": latest,
+            "inverted": "inflation" if inf < 0 and all_ > 0 else "all" if all_ < 0 else None}

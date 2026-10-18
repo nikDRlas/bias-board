@@ -76,8 +76,37 @@ def pull_cot():
     return rows
 
 
+MACRO = os.path.join(ROOT, "data", "macro")
+
+
+def pull_macro(months=4):
+    """economic calendar: the last `months` months re-pulled and merged into data/macro/calendar_lse.csv.gz (history
+    since 2015 is in the repo); US 2-year yield (sovereign series, 2010 onwards) -> data/macro/us2y_lse.csv"""
+    import pandas as pd
+    path = os.path.join(MACRO, "calendar_lse.csv.gz")
+    old = pd.read_csv(path, low_memory=False) if os.path.exists(path) else pd.DataFrame()
+    first = (dt.date.today().replace(day=1) - dt.timedelta(days=31 * (months - 1))).replace(day=1)
+    rows, m = [], first
+    while m <= dt.date.today():
+        nxt = (m.replace(day=28) + dt.timedelta(days=4)).replace(day=1)
+        rows += fetch(f"{BASE}/ref/economic_calendar?start={m.isoformat()}&end={(nxt - dt.timedelta(days=1)).isoformat()}")
+        m = nxt
+    keep = ["id", "date", "time", "region_code", "event", "period_hint", "actual", "previous", "consensus", "forecast"]
+    new = pd.DataFrame(rows)[keep]
+    cal = pd.concat([old[~old["id"].isin(new["id"])], new], ignore_index=True).sort_values(["date", "time"])
+    cal.to_csv(path, index=False, compression="gzip")
+    print(f"calendar: {len(new)} rows re-pulled since {first}, {len(cal)} in total, last {cal['date'].max()}")
+    y = fetch(f"{BASE}/series?dataset=sovereign_yields&symbol=USGB2Y&start=2010-01-01&end={END}")
+    pd.DataFrame(y)[["date", "value"]].to_csv(os.path.join(MACRO, "us2y_lse.csv"), index=False)
+    print(f"US 2-year: {len(y)} days, last {y[-1]['date'] if y else '-'}")
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
+    try:
+        pull_macro()
+    except Exception as e:                       # the board still builds without fresh macro data
+        print("macro pull FAILED", e)
     if "--no-cot" not in sys.argv:
         c = pull_cot()
         json.dump(c, open(os.path.join(OUT, "cot.json"), "w"))
