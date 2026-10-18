@@ -1,0 +1,33 @@
+{
+ "speed judged weekly": {
+  "all": {
+   "n": 498,
+   "win": 60.6,
+   "avg": 0.93,
+   "t": 2.97,
+   "per_week": 0.243
+  },
+  "cot_led": {
+   "n": 182,
+   "win": 64.8,
+   "avg": 1.57,
+   "t": 3.41
+  }
+ },
+ "speed judged start": {
+  "all": {
+   "n": 471,
+   "win": 60.9,
+   "avg": 0.85,
+   "t": 1.77,
+   "per_week": 0.143
+  },
+  "cot_led": {
+   "n": 181,
+   "win": 65.7,
+   "avg": 1.43,
+   "t": 1.4
+  }
+ },
+ "signals per commercial extreme": 1.38
+}

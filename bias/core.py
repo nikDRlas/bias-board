@@ -212,15 +212,29 @@ def speed_of(sp, i, side, cut=None):
     return "fast" if v > cut[1] else "slow" if v <= cut[0] else "medium"
 
 
+SPEED_AT_START = os.environ.get("COT_SPEED_AT_START", "0") == "1"   # tested worse: kept off (data/research/cot_speed_start.json)
+
+
 def lit_sides(reader, sp=None, skip_slow=True):
-    """the board's COT side on every weekly report (None = no side); slow signals count as no side"""
+    """the board's COT side on every weekly report (None = no side); slow signals count as no side. The speed is
+    judged once, on the first report of a run of the same raw read: a weekly flicker between 'medium' and 'slow' does
+    not split one extreme into several signals. Off by default: judged weekly the speed acts as an early exit and
+    tested better (data/research/cot_speed_start.json)"""
     cut = speed_cutoffs() if skip_slow else None
-    out = []
-    for i in range(len(reader.dates)):
-        v = reader.read_at(i)
-        if v not in ("BULLISH", "BEARISH") or (skip_slow and sp is not None and speed_of(sp, i, v, cut) == "slow"):
-            v = None
-        out.append(v)
+    raw = [reader.read_at(i) for i in range(len(reader.dates))]
+    out, start_ok = [], None
+    for i, v in enumerate(raw):
+        if v not in ("BULLISH", "BEARISH"):
+            out.append(None)
+            start_ok = None
+            continue
+        slow = skip_slow and sp is not None and speed_of(sp, i, v, cut) == "slow"
+        if not SPEED_AT_START:
+            out.append(None if slow else v)
+            continue
+        if i == 0 or raw[i - 1] != v:
+            start_ok = not slow                  # judged when the run starts
+        out.append(v if start_ok else None)
     return out
 
 
