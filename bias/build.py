@@ -485,8 +485,12 @@ def move_done(c, s, basis):
     out = {}
     rc = c.get("record") or {}
     lv = rc.get("live")
-    if lv and rc.get("avg") is not None:
-        out["cot"] = _done_state(lv["move"], rc["avg"], rc.get("mfe"))
+    wins = [x["r"] for x in rc.get("cases") or [] if x["r"] > 0]
+    if lv and wins:
+        # COT yardstick = the usual WINNING move (the average of all setups is pulled toward zero by the losers);
+        # done only well past it: research/cot_done_yardstick_test.py (>= 150%: 50% won, +0.04% afterwards)
+        out["cot"] = _done_state(lv["move"], float(np.mean(wins)), rc.get("mfe"), done_at=1.5)
+        out["cot"]["yardstick"] = "winning"
     d, r = s.get("driver"), s.get("remaining")
     if d and r and r.get("started") and r.get("so_far") is not None:
         sg = 1 if d["side"] == "BUY" else -1
@@ -497,13 +501,13 @@ def move_done(c, s, basis):
     return out
 
 
-def _done_state(so_far, usual, best):
+def _done_state(so_far, usual, best, done_at=1.0):
     so_far, usual = round(float(so_far), 2), round(float(usual), 2)
     if usual <= 0:
         state = "no positive usual move"
     else:
-        state = "done" if so_far >= usual else "against" if so_far < 0 else "not yet"
-    return {"so_far": so_far, "usual": usual, "share": round(100 * so_far / usual) if usual > 0 else None,
+        state = "done" if so_far >= done_at * usual else "against" if so_far < 0 else "not yet"
+    return {"so_far": so_far, "usual": usual, "share": round(100 * so_far / usual) if usual > 0 else None, "done_at": done_at,
             "beyond_best": bool(best is not None and best > 0 and so_far >= best), "state": state}
 
 

@@ -309,14 +309,16 @@ function doneCell(x, kind, side) {
   const T = (D.move_done_test || {});
   const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
   if (x.state === "no positive usual move") return `<div><b>–</b><span>no positive usual move to measure against</span></div>`;
+  const what = kind === "cot" ? "a usual winning move" : "the usual move";
   if (x.state === "done") {
-    const t = kind === "seas" ? (T.seasonal_first || {}).done : (T.cot || {}).done;
+    const t = kind === "seas" ? (T.seasonal_first || {}).done : null;
     const a = t && (t.all || t);
     const note = kind === "seas" ? `setup done: windows past their usual move earned ${a ? `${sgn(a.avg)}% from there (${a.win}% won)` : "nothing more"} in the test`
-                                 : `usual move done${x.beyond_best ? ", beyond its usual best" : ""}: COT setups past it still earned ${a ? `${sgn(a.avg)}% from there` : "a little"}, less than ones not there yet`;
-    return `<div class="done"><b>${x.share}%</b><span>of the usual move already made (price ${pc(raw(x.so_far, side))} so far, usual ${pc(raw(x.usual, side))}) · ${note}</span></div>`;
+                                 : `move done: COT setups past 150% of a usual winning move had nothing left in the test (50% won, +0.04% afterwards)`;
+    return `<div class="done"><b>${x.share}%</b><span>of ${what} already made (price ${pc(raw(x.so_far, side))} so far, usual ${pc(raw(x.usual, side))}) · ${note}</span></div>`;
   }
-  return `<div><b>${x.share}%</b><span>of the usual move made so far (price ${pc(raw(x.so_far, side))} so far, usual ${pc(raw(x.usual, side))})${x.state === "against" ? " · so far against the setup" : ""}</span></div>`;
+  if (x.state === "against") return `<div><b>against</b><span>price has moved against the setup so far (${pc(raw(x.so_far, side))}); ${what} is ${pc(raw(x.usual, side))}</span></div>`;
+  return `<div><b>${x.share}%</b><span>of ${what} made so far (price ${pc(raw(x.so_far, side))} so far, usual ${pc(raw(x.usual, side))})${kind === "cot" ? " · counts as done from 150%" : ""}</span></div>`;
 }
 function dots(m, big) {
   const c = m.confidence; if (!c || m.verdict === "STAND ASIDE") return "";
