@@ -521,24 +521,20 @@ function seasonChart(m) {
   const doy = d => { const t = new Date(d + "T00:00:00"); return (t - new Date(t.getFullYear(), 0, 1)) / 864e5; };
   const XD = d => { const t = new Date(d + "T00:00:00"); const yy = t.getFullYear() > TODAY.getFullYear() ? 365 : 0; return X(Math.min(n - 1, (doy(d) + yy) / 365 * (n - 1))); };
   let bands = "";
-  s.windows.forEach(w => {
-    // windows are placed by trading day, like the price paths (samples are every 2nd trading day)
-    const xs = w.s != null ? X(Math.min(n - 1, w.s / 2)) : XD(w.start), xe = w.s != null ? X(Math.min(n - 1, (w.s + w.len) / 2)) : XD(w.end);
-    const x0 = xs, x1 = xe, main = !!(s.driver && !s.small_only && w.start === s.driver.start && w.side === s.driver.side), col = w.side === "BUY" ? "var(--bull)" : "var(--bear)";
-    const flip = m.timing && m.timing.flip && m.timing.flip.start === w.start;
-    if (!main && !flip) return;
-    bands += `<rect x="${x0}" y="${T}" width="${Math.max(2, x1 - x0)}" height="${H - T - B}" fill="${col}" opacity="${main ? .13 : .07}" ${flip ? 'stroke="' + col + '" stroke-dasharray="4 4" stroke-opacity=".6"' : ""} rx="4"/>
-      <text x="${x0 + 5}" y="${T + (main ? 13 : 29)}" style="font:600 11px var(--body);fill:${col}">${main ? "◀ driver · " : "next · "}${w.side.toLowerCase()} ${w.wins}/15</text>`;
-  });
-  // every other window running now or coming, however far ahead (display only), lighter and dotted
-  let li = 0;
-  (s.table || []).forEach(w => {
-    const isMain = s.windows.some(v => v.side === w.side && v.start === w.start && ((s.driver && v.start === s.driver.start && !s.small_only) || (m.timing && m.timing.flip && m.timing.flip.start === v.start)));
-    if (isMain || +w.start.slice(0, 4) > TODAY.getFullYear()) return;
+  // the chart shows at most two windows: the running one and the next, or the next two (the table lists them all)
+  const tbl = (s.table || []).slice().sort((p, q) => p.s - q.s);
+  const isDrv = w => !!(s.driver && !s.small_only && w.start === s.driver.start && w.side === s.driver.side);
+  const run = tbl.filter(w => w.days_to <= 0), fut = tbl.filter(w => w.days_to > 0);
+  const now0 = run.find(isDrv) || run[0];
+  const drvF = fut.find(isDrv);
+  const chosen = now0 ? [now0, ...fut.slice(0, 1)] : drvF ? [drvF, ...fut.filter(w => w.s > drvF.s).slice(0, 1)] : fut.slice(0, 2);
+  chosen.forEach((w, i) => {
+    if (+w.start.slice(0, 4) > TODAY.getFullYear()) return;
     const x0 = X(Math.min(n - 1.5, w.s / 2)), x1 = X(Math.min(n - 1, (w.s + w.len) / 2)), col = w.side === "BUY" ? "var(--bull)" : "var(--bear)";
-    const lab = `${w.days_to <= 0 ? "running" : "in " + w.days_to + "d"} · ${w.side.toLowerCase()} ${w.wins}/15${w.small ? " · small" : ""}`;
-    bands += `<rect x="${x0}" y="${T}" width="${Math.max(2, x1 - x0)}" height="${H - T - B}" fill="${col}" opacity=".06" stroke="${col}" stroke-dasharray="2 4" stroke-opacity=".5" rx="4"/>
-      <text x="${x0 > W - 130 ? W - R - 4 : x0 + 5}" y="${T + 45 + 16 * (li++ % 4)}" text-anchor="${x0 > W - 130 ? "end" : "start"}" style="font:600 11px var(--body);fill:${col};opacity:.85">${lab}</text>`;
+    const main = isDrv(w), right = x0 > W - 130;
+    const lab = main ? `◀ driver · ${w.side.toLowerCase()} ${w.wins}/15` : `${w.days_to <= 0 ? "running" : "in " + w.days_to + "d"} · ${w.side.toLowerCase()} ${w.wins}/15${w.small ? " · small" : ""}`;
+    bands += `<rect x="${x0}" y="${T}" width="${Math.max(2, x1 - x0)}" height="${H - T - B}" fill="${col}" opacity="${main ? .13 : .06}" ${main ? "" : `stroke="${col}" stroke-dasharray="2 4" stroke-opacity=".5"`} rx="4"/>
+      <text x="${right ? W - R - 4 : x0 + 5}" y="${T + 13 + 16 * i}" text-anchor="${right ? "end" : "start"}" style="font:600 11px var(--body);fill:${col}">${lab}</text>`;
   });
   const tx = X(sp.mc - 1);
   const months = "JFMAMJJASOND".split("").map((c, i) => `<text x="${X((i + .5) / 12 * (n - 1))}" y="${H - 8}" text-anchor="middle">${c}</text>`).join("");
