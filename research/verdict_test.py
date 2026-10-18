@@ -26,7 +26,8 @@ SECTOR = lambda k: {"FX": "Currencies", "Indices": "Indices", "Agriculture": "Ag
 LB_CFG = {"15": [(15, 12)], "10": [(10, 8)], "15,10": [(15, 12), (10, 8)]}[os.environ.get("SEAS_LB", os.environ.get("SEAS_YEARS", "15"))]
 SKIP_SLOW = os.environ.get("SKIP_SLOW") == "1"
 OUT = os.environ.get("OUT", "verdict.json")
-GATES = os.environ.get("GATES", "macro,done")          # the final 'nothing left' rules (bias/verdict.py final_read)
+GATES = os.environ.get("GATES", "macro,done")
+FX_COT = os.environ.get("FX_COT", "min")              # currency COT rule: min (board) / none / bernd (his evidence gate)          # the final 'nothing left' rules (bias/verdict.py final_read)
 speed_series, speed_of = C.speed_series, C.speed_of
 LONG_LENS = np.arange(31, 64)
 
@@ -34,6 +35,10 @@ LONG_LENS = np.arange(31, 64)
 if __name__ == "__main__":
     SS.LOOKBACKS = LB_CFG
     MACRO = {}
+    BERND = {}
+    if FX_COT == "bernd":
+        from qualify_test import Market
+        BERND = {k: Market(k) for k in C.M if C.M[k][3] == "FX"}
     if "macro" in GATES:
         import macro as MC
         _cal = MC.load_calendar()
@@ -55,7 +60,11 @@ if __name__ == "__main__":
             spd = speed_of(sp, i_rep, cot) if cot in VD.SIDES else None
             if SKIP_SLOW and spd == "slow":
                 cot = "NEUTRAL"
-            if cot in VD.SIDES and not C.cot_big_enough(k, cot, t):
+            fx = C.M[k][3] == "FX"
+            if cot in VD.SIDES and fx and FX_COT == "bernd":
+                if BERND[k].read(t, "gated") != cot:
+                    cot = "NEUTRAL"
+            elif cot in VD.SIDES and not (fx and FX_COT == "none") and not C.cot_big_enough(k, cot, t):
                 cot = "NEUTRAL"
             v, basis, (ws, status) = VD.board_read(cot, cal, t, rd)
             if v in VD.SIDES and GATES:
@@ -97,7 +106,7 @@ if __name__ == "__main__":
            "by_cell": summary([dict(r, c=r["basis"] + " | " + r["sector"]) for r in rows], "c"),
            "by_sector": summary(rows, "sector"),
            "by_basis_speed": summary([dict(r, bs=r["basis"] + " | " + r["speed"]) for r in rows if r["speed"]], "bs"),
-           "config": {"seas_lb": os.environ.get("SEAS_LB", "15"), "skip_slow": SKIP_SLOW, "solo_min_move": SS.SOLO_MIN_MOVE, "gates": GATES}}
+           "config": {"seas_lb": os.environ.get("SEAS_LB", "15"), "skip_slow": SKIP_SLOW, "solo_min_move": SS.SOLO_MIN_MOVE, "gates": GATES, "fx_cot": FX_COT}}
     os.makedirs(os.path.join(HERE, "..", "data", "research"), exist_ok=True)
     json.dump({**out, "trades": rows}, open(os.path.join(HERE, "..", "data", "research", OUT), "w"), indent=1)
     for key in ("first", "last", "all", "by_basis", "by_sector"):
