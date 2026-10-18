@@ -831,7 +831,16 @@ if __name__ == "__main__":
         cal0 = SS.Calendar(p)
         spd0 = cot_speed(k, reader, reader.read(TODAY))
         v, why, groups, used = combine(k, reader, cal0, spd0["speed"] if spd0 else None)
+        small_only = False
+        if used[1] != "driver":                          # nothing big enough to stand alone: still show the windows
+            every = cal0.windows(TODAY, min_move=0)
+            if every[1] == "driver":
+                used, small_only = every, True
         s = season_block(p, cal0, used)
+        s["small_only"] = small_only
+        if s.get("driver"):
+            vol0 = cal0.day_vol(TODAY)
+            s["driver"]["move_days"] = round(abs(s["driver"]["avg"]) / 100 / vol0, 1) if vol0 else None
         s["past"] = past_years(k, s, reader, p)
         cr = reader.read(TODAY)
         c["index_short_skipped"] = reader.skipped_short     # bearish index COT, not used (research/cot_indices_test.py)

@@ -48,6 +48,8 @@ if __name__ == "__main__":
             spd = speed_of(sp, i_rep, cot) if cot in VD.SIDES else None
             if SKIP_SLOW and spd == "slow":
                 cot = "NEUTRAL"
+            if cot in VD.SIDES and not C.cot_big_enough(k, cot, t):
+                cot = "NEUTRAL"
             v, basis, (ws, status) = VD.board_read(cot, cal, t, rd)
             if v not in VD.SIDES:
                 continue

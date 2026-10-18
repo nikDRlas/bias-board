@@ -240,3 +240,57 @@ def lit_start(lit, i):
     while i > 0 and lit[i - 1] == lit[i]:
         i -= 1
     return i
+
+
+# ---------------------------------------------------------------- size of a market's own COT record
+# A COT signal only counts if the market's earlier setups in that direction (one per lit run, held while lit + 1 week,
+# finished by then) usually moved at least COT_MIN_MOVE normal daily moves (research/cot_record_size_test.py).
+COT_MIN_MOVE = float(os.environ.get("COT_MIN_MOVE", "-99"))
+_CASES = {}
+
+
+def cot_cases(k):
+    """every finished COT setup of market k: side, exit date, end move and worst move along the way (in %)"""
+    if k in _CASES:
+        return _CASES[k]
+    p, rd = load_px(k), CotReader(k)
+    lit = lit_sides(rd, speed_series(k))
+    px = p.to_numpy(float)
+    out = []
+    for i in range(len(rd.dates)):
+        v = lit[i]
+        if not v or (i and lit[i - 1] == v):
+            continue
+        ex = cot_exit(rd.dates, lit, i)
+        rel = rd.dates[i] + pd.Timedelta(days=3)
+        if ex is None or rel < p.index[0]:
+            continue
+        a, b = p.index.searchsorted(rel), p.index.searchsorted(ex)
+        if b >= len(p) or b <= a:
+            continue
+        sg = 1 if v == "BULLISH" else -1
+        seg = sg * (px[a:b + 1] / px[a] - 1)
+        out.append({"side": v, "start": rd.dates[i], "exit": p.index[b], "end": 100 * float(seg[-1]), "mae": 100 * float(seg.min())})
+    _CASES[k] = (out, p)
+    return _CASES[k]
+
+
+def cot_usual(k, side, t, min_cases=5):
+    """usual end move of market k's earlier COT setups in `side`, finished by t, in normal daily moves; None if fewer
+    than `min_cases`"""
+    cs, p = cot_cases(k)
+    prior = [c["end"] for c in cs if c["side"] == side and c["exit"] <= t]
+    if len(prior) < min_cases:
+        return None
+    ti = p.index.searchsorted(t)
+    lr = np.diff(np.log(p.to_numpy(float)[max(0, ti - 253):ti]))
+    vol = 100 * lr.std() if len(lr) > 20 else np.nan
+    return float(np.mean(prior)) / vol if vol else None
+
+
+def cot_big_enough(k, side, t):
+    """does a COT signal in `side` clear the minimum record size (no minimum when the record is too short)?"""
+    if COT_MIN_MOVE <= -90 or side not in ("BULLISH", "BEARISH"):
+        return True
+    u = cot_usual(k, side, t)
+    return u is None or u >= COT_MIN_MOVE

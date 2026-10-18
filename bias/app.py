@@ -684,6 +684,7 @@ function chartTag(m, which) {
   const b = m.basis, drive = '<span class="tag">drives the bias</span>', off = t => `<span class="tag ctx">${t}</span>`;
   if (b.startsWith("Conflict")) return '<span class="tag conflict">in conflict · no bias</span>';
   if (b === "COT + calendar") return drive;
+  if (which === "seas" && m.seas.small_only) return off("too small to carry a bias alone");
   if (b === "COT only") return which === "cot" ? drive : off("not part of the verdict");
   if (b === "Calendar only") return which === "seas" ? drive : off("not part of the verdict");
   if (b === "Calendar over COT") return which === "seas" ? drive : off("overruled by the calendar");
@@ -705,6 +706,7 @@ function seasonCard(m, ess) {
   return `<div class="card"><h3>Seasonality ${chartTag(m, "seas")} ${pill(s.read === "BULLISH" || s.read === "BEARISH" ? s.read : "flat", title(s.read))}${s.strength ? ` <span class="st">${title(s.strength)} · ${s.kind}</span>` : ""}</h3>
     <p class="note">In price: ${TODAY.getFullYear()} so far, and the average path of the last 5, 10 and 15 years lined up to pass through today's price, with the usual path from today to the end of the current seasonal window (dashed). The numbers under the chart are measured over the same trading days in each of the last 15 years. Shape match ${s.shape >= 0 ? "+" : ""}${s.shape.toFixed(2)}, ${s.shape_read}.</p>
     <div class="ctl" role="group" aria-label="Seasonal scale"><button class="chip" data-fit="1" aria-pressed="${seasonFit}">Stretched to the price's swing</button><button class="chip" data-fit="0" aria-pressed="${!seasonFit}">Real size</button></div>
+    ${s.small_only && s.driver ? `<p class="note smallonly">This window's usual move is ${s.driver.move_days} normal days of ${esc(m.name)} (${sgn(s.driver.avg)}%); a window needs at least 3 to carry a bias alone. It can only back a COT signal pointing the same way, so it is shown for information and is not part of this week's verdict.</p>` : ""}
     <div id="seaschart">${seasonChart(m)}</div>${pastYears(m)}</div>`;
 }
 function testedSection() {
