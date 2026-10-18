@@ -206,6 +206,8 @@ def combine(k, reader, cal, speed=None):
     g = reader.last_groups
     if speed == "slow":
         v = "NEUTRAL"
+    if v in VD.SIDES and not R.cot_big_enough(k, v, TODAY):
+        v = "NEUTRAL"                 # the market's COT record usually moved too little (research/cot_min_grid.json)
     verdict, basis, used = VD.board_read(v, cal, TODAY, reader)
     return verdict, basis, g, used
 
@@ -868,6 +870,9 @@ if __name__ == "__main__":
         s["past"] = past_years(k, s, reader, p)
         cr = reader.read(TODAY)
         c["index_short_skipped"] = reader.skipped_short     # bearish index COT, not used (research/cot_indices_test.py)
+        c["usual_days"] = round(R.cot_usual(k, cr, TODAY), 2) if cr in ("BULLISH", "BEARISH") and R.cot_usual(k, cr, TODAY) is not None else None
+        c["small_record"] = bool(cr in ("BULLISH", "BEARISH") and not R.cot_big_enough(k, cr, TODAY))
+        c["min_move"] = R.COT_MIN_MOVE
         c["read"] = cr if cr in ("BULLISH", "BEARISH") else "STAND ASIDE"   # the tested read, not the untested tie-breaks
         c["record"] = cot_record(reader, p, cr, k)
         c["speed"] = cot_speed(k, reader, cr)

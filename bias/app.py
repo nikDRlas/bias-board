@@ -389,14 +389,21 @@ function why(m) {
   const g = m.groups === 2 ? "commercials, with retail and funds on the other side" : "commercials, with retail or funds on the other side";
   switch (m.basis) {
     case "COT + calendar": return `Both engines point ${m.verdict.toLowerCase()}: ${g} at extremes, and the calendar agrees (${win}).${turnNote(d)}`;
-    case "COT only": return `COT carries the bias alone: ${g} at extremes. ${s.read === "SELF-CANCELLING" ? "The calendar cancels itself out." : "No seasonal window is in play."}`;
+    case "COT only": return `COT carries the bias alone: ${g} at extremes. ${s.read === "SELF-CANCELLING" ? "The calendar cancels itself out." : (s.small_only ? "The seasonal window in play is too small to count." : "No seasonal window is in play.")}`;
     case "Calendar only": return `The calendar carries the bias alone: ${win}.${turnNote(d)} Positioning has no side.${shortSkip(m)}`;
   }
   const ag = (s.past && s.past.summary.against) || {n: 0, w: 0};
   if (m.basis === "Calendar over COT") return `COT reads ${title(c.read)} (${g}), against the calendar: ${win}. In the past years when COT was against this window it still paid ${ag.w} of ${ag.n} times, so the calendar stands.`;
   if (m.basis.startsWith("Conflict")) return `No bias. COT reads ${title(c.read)} (${g}) while the calendar says ${title(s.read)} (${win}). ${ag.n >= 3 ? `In past years with COT against it, this window paid only ${ag.w} of ${ag.n} times` : `This window has too few past years with COT against it (${ag.n}) to judge`}, so COT is relevant here and we wait.`;
   if (c.index_short_skipped) return `No bias.${shortSkip(m)} And ${s.read === "SELF-CANCELLING" ? "the calendar cancels itself out" : "no seasonal window in play is big enough to carry a bias alone (usual move of at least 3 normal daily moves)"}.`;
-  return `No bias. The commercials are not at an extreme with retail or funds on the other side, and ${s.read === "SELF-CANCELLING" ? "the calendar cancels itself out" : "no seasonal window in play is big enough to carry a bias alone (usual move of at least 3 normal days)"}.`;
+  const seasPart = s.read === "SELF-CANCELLING" ? "the calendar cancels itself out" : "no seasonal window in play is big enough to carry a bias alone (usual move of at least 3 normal days)";
+  if (c.small_record) return `No bias: ${seasPart}.`;
+  return `No bias. The commercials are not at an extreme with retail or funds on the other side, and ${seasPart}.`;
+}
+function smallRecord(m) {
+  // a COT signal whose own record on this market usually moved too little is not used (research/cot_min_grid.json)
+  const c = m.cot; if (!c.small_record) return "";
+  return ` COT reads ${c.read.toLowerCase()}, but on ${esc(m.name)} this signal's past setups usually moved only ${c.usual_days} normal daily moves (price ${pcx(raw(c.record ? c.record.avg : null, c.read))} on average), below the ${c.min_move} the board requires, so it is not used.`;
 }
 function shortSkip(m) {
   // bearish COT on the US indices is not used (research/cot_indices_test.py)
@@ -482,7 +489,7 @@ function cotStats(m) {
   const cell = (big, small) => `<div><b>${big}</b><span>${small}</span></div>`;
   return `<div class="wstats">
     ${cell(pc(raw(lv.move, sd)), `price so far since the ${sd.toLowerCase()} signal (report ${fmtD(lv.since)}, entry ${fmtD(lv.entry)}) · running ${lv.weeks.toFixed(1)} weeks (usually about ${rc.weeks}) · held while the signal stays lit, out ${rc.after} week after it goes dark`)}
-    ${cell(pc(raw(rc.avg, sd)), `usual price move at the exit · went the signal's way ${rc.w} of ${rc.n} times`)}
+    ${cell(pc(raw(rc.avg, sd)), `usual price move at the exit · went the signal's way ${rc.w} of ${rc.n} times${m.cot.usual_days != null ? ` · ${m.cot.usual_days} normal days in the signal's direction (the board needs ${m.cot.min_move})` : ""}`)}
     ${cell(pc(bw[0]), "usual best point for the signal along the way")}
     ${doneCell(m.done && m.done.cot, "cot", m.cot.read)}
     ${cell(pc(bw[1]), "usual worst point for the signal along the way")}
@@ -712,6 +719,7 @@ function chartTag(m, which) {
   if (b.startsWith("Conflict")) return '<span class="tag conflict">in conflict · no bias</span>';
   if (b === "COT + calendar") return drive;
   if (which === "seas" && m.seas.small_only) return off("too small to carry a bias alone");
+  if (which === "cot" && m.cot.small_record) return off("record too small · not used");
   if (b === "COT only") return which === "cot" ? drive : off("not part of the verdict");
   if (b === "Calendar only") return which === "seas" ? drive : off("not part of the verdict");
   if (b === "Calendar over COT") return which === "seas" ? drive : off("overruled by the calendar");
@@ -756,7 +764,7 @@ function testedSection() {
       const c = o => o ? `<td class="n">${o.n}</td><td class="n">${o.win}%</td><td class="n">${sgn(o.avg)}%</td>` : `<td class="n">–</td><td class="n">–</td><td class="n">–</td>`;
       return `<tr><th>${esc(M[k].name)}</th>${c(a)}${c(b)}</tr>`; }).join("")}</tbody></table></div>
     <p class="note">Per market the samples are small (a few dozen trades over 7–10 years), so single rows swing a lot; the pooled rows above are the more reliable read.</p>
-    <p class="note">How the board uses this: each engine may carry the bias alone, but a seasonal window that carries it alone (no COT agreeing) must usually move at least 3 normal daily moves of that market (tested: verdicts 57% vs 54% without it); a window that agrees with COT counts at any size. In a contradiction the calendar stands if the window already paid in at least 2 of 3 past years when COT was against it (at least 3 such years); otherwise there is no bias. Tested, that split made no difference: the calendar won 50.5% when the window had played out against COT and 50.0% when it had not. In contradictions the calendar won about half the time and COT only slightly more, so neither earns the right to overrule the other. Both edges are small: the COT read, held while lit, wins about 55-60% with a small average and is only clearly above zero pooled across all markets; the seasonal windows have not beaten a coin flip out of sample.</p></details>`;
+    <p class="note">How the board uses this: each engine may carry the bias alone, but a seasonal window that carries it alone (no COT agreeing) must usually move at least 3 normal daily moves of that market (tested: verdicts 57% vs 54% without it); a window that agrees with COT counts at any size. A COT signal only counts if its past setups on that market usually moved at least 0.5 normal daily moves in its direction (tested on a grid of thresholds: chosen on 2019–22, confirmed on 2023–26, 63.5% won vs 59.5% without it); on the US indices only bullish COT signals count. In a contradiction the calendar stands if the window already paid in at least 2 of 3 past years when COT was against it (at least 3 such years); otherwise there is no bias. Tested, that split made no difference: the calendar won 50.5% when the window had played out against COT and 50.0% when it had not. In contradictions the calendar won about half the time and COT only slightly more, so neither earns the right to overrule the other. Both edges are small: the COT read, held while lit, wins about 55-60% with a small average and is only clearly above zero pooled across all markets; the seasonal windows have not beaten a coin flip out of sample.</p></details>`;
 }
 function render(k) {
   const m = M[k], P = $("#panel");
@@ -766,7 +774,7 @@ function render(k) {
   const extra = [];
   P.style.animation = "none"; void P.offsetWidth; P.style.animation = "";
   P.innerHTML = `<div class="hero"><div><h1>${esc(m.name)}</h1><div class="sub">${k} · ${m.sector} · ${pill(m.verdict)} <span style="margin-left:6px">${m.basis}</span></div>
-      <p class="why">${why(m)}</p>${testedHero(m)}</div>${dial(m)}</div>${banner(m)}
+      <p class="why">${why(m)}${smallRecord(m)}</p>${testedHero(m)}</div>${dial(m)}</div>${banner(m)}
     <div class="engines"><div class="eng ${cEss ? "lead" : ""}">${ICON.cot.replace("<svg", '<svg width="16" height="16"')}<span class="k">COT</span><b>${c_read(m)}</b>${m.cot.conv}</div>
       <div class="eng ${sEss ? "lead" : ""}">${ICON.cal.replace("<svg", '<svg width="16" height="16"')}<span class="k">Seasonality</span><b>${title(m.seas.read)}</b>${m.seas.strength ? title(m.seas.strength) : "–"}</div></div>
     <div class="charts">${cards.filter(Boolean).join("")}</div>${extra.join("")}

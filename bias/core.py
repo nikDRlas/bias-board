@@ -244,8 +244,9 @@ def lit_start(lit, i):
 
 # ---------------------------------------------------------------- size of a market's own COT record
 # A COT signal only counts if the market's earlier setups in that direction (one per lit run, held while lit + 1 week,
-# finished by then) usually moved at least COT_MIN_MOVE normal daily moves (research/cot_record_size_test.py).
-COT_MIN_MOVE = float(os.environ.get("COT_MIN_MOVE", "-99"))
+# finished by then) usually moved at least COT_MIN_MOVE normal daily moves (research/cot_record_size_test.py; grid
+# -0.25..1 in data/research/cot_min_grid.json: plateau 0-0.5, 0.5 chosen on 2019-22 and confirmed on 2023-26).
+COT_MIN_MOVE = float(os.environ.get("COT_MIN_MOVE", "0.5"))
 _CASES = {}
 
 
