@@ -65,7 +65,7 @@ if __name__ == "__main__":
             i_rep = rd.dates.searchsorted(t - pd.Timedelta(days=3), "right") - 1
             if cot in VD.SIDES and speed_of(sp, i_rep, cot) == "slow":
                 cot = "NEUTRAL"
-            if cot in VD.SIDES and not C.cot_big_enough(k, cot, t):
+            if cot in VD.SIDES and not C.cot_counts(k, cot, t):
                 cot = "NEUTRAL"
             v, basis, (ws, status) = VD.board_read(cot, cal, t, rd)
             if v in VD.SIDES:

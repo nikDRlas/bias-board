@@ -292,6 +292,11 @@ function setupStats(m) {
   const yrs = rel => (s.past ? s.past.years.filter(y => !rel || y.rel === rel) : []);
   const fromYears = (ys, label) => ys.length ? {w: ys.filter(y => y.win).length, n: ys.length, avg: sg * ys.reduce((a, y) => a + y.r, 0) / ys.length, label} : null;
   if (b === "Calendar only" && d) return {w: d.wins, n: d.n || 15, avg: d.avg, label: `this window, last ${d.n || 15} years`};
+  if (b === "COT only" && c.gate && c.gate.rows && c.gate.rows.length) {
+    // currencies: the row Bernd's evidence bar accepted is the record the rule uses
+    const g = c.gate.rows.slice().sort((x, y) => y.w / y.n - x.w / x.n || y.n - x.n)[0];
+    return {w: g.w, n: g.n, avg: raw(g.avg, m.cot.read), label: `the qualifying COT row: ${GN[g.group].toLowerCase()} ${g.lb}, ${g.h} weeks after the extreme (Bernd's evidence bar)`};
+  }
   if (b === "COT only" && c.record) return {w: c.record.w, n: c.record.n, avg: raw(c.record.avg, m.cot.read), label: `this COT signal on ${m.name} since ${c.record.first}, held while lit + 1 week`};
   if (b === "COT + calendar") return fromYears(yrs("agree"), "years of this window when COT pointed the same way at its start");
   if (b === "Calendar over COT") return fromYears(yrs("against"), "years of this window when COT was against it at its start");
@@ -440,8 +445,15 @@ function whyMain(m) {
   return `No bias. The commercials are not at an extreme with retail or funds on the other side, and ${seasPart}.`;
 }
 function smallRecord(m) {
-  // a COT signal whose own record on this market usually moved too little is not used (research/cot_min_grid.json)
-  const c = m.cot; if (!c.small_record) return "";
+  // a COT signal whose own record on this market usually moved too little is not used (research/cot_min_grid.json);
+  // currencies use Bernd's evidence gate instead (provisional): say which row qualifies, or that none does
+  const c = m.cot;
+  if (c.gate) {
+    if (c.gate_fail) return ` COT reads ${c.read.toLowerCase()}, but none of its live lookbacks has the record the currency rule needs (Bernd's bar: at least 6 earlier cases, 60% right and a positive average at 4 or 8 weeks), so it is not used.`;
+    const g = (c.gate.rows || []).slice().sort((a, b) => b.w / b.n - a.w / a.n)[0];
+    return g && c.read === c.gate.read ? ` Currency COT rule (provisional, Bernd's evidence bar): ${GN[g.group].toLowerCase()} ${g.lb} reached this extreme ${g.n} times before and price went their way ${g.w} of ${g.n} times over ${g.h} weeks (avg ${sgn(g.avg)}% in the signal's direction).` : "";
+  }
+  if (!c.small_record) return "";
   return ` COT reads ${c.read.toLowerCase()}, but on ${esc(m.name)} this signal's past setups usually moved only ${c.usual_days} normal daily moves (price ${pcx(raw(c.record ? c.record.avg : null, c.read))} on average), below the ${c.min_move} the board requires, so it is not used.`;
 }
 function shortSkip(m) {
@@ -757,6 +769,7 @@ function chartTag(m, which) {
   if (b === "COT + calendar") return drive;
   if (which === "seas" && m.seas.small_only) return off("too small to carry a bias alone");
   if (which === "cot" && m.cot.small_record) return off("record too small · not used");
+  if (which === "cot" && m.cot.gate_fail) return off("no qualifying row · not used");
   if (b === "COT only") return which === "cot" ? drive : off("not part of the verdict");
   if (b === "Calendar only") return which === "seas" ? drive : off("not part of the verdict");
   if (b === "Calendar over COT") return which === "seas" ? drive : off("overruled by the calendar");
@@ -815,7 +828,7 @@ function testedSection() {
       const c = o => o ? `<td class="n">${o.n}</td><td class="n">${o.win}%</td><td class="n">${sgn(o.avg)}%</td>` : `<td class="n">–</td><td class="n">–</td><td class="n">–</td>`;
       return `<tr><th>${esc(M[k].name)}</th>${c(a)}${c(b)}</tr>`; }).join("")}</tbody></table></div>
     <p class="note">Per market the samples are small (a few dozen trades over 7–10 years), so single rows swing a lot; the pooled rows above are the more reliable read.</p>
-    <p class="note">How the board uses this: each engine may carry the bias alone, but a seasonal window that carries it alone (no COT agreeing) must usually move at least 3 normal daily moves of that market (tested: verdicts 57% vs 54% without it); a window that agrees with COT counts at any size. A COT signal only counts if its past setups on that market usually moved at least 0.5 normal daily moves in its direction (tested on a grid of thresholds: chosen on 2019–22, confirmed on 2023–26, 63.5% won vs 59.5% without it); on the US indices only bullish COT signals count. Finally, a bias becomes no bias when nothing is left in it: on US indices, gold and silver when the US macro score points the other way, and anywhere when the setup has already made its usual move. In a contradiction the calendar stands if the window already paid in at least 2 of 3 past years when COT was against it (at least 3 such years); otherwise there is no bias. Tested, that split made no difference: the calendar won 50.5% when the window had played out against COT and 50.0% when it had not. In contradictions the calendar won about half the time and COT only slightly more, so neither earns the right to overrule the other. Both edges are small: the COT read, held while lit, wins about 55-60% with a small average and is only clearly above zero pooled across all markets; the seasonal windows have not beaten a coin flip out of sample.</p></details>`;
+    <p class="note">How the board uses this: each engine may carry the bias alone, but a seasonal window that carries it alone (no COT agreeing) must usually move at least 3 normal daily moves of that market (tested: verdicts 57% vs 54% without it); a window that agrees with COT counts at any size. A COT signal only counts if its past setups on that market usually moved at least 0.5 normal daily moves in its direction (tested on a grid of thresholds: chosen on 2019–22, confirmed on 2023–26, 63.5% won vs 59.5% without it); on the US indices only bullish COT signals count; on currencies (provisional, since October 2026) a COT signal counts when one of its live lookbacks clears Bernd's evidence bar (at least 6 earlier cases, 60% right, positive average), which tested better on currencies since 2020 than the record minimum. Finally, a bias becomes no bias when nothing is left in it: on US indices, gold and silver when the US macro score points the other way, and anywhere when the setup has already made its usual move. In a contradiction the calendar stands if the window already paid in at least 2 of 3 past years when COT was against it (at least 3 such years); otherwise there is no bias. Tested, that split made no difference: the calendar won 50.5% when the window had played out against COT and 50.0% when it had not. In contradictions the calendar won about half the time and COT only slightly more, so neither earns the right to overrule the other. Both edges are small: the COT read, held while lit, wins about 55-60% with a small average and is only clearly above zero pooled across all markets; the seasonal windows have not beaten a coin flip out of sample.</p></details>`;
 }
 function render(k) {
   const m = M[k], P = $("#panel");

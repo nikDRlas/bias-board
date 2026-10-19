@@ -27,7 +27,7 @@ LB_CFG = {"15": [(15, 12)], "10": [(10, 8)], "15,10": [(15, 12), (10, 8)]}[os.en
 SKIP_SLOW = os.environ.get("SKIP_SLOW") == "1"
 OUT = os.environ.get("OUT", "verdict.json")
 GATES = os.environ.get("GATES", "macro,done")
-FX_COT = os.environ.get("FX_COT", "min")              # currency COT rule: min (board) / none / bernd (his evidence gate)          # the final 'nothing left' rules (bias/verdict.py final_read)
+FX_COT = os.environ.get("FX_COT", "bernd")              # currency COT rule: min (board) / none / bernd (his evidence gate)          # the final 'nothing left' rules (bias/verdict.py final_read)
 speed_series, speed_of = C.speed_series, C.speed_of
 LONG_LENS = np.arange(31, 64)
 

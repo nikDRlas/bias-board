@@ -311,3 +311,19 @@ def cot_big_enough(k, side, t):
         return True
     u = cot_usual(k, side, t)
     return u is None or u >= COT_MIN_MOVE
+
+
+_GATES = {}
+
+
+def cot_counts(k, side, t):
+    """does the board count a COT signal in `side` on market k at t? Currencies: Bernd's evidence gate (bias/bernd.py,
+    provisional since 2026-10-19); everything else: the COT minimum (cot_big_enough)"""
+    if side not in ("BULLISH", "BEARISH"):
+        return False
+    if M[k][3] == "FX":
+        import bernd
+        if k not in _GATES:
+            _GATES[k] = bernd.Gate(k)
+        return _GATES[k].read(t) == side
+    return cot_big_enough(k, side, t)
