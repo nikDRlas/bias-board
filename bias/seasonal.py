@@ -24,6 +24,17 @@ SOLO_MIN_MOVE = float(os.environ.get("SEAS_MIN_MOVE", "3"))
 MODE = os.environ.get("SEAS_MODE", "scan")
 SWING = float(os.environ.get("SEAS_SWING", "1.5"))           # a turn = the average path reverses this many normal days
 GATE_OVERRIDE = os.environ.get("SEAS_GATE")
+# how overlapping candidate windows are ranked: "share" = hit rate, then consistency (t); "share_len" = hit rate, then
+# the longest; "len" = the longest that qualifies, then hit rate
+PICK = os.environ.get("SEAS_PICK", "share")
+
+
+def _rank(w):
+    if PICK == "share_len":
+        return (-w["share"], -w["len"], -w["t"])
+    if PICK == "len":
+        return (-w["len"], -w["share"], -w["t"])
+    return (-w["share"], -w["t"], -w.get("ny", 15))
 SWING_DETREND = os.environ.get("SEAS_SWING_DETREND", "0") == "1"   # find turns on the path without its average drift
 
 
@@ -194,7 +205,7 @@ class Calendar:
                              "t": float(sc["t"][i, j]), "s": int(S[i]), "len": int(LL[j])})
         if not cand:
             return [], "none"
-        cand.sort(key=lambda w: (-w["share"], -w["t"], -w["ny"]))
+        cand.sort(key=_rank)
         uniq = []
         for w in cand:                                   # the same window found on both lookbacks counts once
             key = (w["s"], w["len"], w["side"])
@@ -263,7 +274,9 @@ class Calendar:
         cand = [{"s": int(starts[i]), "len": int(LEN_TD[j]), "side": "BUY" if sc["up"][i, j] > ny / 2 else "SELL",
                  "wins": int(sc["wins"][i, j]), "t": float(sc["t"][i, j]), "mu": float(sc["mu"][i, j])}
                 for i, j in zip(*np.nonzero(ok))]
-        cand.sort(key=lambda w: (-w["wins"], -w["t"]))
+        for w in cand:
+            w["share"] = w["wins"] / ny
+        cand.sort(key=_rank)
         picks = []
         for w in cand:
             if any(min(w["s"] + w["len"], q["s"] + q["len"]) - max(w["s"], q["s"]) > 0 and

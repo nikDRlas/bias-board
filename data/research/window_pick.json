@@ -1,0 +1,44 @@
+{
+ "share": {
+  "all": {
+   "n": 632,
+   "win": 59.7,
+   "avg": 0.8,
+   "per_week": 0.218
+  },
+  "calendar_alone": {
+   "n": 312,
+   "win": 58.3,
+   "avg": 0.58,
+   "hold_weeks": 4.3
+  }
+ },
+ "share_len": {
+  "all": {
+   "n": 628,
+   "win": 58.3,
+   "avg": 0.77,
+   "per_week": 0.203
+  },
+  "calendar_alone": {
+   "n": 307,
+   "win": 55.0,
+   "avg": 0.5,
+   "hold_weeks": 4.5
+  }
+ },
+ "len": {
+  "all": {
+   "n": 623,
+   "win": 58.3,
+   "avg": 0.74,
+   "per_week": 0.191
+  },
+  "calendar_alone": {
+   "n": 304,
+   "win": 55.3,
+   "avg": 0.44,
+   "hold_weeks": 4.7
+  }
+ }
+}
