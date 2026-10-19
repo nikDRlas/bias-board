@@ -354,19 +354,17 @@ function liveRecord() {
     <p class="note" style="margin:8px 0 0">Every verdict saved as given on its Saturday and scored when its exit passes (calendar: window end; COT: one week after the signal goes dark), one position per market at a time; price moves shown as + up / − down. The replay numbers elsewhere were tested on 2019–26; this record is the board on weeks its rules have never seen.</p>`;
 }
 function focusStrip() {
-  // switched off: with the board's final rules the focus picks no longer beat the other verdicts
-  // (research/focus_test.py: 58.5% won, +0.93% vs 59.1%, +0.97% for all verdicts)
-  const F = D.focus; if (true || !F || !F.keys.length) { $("#focus").hidden = true; return; }
+  // Top setups: COT + calendar outside currencies, the board's best tested verdict type (the old focus picks no
+  // longer beat the other verdicts and were switched off)
+  const T = D.top_test, keys = KEYS.filter(k => M[k].basis === "COT + calendar" && M[k].sector !== "FX");
   const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
-  const card = (k, i) => { const m = M[k], p0 = m.profile, bw = bestPx(p0.mfe, p0.mae, m.verdict), f = {...p0, end: raw(p0.end, m.verdict), mfe: bw[0], mae: bw[1]};
-    return `<button class="fcard" data-k="${k}"><span class="frank">${i + 1}</span>
-      <div class="fh"><div><div class="nm">${esc(m.name)}</div><div class="tk">${k} · ${esc(m.basis)}</div></div>${pill(m.verdict)}</div>
-      <div class="fs"><div><b>${f.hit}%</b><span>hit rate · ${f.n} cases</span></div><div><b>${pc(f.end)}</b><span>avg price move at the end</span></div>
-      <div><b>${pc(f.mfe)}</b><span>best along the way</span></div><div><b>${pc(f.mae)}</b><span>worst along the way</span></div></div></button>`; };
-  const meth = F.method, all = F.all && F.all.all;
-  $("#focus").innerHTML = `<div class="fhead"><h2 class="sec" style="margin:0">Focus this week</h2>
-      <p class="note" style="margin:0">Up to three setups: both engines agreeing first, then the biggest usual move at the end of the setup. Tested 2019–2026 by picking the top three every week with only data known then: ${meth ? `${meth.all.win}% won, average ${sgn(meth.all.avg)}%` : ""}${all ? ` (all verdicts: ${all.win}%, ${sgn(all.avg)}%)` : ""}.</p></div>
-    <div class="fgrid">${F.keys.map(card).join("")}</div>`;
+  const card = k => { const m = M[k], st = setupStats(m);
+    return `<button class="fcard" data-k="${k}"><div class="fh"><div><div class="nm">${esc(m.name)}</div><div class="tk">${k} · COT + calendar</div></div>${pill(m.verdict)}</div>
+      <div class="fs">${st ? `<div><b>${st.w}/${st.n}</b><span>this setup's years</span></div><div><b>${pc(st.avg)}</b><span>avg price move</span></div>` : ""}</div></button>`; };
+  $("#focus").innerHTML = `<div class="fhead"><h2 class="sec" style="margin:0">Top setups this week</h2>
+      <p class="note" style="margin:0">COT and the seasonal window agree, outside currencies: the board's strongest tested verdict type${T ? ` (${T.first}–${T.last}: ${T.win}% won, ${pc(T.avg)} per verdict, ${pc(T["2019-22"])} in 2019–22 and ${pc(T["2023-26"])} in 2023–26)` : ""}. On currencies this combination tested as a coin flip, so they are not listed.</p></div>
+    ${keys.length ? `<div class="fgrid">${keys.map(card).join("")}</div>` : `<p class="note">No top setup this week.</p>`}`;
+  $("#focus").hidden = false;
   document.querySelectorAll(".fcard").forEach(b => b.addEventListener("click", () => select(b.dataset.k, true)));
 }
 function evBadge(m) {

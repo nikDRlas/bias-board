@@ -928,6 +928,15 @@ if __name__ == "__main__":
     if os.environ.get("TRACK") == "1":            # the scheduled Saturday run records this week's verdicts
         TR.record(res, TODAY, ASOF)
     track = TR.summary(TODAY)
+    # the board's best verdict type: COT + calendar outside currencies (on currencies it tested as a coin flip)
+    top_test = None
+    if os.path.exists(VERDICT):
+        vt = pd.DataFrame(json.load(open(VERDICT))["trades"])
+        g = vt[(vt.basis == "COT + calendar") & (vt.sector != "Currencies")]
+        if len(g) > 2:
+            top_test = {"n": len(g), "win": round(100 * float((g.r > 0).mean()), 1), "avg": round(float(g.r.mean()), 2),
+                        "first": str(vt.t.min())[:4], "last": str(vt.exit.max())[:4],
+                        "2019-22": round(float(g[g.t < "2023"].r.mean()), 2), "2023-26": round(float(g[g.t >= "2023"].r.mean()), 2)}
     mtp = os.path.join(ROOT, "data", "research", "tools_macro_align.json")
     macro_test = None
     if os.path.exists(mtp):
@@ -936,7 +945,7 @@ if __name__ == "__main__":
     mdp = os.path.join(ROOT, "data", "research", "move_done.json")
     md_test = json.load(open(mdp)) if os.path.exists(mdp) else None
     json.dump({"asof": str(ASOF.date()), "today": str(TODAY.date()), "tested": tested, "verdict_test": vsum, "focus": focus,
-               "move_done_test": md_test, "track": track, "macro_test": macro_test,
+               "move_done_test": md_test, "track": track, "macro_test": macro_test, "top_test": top_test,
                "markets": res, "quant": quant},
               open(f"{ROOT}/data/live/outlook.json", "w"), indent=1, default=float)
     os.makedirs(f"{ROOT}/site", exist_ok=True)
