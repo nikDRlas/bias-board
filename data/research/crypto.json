@@ -1,0 +1,439 @@
+{
+ "BTC": {
+  "cot": {
+   "lit+1w": {
+    "n": 43,
+    "win": 55.8,
+    "avg": 7.32,
+    "vs_drift": 7.45,
+    "t": 1.68
+   },
+   "4w": {
+    "n": 46,
+    "win": 58.7,
+    "avg": 3.78,
+    "vs_drift": 3.15,
+    "t": 1.25
+   },
+   "8w": {
+    "n": 45,
+    "win": 51.1,
+    "avg": 7.53,
+    "vs_drift": 6.11,
+    "t": 1.49
+   }
+  },
+  "cot_cases": [
+   {
+    "report": "2019-07-16",
+    "side": "BULLISH",
+    "r": 0.19
+   },
+   {
+    "report": "2020-05-12",
+    "side": "BULLISH",
+    "r": 1.19
+   },
+   {
+    "report": "2020-06-02",
+    "side": "BULLISH",
+    "r": -3.23
+   },
+   {
+    "report": "2020-07-28",
+    "side": "BULLISH",
+    "r": 19.53
+   },
+   {
+    "report": "2020-10-27",
+    "side": "BULLISH",
+    "r": 20.45
+   },
+   {
+    "report": "2020-11-17",
+    "side": "BULLISH",
+    "r": -8.13
+   },
+   {
+    "report": "2020-12-01",
+    "side": "BULLISH",
+    "r": 55.08
+   },
+   {
+    "report": "2021-01-05",
+    "side": "BULLISH",
+    "r": -15.61
+   },
+   {
+    "report": "2021-05-11",
+    "side": "BULLISH",
+    "r": -25.25
+   },
+   {
+    "report": "2021-05-18",
+    "side": "BEARISH",
+    "r": 4.47
+   },
+   {
+    "report": "2021-07-27",
+    "side": "BULLISH",
+    "r": 13.25
+   },
+   {
+    "report": "2021-08-10",
+    "side": "BEARISH",
+    "r": 1.06
+   },
+   {
+    "report": "2021-09-21",
+    "side": "BEARISH",
+    "r": -11.07
+   },
+   {
+    "report": "2021-10-05",
+    "side": "BULLISH",
+    "r": 12.49
+   },
+   {
+    "report": "2021-10-26",
+    "side": "BULLISH",
+    "r": -2.11
+   },
+   {
+    "report": "2021-12-21",
+    "side": "BEARISH",
+    "r": 143.97
+   },
+   {
+    "report": "2022-08-02",
+    "side": "BULLISH",
+    "r": 4.68
+   },
+   {
+    "report": "2022-08-23",
+    "side": "BEARISH",
+    "r": 2.21
+   },
+   {
+    "report": "2022-09-20",
+    "side": "BEARISH",
+    "r": -1.24
+   },
+   {
+    "report": "2022-10-11",
+    "side": "BEARISH",
+    "r": 0.07
+   },
+   {
+    "report": "2022-11-15",
+    "side": "BEARISH",
+    "r": -2.5
+   },
+   {
+    "report": "2022-12-27",
+    "side": "BEARISH",
+    "r": -16.67
+   },
+   {
+    "report": "2023-01-10",
+    "side": "BULLISH",
+    "r": 12.17
+   },
+   {
+    "report": "2023-04-11",
+    "side": "BULLISH",
+    "r": -10.52
+   },
+   {
+    "report": "2023-05-02",
+    "side": "BEARISH",
+    "r": -3.17
+   },
+   {
+    "report": "2023-06-27",
+    "side": "BULLISH",
+    "r": -1.87
+   },
+   {
+    "report": "2023-08-08",
+    "side": "BULLISH",
+    "r": -11.46
+   },
+   {
+    "report": "2023-08-22",
+    "side": "BEARISH",
+    "r": -12.16
+   },
+   {
+    "report": "2023-10-31",
+    "side": "BULLISH",
+    "r": 8.63
+   },
+   {
+    "report": "2023-11-28",
+    "side": "BULLISH",
+    "r": 10.6
+   },
+   {
+    "report": "2024-01-23",
+    "side": "BULLISH",
+    "r": 12.69
+   },
+   {
+    "report": "2024-02-13",
+    "side": "BULLISH",
+    "r": 30.7
+   },
+   {
+    "report": "2024-03-19",
+    "side": "BULLISH",
+    "r": 9.49
+   },
+   {
+    "report": "2024-04-02",
+    "side": "BEARISH",
+    "r": 6.27
+   },
+   {
+    "report": "2024-08-06",
+    "side": "BEARISH",
+    "r": -5.0
+   },
+   {
+    "report": "2024-09-17",
+    "side": "BULLISH",
+    "r": 54.21
+   },
+   {
+    "report": "2025-01-07",
+    "side": "BEARISH",
+    "r": -2.85
+   },
+   {
+    "report": "2025-03-04",
+    "side": "BEARISH",
+    "r": 3.47
+   },
+   {
+    "report": "2025-04-08",
+    "side": "BEARISH",
+    "r": -1.24
+   },
+   {
+    "report": "2025-04-29",
+    "side": "BULLISH",
+    "r": 11.45
+   },
+   {
+    "report": "2025-07-08",
+    "side": "BULLISH",
+    "r": -3.6
+   },
+   {
+    "report": "2025-12-02",
+    "side": "BEARISH",
+    "r": -1.04
+   },
+   {
+    "report": "2026-01-20",
+    "side": "BEARISH",
+    "r": 15.1
+   }
+  ],
+  "seasonal_2023_26": {
+   "n": 47,
+   "win": 53.2,
+   "avg": 2.41,
+   "vs_drift": 2.04,
+   "t": 1.29
+  },
+  "cot_first": "2018-04-10",
+  "price_first": "2017-08-17"
+ },
+ "ETH": {
+  "cot": {
+   "lit+1w": {
+    "n": 30,
+    "win": 56.7,
+    "avg": 8.48,
+    "vs_drift": 9.45,
+    "t": 1.8
+   },
+   "4w": {
+    "n": 31,
+    "win": 51.6,
+    "avg": 3.07,
+    "vs_drift": 3.06,
+    "t": 0.93
+   },
+   "8w": {
+    "n": 30,
+    "win": 70.0,
+    "avg": 14.1,
+    "vs_drift": 14.12,
+    "t": 2.33
+   }
+  },
+  "cot_cases": [
+   {
+    "report": "2022-04-26",
+    "side": "BEARISH",
+    "r": 83.49
+   },
+   {
+    "report": "2022-09-20",
+    "side": "BEARISH",
+    "r": -0.29
+   },
+   {
+    "report": "2022-11-01",
+    "side": "BULLISH",
+    "r": -21.61
+   },
+   {
+    "report": "2022-11-22",
+    "side": "BEARISH",
+    "r": -7.43
+   },
+   {
+    "report": "2023-01-10",
+    "side": "BULLISH",
+    "r": 3.18
+   },
+   {
+    "report": "2023-02-21",
+    "side": "BULLISH",
+    "r": 17.61
+   },
+   {
+    "report": "2023-06-27",
+    "side": "BULLISH",
+    "r": 3.66
+   },
+   {
+    "report": "2023-08-22",
+    "side": "BEARISH",
+    "r": -7.06
+   },
+   {
+    "report": "2023-11-14",
+    "side": "BULLISH",
+    "r": 6.12
+   },
+   {
+    "report": "2023-11-28",
+    "side": "BULLISH",
+    "r": 11.37
+   },
+   {
+    "report": "2024-01-16",
+    "side": "BULLISH",
+    "r": -9.0
+   },
+   {
+    "report": "2024-02-20",
+    "side": "BULLISH",
+    "r": 14.17
+   },
+   {
+    "report": "2024-04-30",
+    "side": "BEARISH",
+    "r": 6.62
+   },
+   {
+    "report": "2024-05-21",
+    "side": "BULLISH",
+    "r": -1.34
+   },
+   {
+    "report": "2024-08-27",
+    "side": "BEARISH",
+    "r": 13.51
+   },
+   {
+    "report": "2024-09-10",
+    "side": "BULLISH",
+    "r": 10.46
+   },
+   {
+    "report": "2024-10-01",
+    "side": "BULLISH",
+    "r": 1.04
+   },
+   {
+    "report": "2024-11-05",
+    "side": "BEARISH",
+    "r": -4.15
+   },
+   {
+    "report": "2024-12-17",
+    "side": "BEARISH",
+    "r": 4.16
+   },
+   {
+    "report": "2025-01-07",
+    "side": "BEARISH",
+    "r": 79.82
+   },
+   {
+    "report": "2025-04-08",
+    "side": "BEARISH",
+    "r": -12.2
+   },
+   {
+    "report": "2025-05-06",
+    "side": "BEARISH",
+    "r": -7.57
+   },
+   {
+    "report": "2025-05-27",
+    "side": "BULLISH",
+    "r": -0.92
+   },
+   {
+    "report": "2025-07-08",
+    "side": "BULLISH",
+    "r": 25.92
+   },
+   {
+    "report": "2025-08-12",
+    "side": "BEARISH",
+    "r": 63.98
+   },
+   {
+    "report": "2026-02-03",
+    "side": "BEARISH",
+    "r": 4.28
+   },
+   {
+    "report": "2026-03-31",
+    "side": "BEARISH",
+    "r": -15.1
+   },
+   {
+    "report": "2026-04-28",
+    "side": "BEARISH",
+    "r": -0.5
+   },
+   {
+    "report": "2026-05-12",
+    "side": "BEARISH",
+    "r": -8.93
+   },
+   {
+    "report": "2026-09-08",
+    "side": "BEARISH",
+    "r": 1.15
+   }
+  ],
+  "seasonal_2023_26": {
+   "n": 51,
+   "win": 45.1,
+   "avg": 0.13,
+   "vs_drift": 0.44,
+   "t": 0.23
+  },
+  "cot_first": "2021-04-06",
+  "price_first": "2017-08-17"
+ }
+}
