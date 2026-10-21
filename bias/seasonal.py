@@ -27,6 +27,7 @@ GATE_OVERRIDE = os.environ.get("SEAS_GATE")
 # how overlapping candidate windows are ranked: "share" = hit rate, then consistency (t); "share_len" = hit rate, then
 # the longest; "len" = the longest that qualifies, then hit rate
 PICK = os.environ.get("SEAS_PICK", "share")
+SIZE = os.environ.get("SEAS_SIZE", "end")    # research switch: window size by its move start->end ("end") or its usual best point ("mfe")
 
 
 def _rank(w):
@@ -86,6 +87,7 @@ class Calendar:
         up = np.zeros((len(S), len(lens)))
         s1 = np.zeros_like(up)
         s2 = np.zeros_like(up)
+        fu, fd = np.zeros_like(up), np.zeros_like(up)
         for y in ys:
             a = self.first[y][0] + S
             if a.min() < DRIFT_N + 1:
@@ -94,13 +96,17 @@ class Calendar:
             if b.max() >= self.n:
                 return None
             r = self.lc[b] - self.lc[a][:, None]
+            if SIZE == "mfe":
+                path = self.lc[a[:, None] + np.arange(lens.max() + 1)[None, :]] - self.lc[a][:, None]
+                fu += np.maximum.accumulate(path, axis=1)[:, lens]
+                fd -= np.minimum.accumulate(path, axis=1)[:, lens]
             up += r > 0
             s1 += r
             s2 += r * r
         mu = s1 / ny
         sd = np.sqrt(np.maximum(s2 / ny - mu ** 2, 1e-18) * ny / (ny - 1))
         return {"Y": Y, "now": now, "S": S, "up": up, "lens": lens, "wins": np.maximum(up, ny - up), "ny": ny,
-                "t": np.abs(mu) / sd * np.sqrt(ny), "mu": mu}
+                "t": np.abs(mu) / sd * np.sqrt(ny), "mu": mu, "mfe_up": fu / ny, "mfe_dn": fd / ny}
 
     def day_vol(self, t):
         """normal daily move (standard deviation of daily log returns over the past year) up to t"""
@@ -203,7 +209,8 @@ class Calendar:
             S, LL = sc["S"], sc["lens"]
             ok = (sc["wins"] >= gate) & ((S[:, None] + LL[None, :]) > now + 2)
             if min_move > 0:
-                ok &= np.abs(sc["mu"]) >= min_move * self.day_vol(t)
+                size = np.where(sc["up"] > ny / 2, sc["mfe_up"], sc["mfe_dn"]) if SIZE == "mfe" else np.abs(sc["mu"])
+                ok &= size >= min_move * self.day_vol(t)
             for i, j in zip(*np.nonzero(ok)):
                 cand.append({"side": "BUY" if sc["up"][i, j] > ny / 2 else "SELL", "wins": int(sc["wins"][i, j]),
                              "ny": ny, "share": float(sc["wins"][i, j]) / ny,

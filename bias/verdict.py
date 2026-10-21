@@ -61,6 +61,9 @@ US_DRIVEN = ("ES", "NQ", "YM", "GC", "SI")
 COT_DONE_AT = 1.5          # COT setup done at 150% of its usual winning move (research/cot_done_yardstick_test.py)
 
 
+DONE_YARD = __import__("os").environ.get("SEAS_DONE", "end")
+
+
 def final_read(k, v, basis, t, p, cal, ws, rd, lit, macro_sign=None):
     """the validated 'nothing left' situations turn a bias into no bias:
       macro against   on US indices, gold and silver the US macro score points the other way (or is flat):
@@ -75,7 +78,8 @@ def final_read(k, v, basis, t, p, cal, ws, rd, lit, macro_sign=None):
     if horizon(basis) == "window":
         d = ws[0]
         r = cal.remaining(t, d)
-        if r and r["started"] and r["so_far"] is not None and sg * d["avg"] > 0 and sg * r["so_far"] >= sg * d["avg"]:
+        usual = d.get("mfe") if DONE_YARD == "mfe" else sg * d["avg"]       # research switch SEAS_DONE=mfe
+        if r and r["started"] and r["so_far"] is not None and sg * d["avg"] > 0 and usual and sg * r["so_far"] >= usual:
             return "STAND ASIDE", "Move done"
     else:
         import core as C
