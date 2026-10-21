@@ -16,6 +16,9 @@ def _side(ws, status):
     return ("BULLISH" if ws[0]["side"] == "BUY" else "BEARISH") if status == "driver" else None
 
 
+SOLO_SECTORS = set(__import__("os").environ.get("SEAS_SOLO_SECTORS", "").split(",")) - {""}
+
+
 def board_read(cot, cal, t, reader):
     """the board's verdict on day t from the COT side (slow signals already removed) and the seasonal calendar.
     A window that agrees with COT counts at any size ("COT + calendar"). A window that has to carry the bias alone
@@ -25,6 +28,9 @@ def board_read(cot, cal, t, reader):
     every = cal.windows(t, min_move=0)
     if cot in SIDES and _side(*every) == cot:
         return cot, "COT + calendar", every
+    if SOLO_SECTORS and reader is not None and __import__("core").M[reader.k][3] not in SOLO_SECTORS:
+        v, basis = decide(cot, None)                     # research switch: the calendar may not stand alone here
+        return v, basis, every
     solo = cal.windows(t, min_move=SS.SOLO_MIN_MOVE) if SS.SOLO_MIN_MOVE > 0 else every
     seas = _side(*solo)
     if cot in SIDES and seas == cot:

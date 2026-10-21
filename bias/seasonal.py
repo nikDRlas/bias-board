@@ -29,7 +29,8 @@ GATE_OVERRIDE = os.environ.get("SEAS_GATE")
 PICK = os.environ.get("SEAS_PICK", "share")
 RECENT = int(os.environ.get("SEAS_RECENT", "0"))
 RECENT_SOLO = os.environ.get("SEAS_RECENT_SOLO") == "1"   # ...only for windows that must stand alone (calendar-only verdicts)   # research switch: the window must also have worked in >= this many of the last 5 years
-SIZE = os.environ.get("SEAS_SIZE", "end")    # research switch: window size by its move start->end ("end") or its usual best point ("mfe")
+SIZE = os.environ.get("SEAS_SIZE", "end")
+TRUE_GATE = int(os.environ.get("SEAS_TRUE", "0"))   # research switch: windows standing alone need this many years after removing the drift    # research switch: window size by its move start->end ("end") or its usual best point ("mfe")
 
 
 def _rank(w):
@@ -91,6 +92,7 @@ class Calendar:
         s2 = np.zeros_like(up)
         fu, fd = np.zeros_like(up), np.zeros_like(up)
         rup = np.zeros_like(up)
+        tup = np.zeros_like(up)
         for y in ys:
             a = self.first[y][0] + S
             if a.min() < DRIFT_N + 1:
@@ -104,6 +106,8 @@ class Calendar:
                 fu += np.maximum.accumulate(path, axis=1)[:, lens]
                 fd -= np.minimum.accumulate(path, axis=1)[:, lens]
             up += r > 0
+            if TRUE_GATE:
+                tup += (r - self.drift[a][:, None] * lens[None, :]) > 0
             if y >= ys[-1] - 4:
                 rup += r > 0
             s1 += r
@@ -111,7 +115,7 @@ class Calendar:
         mu = s1 / ny
         sd = np.sqrt(np.maximum(s2 / ny - mu ** 2, 1e-18) * ny / (ny - 1))
         return {"Y": Y, "now": now, "S": S, "up": up, "lens": lens, "wins": np.maximum(up, ny - up), "ny": ny,
-                "t": np.abs(mu) / sd * np.sqrt(ny), "mu": mu, "mfe_up": fu / ny, "mfe_dn": fd / ny, "rec_up": rup}
+                "t": np.abs(mu) / sd * np.sqrt(ny), "mu": mu, "mfe_up": fu / ny, "mfe_dn": fd / ny, "rec_up": rup, "true_up": tup}
 
     def day_vol(self, t):
         """normal daily move (standard deviation of daily log returns over the past year) up to t"""
@@ -213,6 +217,8 @@ class Calendar:
                 continue
             S, LL = sc["S"], sc["lens"]
             ok = (sc["wins"] >= gate) & ((S[:, None] + LL[None, :]) > now + 2)
+            if TRUE_GATE and min_move > 0:
+                ok &= np.where(sc["up"] > ny / 2, sc["true_up"], ny - sc["true_up"]) >= TRUE_GATE
             if RECENT and (min_move > 0 or not RECENT_SOLO):
                 ok &= np.where(sc["up"] > ny / 2, sc["rec_up"], 5 - sc["rec_up"]) >= RECENT
             if min_move > 0:
