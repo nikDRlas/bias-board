@@ -111,11 +111,13 @@ class Calendar:
     def stats(self, Y, s, L, side, ny=NY):
         """Seasonax-style statistics of one window over the `ny` years before Y"""
         sg = 1 if side == "BUY" else -1
-        raw, res, yrs = [], [], []
+        raw, res, yrs, fav, adv = [], [], [], [], []
         for y in range(Y - ny, Y):
             a = self.first[y][0] + s
             b = a + L
             r = self.lc[b] - self.lc[a]
+            seg = sg * 100 * (np.exp(self.lc[a:b + 1] - self.lc[a]) - 1)     # the path for the trade, from the start
+            fav.append(float(seg.max())); adv.append(float(seg.min()))
             raw.append(100 * (np.exp(r) - 1))
             res.append(r - self.drift[a] * L)
             yrs.append(y)
@@ -127,6 +129,9 @@ class Calendar:
                 "annual": round(100 * float(np.sign(1 + avg / 100) * (abs(1 + avg / 100) ** (252 / L) - 1)), 1),
                 "best": round(float(dirv.max()), 2), "worst": round(float(dirv.min()), 2),
                 "rec": int((dirv[-4:] > 0).sum()),
+                # best and worst point along the way, for the trade (as in the COT record): average over the years
+                "mfe": round(float(np.mean(fav)), 2), "mae": round(float(np.mean(adv)), 2),
+                "mae_worst": round(float(np.min(adv)), 2),
                 "years": [{"y": y, "r": round(float(v), 2)} for y, v in zip(yrs, dirv)]}
 
     def swing_cands(self, t, ny, gate, min_move=0.0, lens=None):

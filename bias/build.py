@@ -531,7 +531,8 @@ def cot_speed(k, reader, side):
     lo, hi = r["cutoffs"]
     speed = "fast" if mv > hi else "slow" if mv <= lo else "medium"
     return {"move": round(mv, 2), "speed": speed, "all": r["2003-26"][speed], "recent": r["2016-26"][speed],
-            "slow_all": r["2003-26"]["slow"], "fast_all": r["2003-26"]["fast"]}
+            "slow_all": r["2003-26"]["slow"], "fast_all": r["2003-26"]["fast"], "since16": r["2016-26"],
+            "board": json.load(open(bp)) if os.path.exists(bp := os.path.join(ROOT, "data", "research", "cot_speed_board.json")) else None}
 
 
 def past_years(k, s, reader, p):

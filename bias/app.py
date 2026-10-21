@@ -489,7 +489,12 @@ function testedHero(m) {
     const tr = (m.cot.track || []).filter(r => r.board && r.r8 && r.dir === m.cot.read).sort((x, y) => y.r8.n - x.r8.n)[0];
     if (tr) rows.push(line(`${Math.round(100 * tr.r8.w / tr.r8.n)}%`, `${esc(tr.label)} · ${tr.lb}`, `this exact picture ${tr.r8.w} of ${tr.r8.n} times · avg price move ${sgn(+raw(tr.r8.avg, tr.dir).toFixed(2))}% held while it lasted${tr.r8.n < 6 ? " · few cases" : ""}`));
     const sp = m.cot.speed;
-    if (sp) rows.push(`<p class="spd"><b class="sp ${sp.speed}">${sp.speed === "fast" ? "Reached fast" : sp.speed === "slow" ? "Crept in slowly · skipped" : "Medium speed"}</b> commercials moved ${sp.move.toFixed(1)}× a typical 4-week change into this extreme. ${title(sp.speed)} signals won ${sp.all.win}% since 2003 and ${sp.recent.win}% since 2016 (fast ${sp.fast_all.win}%, slow ${sp.slow_all.win}%).${sp.speed === "slow" ? " Slow signals are not used for the verdict: skipping them tested better." : ""}</p>`);
+    if (sp) {
+      const r16 = sp.since16, B = sp.board, sg2 = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+      const rec = r16 ? ` Since 2016, the usual 4-week move after the signal: fast ${sg2(r16.fast.avg)}, medium ${sg2(r16.medium.avg)}, slow ${sg2(r16.slow.avg)} (won ${r16.fast.win}%, ${r16.medium.win}%, ${r16.slow.win}%).` : "";
+      const why = sp.speed === "slow" ? (B ? ` Slow signals are not used for the verdict. Tested on the whole board 2019–26: skipping them ${B.skip.board.n} verdicts, ${B.skip.board.win}% won, ${sg2(B.skip.board.avg)} each, ${Math.round(B.skip.board.total)}% in total, steadiness t ${B.skip.board.t}; keeping them ${B.keep.board.n} verdicts, ${B.keep.board.win}% won, ${sg2(B.keep.board.avg)}, ${Math.round(B.keep.board.total)}% in total, t ${B.keep.board.t}. The slow signals themselves were not losers (${sg2(B.keep.slow_verdicts.avg)} each), but a slow extreme lasts long and keeps the market tied up, so the next signal or window is missed.` : " Slow signals are not used for the verdict: skipping them tested better.") : "";
+      rows.push(`<p class="spd"><b class="sp ${sp.speed}">${sp.speed === "fast" ? "Reached fast" : sp.speed === "slow" ? "Crept in slowly · skipped" : "Medium speed"}</b> commercials moved ${sp.move.toFixed(1)}× a typical 4-week change into this extreme.${rec}${why}</p>`);
+    }
     if (rows.length) groups.push(`<div class="isg"><div class="isgh">${fa(m, m.cot.read)}<span>COT</span></div>${rows.join("")}</div>`);
   }
   if (!groups.length && !cf) return "";
@@ -558,6 +563,7 @@ function windowStats(m) {
     ${cell(pc(r.avg), `${r.started ? "still to come" : "expected"} over the ${r.days} trading days ${r.started ? "left" : "of the window"} · went that way ${r.wins} of 15 years`)}
     ${r.so_far == null ? "" : cell(pc(r.so_far), "this year so far in the window")}
     ${doneCell(m.done && m.done.seas, "seas", m.seas.driver && m.seas.driver.side)}
+    ${d.mae != null ? (([b0, w0, x0]) => cell(pc(w0), `usual worst point for the window along the way (worst year ${pc(x0)}) · usual best point ${pc(b0)}`))([...bestPx(d.mfe, d.mae, d.side), dirSg(d.side) * d.mae_worst]) : ""}
   </div>`;
 }
 function seasonChart(m) {
@@ -698,9 +704,9 @@ function windowsTbl(m) {
   const when = w => w.days_to <= 0 ? `<span class="st live">running</span>` : `in ${w.days_to} trading days`;
   const role = w => s.driver && w.start === s.driver.start && w.side === s.driver.side && !s.small_only ? `<span class="st live">driver</span>`
     : w.small ? `<span class="st" title="usual move below 3 normal days: can only back a COT signal">small · ${w.move_days}d</span>` : `<span class="st">${w.move_days}d · can stand alone</span>`;
-  return `<div class="tbl"><table><thead><tr><th>Trade</th><th>Window</th><th>When</th><th>Size</th><th>Trading days</th><th>Win ratio</th><th>Avg</th><th>Median</th><th>Best / worst</th><th>Trend removed</th><th>Last 4</th></tr></thead><tbody>` +
-    rows.map(w => `<tr><td>${pill(sideV(w.side), title(w.side))}</td><td>${fmtD(w.start)} – ${fmtD(w.end)}</td><td>${when(w)}</td><td>${role(w)}</td><td class="n">${w.len}</td><td class="n">${w.wins} of 15</td><td class="n">${pc(w.avg)}</td><td class="n">${w.median != null ? pc(w.median) : "–"}</td><td class="n">${w.best != null ? (([b0, w0]) => `${pc(b0)} / ${pc(w0)}`)(bestPx(w.best, w.worst, w.side)) : "–"}</td><td class="n">${w.wins_true != null ? `${w.wins_true} of 15` : "–"}</td><td class="n">${w.rec != null ? `${w.rec}/4` : "–"}</td></tr>`).join("") +
-    `</tbody></table></div><p class="note">Every window with at least 12 of 15 years in its direction that is running now or comes next, however far ahead, counted in trading days over the last 15 years. Size: the usual move in normal daily moves of this market; a window needs at least 3 to carry a bias alone, a smaller one can only back a COT signal pointing the same way. Only the driver is part of this week's verdict. All moves are price moves (+ = up, − = down; a sell window wants −); best and worst are the best and worst year for the trade, as price moves; trend removed counts the years after taking out the market's normal drift.</p>`;
+  return `<div class="tbl"><table><thead><tr><th>Trade</th><th>Window</th><th>When</th><th>Size</th><th>Trading days</th><th>Win ratio</th><th>Avg</th><th>Median</th><th>Best / worst</th><th>Usually against</th><th>Trend removed</th><th>Last 4</th></tr></thead><tbody>` +
+    rows.map(w => `<tr><td>${pill(sideV(w.side), title(w.side))}</td><td>${fmtD(w.start)} – ${fmtD(w.end)}</td><td>${when(w)}</td><td>${role(w)}</td><td class="n">${w.len}</td><td class="n">${w.wins} of 15</td><td class="n">${pc(w.avg)}</td><td class="n">${w.median != null ? pc(w.median) : "–"}</td><td class="n">${w.best != null ? (([b0, w0]) => `${pc(b0)} / ${pc(w0)}`)(bestPx(w.best, w.worst, w.side)) : "–"}</td><td class="n">${w.mae != null ? pc(dirSg(w.side) * w.mae) : "–"}</td><td class="n">${w.wins_true != null ? `${w.wins_true} of 15` : "–"}</td><td class="n">${w.rec != null ? `${w.rec}/4` : "–"}</td></tr>`).join("") +
+    `</tbody></table></div><p class="note">Every window with at least 12 of 15 years in its direction that is running now or comes next, however far ahead, counted in trading days over the last 15 years. Size: the usual move in normal daily moves of this market; a window needs at least 3 to carry a bias alone, a smaller one can only back a COT signal pointing the same way. Only the driver is part of this week's verdict. All moves are price moves (+ = up, − = down; a sell window wants −); best and worst are the best and worst year for the trade, as price moves; usually against is the average worst point inside the window before its end (how far price went the wrong way on the way), for stops and entries, not a rule; trend removed counts the years after taking out the market's normal drift.</p>`;
 }
 function eventsCard(m) {
   const ev = m.events; if (!ev) return "";
