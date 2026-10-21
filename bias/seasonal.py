@@ -27,6 +27,8 @@ GATE_OVERRIDE = os.environ.get("SEAS_GATE")
 # how overlapping candidate windows are ranked: "share" = hit rate, then consistency (t); "share_len" = hit rate, then
 # the longest; "len" = the longest that qualifies, then hit rate
 PICK = os.environ.get("SEAS_PICK", "share")
+RECENT = int(os.environ.get("SEAS_RECENT", "0"))
+RECENT_SOLO = os.environ.get("SEAS_RECENT_SOLO") == "1"   # ...only for windows that must stand alone (calendar-only verdicts)   # research switch: the window must also have worked in >= this many of the last 5 years
 SIZE = os.environ.get("SEAS_SIZE", "end")    # research switch: window size by its move start->end ("end") or its usual best point ("mfe")
 
 
@@ -88,6 +90,7 @@ class Calendar:
         s1 = np.zeros_like(up)
         s2 = np.zeros_like(up)
         fu, fd = np.zeros_like(up), np.zeros_like(up)
+        rup = np.zeros_like(up)
         for y in ys:
             a = self.first[y][0] + S
             if a.min() < DRIFT_N + 1:
@@ -101,12 +104,14 @@ class Calendar:
                 fu += np.maximum.accumulate(path, axis=1)[:, lens]
                 fd -= np.minimum.accumulate(path, axis=1)[:, lens]
             up += r > 0
+            if y >= ys[-1] - 4:
+                rup += r > 0
             s1 += r
             s2 += r * r
         mu = s1 / ny
         sd = np.sqrt(np.maximum(s2 / ny - mu ** 2, 1e-18) * ny / (ny - 1))
         return {"Y": Y, "now": now, "S": S, "up": up, "lens": lens, "wins": np.maximum(up, ny - up), "ny": ny,
-                "t": np.abs(mu) / sd * np.sqrt(ny), "mu": mu, "mfe_up": fu / ny, "mfe_dn": fd / ny}
+                "t": np.abs(mu) / sd * np.sqrt(ny), "mu": mu, "mfe_up": fu / ny, "mfe_dn": fd / ny, "rec_up": rup}
 
     def day_vol(self, t):
         """normal daily move (standard deviation of daily log returns over the past year) up to t"""
@@ -208,6 +213,8 @@ class Calendar:
                 continue
             S, LL = sc["S"], sc["lens"]
             ok = (sc["wins"] >= gate) & ((S[:, None] + LL[None, :]) > now + 2)
+            if RECENT and (min_move > 0 or not RECENT_SOLO):
+                ok &= np.where(sc["up"] > ny / 2, sc["rec_up"], 5 - sc["rec_up"]) >= RECENT
             if min_move > 0:
                 size = np.where(sc["up"] > ny / 2, sc["mfe_up"], sc["mfe_dn"]) if SIZE == "mfe" else np.abs(sc["mu"])
                 ok &= size >= min_move * self.day_vol(t)
