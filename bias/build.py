@@ -203,7 +203,7 @@ def tested_cells():
 def combine(k, reader, cal, speed=None):
     """the board's verdict (bias/verdict.py board_read). A COT signal the commercials crept into slowly counts as no
     side (tested: research/verdict_test.py with SKIP_SLOW=1 beat keeping them). A calendar window that carries the
-    bias alone needs a usual move of at least 3 normal daily moves. Returns the calendar windows it used."""
+    bias alone is allowed on agricultural markets only and needs a usual move of at least 3 normal daily moves. Returns the calendar windows it used."""
     v = reader.read(TODAY)
     g = reader.last_groups
     if speed == "slow":
@@ -858,6 +858,7 @@ if __name__ == "__main__":
                 used, small_only = every, True
         s = season_block(p, cal0, used)
         s["small_only"] = small_only
+        s["solo_ok"] = VD.solo_allowed(k)                # outside agriculture the calendar needs COT to count
         vol0 = cal0.day_vol(TODAY)
         if s.get("driver"):
             s["driver"]["move_days"] = round(abs(s["driver"]["avg"]) / 100 / vol0, 1) if vol0 else None

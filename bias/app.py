@@ -401,8 +401,11 @@ function dial(m) {
       <path d="M95 92 L95 26" stroke="var(--ink)" stroke-width="4" stroke-linecap="round"/></g>
     <circle cx="95" cy="92" r="8" fill="var(--ink)"/><circle cx="95" cy="92" r="3" fill="var(--card)"/></svg>`;
 }
+const benched = m => !m.seas.solo_ok && m.basis !== "COT + calendar";   // outside agriculture the calendar needs COT
+const NEEDS_COT = "outside agriculture a seasonal window only counts when COT agrees (tested: calendar-alone verdicts made money only on agricultural markets)";
 function seasStance(m) {
   const s = m.seas;
+  if ((s.read === "BULLISH" || s.read === "BEARISH") && benched(m) && m.verdict === "STAND ASIDE") return `the calendar leans ${s.read.toLowerCase()}, but ${NEEDS_COT}`;
   if (s.read !== "BULLISH" && s.read !== "BEARISH") return s.read === "SELF-CANCELLING" ? "the calendar cancels itself out" : "no seasonal window in play is big enough to carry a bias alone (usual move of at least 3 normal days)";
   if (m.verdict === "STAND ASIDE") return `the calendar leans ${s.read.toLowerCase()}`;
   return s.read === m.verdict ? "the calendar points the same way" : "the calendar points the other way";
@@ -431,14 +434,14 @@ function whyMain(m) {
   const g = m.groups === 2 ? "commercials, with retail and funds on the other side" : "commercials, with retail or funds on the other side";
   switch (m.basis) {
     case "COT + calendar": return `Both engines point ${m.verdict.toLowerCase()}: ${g} at extremes, and the calendar agrees (${win}).${turnNote(d)}`;
-    case "COT only": return `COT carries the bias alone: ${g} at extremes. ${s.read === "SELF-CANCELLING" ? "The calendar cancels itself out." : (s.small_only ? "The seasonal window in play is too small to count." : "No seasonal window is in play.")}`;
+    case "COT only": return `COT carries the bias alone: ${g} at extremes. ${s.read === "SELF-CANCELLING" ? "The calendar cancels itself out." : (s.small_only ? "The seasonal window in play is too small to count." : d && !s.solo_ok ? `The calendar points the other way (${win}), but ${NEEDS_COT}.` : "No seasonal window is in play.")}`;
     case "Calendar only": return `The calendar carries the bias alone: ${win}.${turnNote(d)} Positioning has no side.${shortSkip(m)}`;
   }
   const ag = (s.past && s.past.summary.against) || {n: 0, w: 0};
   if (m.basis === "Calendar over COT") return `COT reads ${title(c.read)} (${g}), against the calendar: ${win}. In the past years when COT was against this window it still paid ${ag.w} of ${ag.n} times, so the calendar stands.`;
   if (m.basis.startsWith("Conflict")) return `No bias. COT reads ${title(c.read)} (${g}) while the calendar says ${title(s.read)} (${win}). ${ag.n >= 3 ? `In past years with COT against it, this window paid only ${ag.w} of ${ag.n} times` : `This window has too few past years with COT against it (${ag.n}) to judge`}, so COT is relevant here and we wait.`;
   if (c.index_short_skipped) return `No bias.${shortSkip(m)} And ${s.read === "SELF-CANCELLING" ? "the calendar cancels itself out" : "no seasonal window in play is big enough to carry a bias alone (usual move of at least 3 normal daily moves)"}.`;
-  const seasPart = s.read === "SELF-CANCELLING" ? "the calendar cancels itself out" : "no seasonal window in play is big enough to carry a bias alone (usual move of at least 3 normal days)";
+  const seasPart = s.read === "SELF-CANCELLING" ? "the calendar cancels itself out" : d && !s.solo_ok && !s.small_only ? `there is a ${win.charAt(0).toLowerCase() + win.slice(1)}, but ${NEEDS_COT}` : "no seasonal window in play is big enough to carry a bias alone (usual move of at least 3 normal days)";
   if (c.small_record) return `No bias: ${seasPart}.`;
   return `No bias. The commercials are not at an extreme with retail or funds on the other side, and ${seasPart}.`;
 }
@@ -576,7 +579,7 @@ function seasonChart(m) {
   let bands = "";
   // the chart shows at most two windows: the running one and the next, or the next two (the table lists them all)
   const tbl = (s.table || []).slice().sort((p, q) => p.s - q.s);
-  const isDrv = w => !!(s.driver && !s.small_only && w.start === s.driver.start && w.side === s.driver.side);
+  const isDrv = w => !!(s.driver && !s.small_only && !benched(m) && w.start === s.driver.start && w.side === s.driver.side);
   const run = tbl.filter(w => w.days_to <= 0), fut = tbl.filter(w => w.days_to > 0);
   const now0 = run.find(isDrv) || run[0];
   const drvF = fut.find(isDrv);
@@ -702,11 +705,11 @@ function windowsTbl(m) {
   if (!rows.length) return `<p class="note">No seasonal window with 12 of 15 years or better in the coming months.</p>`;
   const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
   const when = w => w.days_to <= 0 ? `<span class="st live">running</span>` : `in ${w.days_to} trading days`;
-  const role = w => s.driver && w.start === s.driver.start && w.side === s.driver.side && !s.small_only ? `<span class="st live">driver</span>`
-    : w.small ? `<span class="st" title="usual move below 3 normal days: can only back a COT signal">small · ${w.move_days}d</span>` : `<span class="st">${w.move_days}d · can stand alone</span>`;
+  const role = w => s.driver && w.start === s.driver.start && w.side === s.driver.side && !s.small_only && !benched(m) ? `<span class="st live">driver</span>`
+    : w.small ? `<span class="st" title="usual move below 3 normal days: can only back a COT signal">small · ${w.move_days}d</span>` : !s.solo_ok ? `<span class="st" title="outside agriculture a window only counts when COT agrees">${w.move_days}d · needs COT</span>` : `<span class="st">${w.move_days}d · can stand alone</span>`;
   return `<div class="tbl"><table><thead><tr><th>Trade</th><th>Window</th><th>When</th><th>Size</th><th>Trading days</th><th>Win ratio</th><th>Avg</th><th>Median</th><th>Best / worst</th><th>Usually against</th><th>Trend removed</th><th>Last 4</th></tr></thead><tbody>` +
     rows.map(w => `<tr><td>${pill(sideV(w.side), title(w.side))}</td><td>${fmtD(w.start)} – ${fmtD(w.end)}</td><td>${when(w)}</td><td>${role(w)}</td><td class="n">${w.len}</td><td class="n">${w.wins} of 15</td><td class="n">${pc(w.avg)}</td><td class="n">${w.median != null ? pc(w.median) : "–"}</td><td class="n">${w.best != null ? (([b0, w0]) => `${pc(b0)} / ${pc(w0)}`)(bestPx(w.best, w.worst, w.side)) : "–"}</td><td class="n">${w.mae != null ? pc(dirSg(w.side) * w.mae) : "–"}</td><td class="n">${w.wins_true != null ? `${w.wins_true} of 15` : "–"}</td><td class="n">${w.rec != null ? `${w.rec}/4` : "–"}</td></tr>`).join("") +
-    `</tbody></table></div><p class="note">Every window with at least 12 of 15 years in its direction that is running now or comes next, however far ahead, counted in trading days over the last 15 years. Size: the usual move in normal daily moves of this market; a window needs at least 3 to carry a bias alone, a smaller one can only back a COT signal pointing the same way. Only the driver is part of this week's verdict. All moves are price moves (+ = up, − = down; a sell window wants −); best and worst are the best and worst year for the trade, as price moves; usually against is the average worst point inside the window before its end (how far price went the wrong way on the way), for stops and entries, not a rule; trend removed counts the years after taking out the market's normal drift.</p>`;
+    `</tbody></table></div><p class="note">Every window with at least 12 of 15 years in its direction that is running now or comes next, however far ahead, counted in trading days over the last 15 years. Size: the usual move in normal daily moves of this market. On agricultural markets a window of at least 3 can carry a bias alone and a smaller one can only back COT; on all other markets every window only counts when COT points the same way (calendar-alone verdicts were a coin flip in currencies and lost in metals and energy; agriculture, with harvest, planting and weather behind it, made +1.9% per verdict in both halves of 2019–26). Only the driver is part of this week's verdict. All moves are price moves (+ = up, − = down; a sell window wants −); best and worst are the best and worst year for the trade, as price moves; usually against is the average worst point inside the window before its end (how far price went the wrong way on the way), for stops and entries, not a rule; trend removed counts the years after taking out the market's normal drift.</p>`;
 }
 function eventsCard(m) {
   const ev = m.events; if (!ev) return "";
@@ -771,6 +774,7 @@ function chartTag(m, which) {
   if (b === "Macro against") return off(which === "macro" ? "cancels the bias" : "bias cancelled by US macro");
   if (b === "Move done") return off("usual move already made");
   if (b === "COT + calendar") return drive;
+  if (which === "seas" && benched(m)) return off("needs COT outside agriculture");
   if (which === "seas" && m.seas.small_only) return off("too small to carry a bias alone");
   if (which === "cot" && m.cot.small_record) return off("record too small · not used");
   if (which === "cot" && m.cot.gate_fail) return off("no qualifying row · not used");
@@ -809,6 +813,7 @@ function seasonCard(m, ess) {
   return `<div class="card"><h3>Seasonality ${chartTag(m, "seas")} ${pill(s.read === "BULLISH" || s.read === "BEARISH" ? s.read : "flat", title(s.read))}${s.strength ? ` <span class="st">${title(s.strength)} · ${s.kind}</span>` : ""}</h3>
     <p class="note">In price: ${TODAY.getFullYear()} so far, and the average path of the last 5, 10 and 15 years lined up to pass through today's price, with the usual path from today to the end of the current seasonal window (dashed). The numbers under the chart are measured over the same trading days in each of the last 15 years. Shape match ${s.shape >= 0 ? "+" : ""}${s.shape.toFixed(2)}, ${s.shape_read}.</p>
     <div class="ctl" role="group" aria-label="Seasonal scale"><button class="chip" data-fit="1" aria-pressed="${seasonFit}">Stretched to the price's swing</button><button class="chip" data-fit="0" aria-pressed="${!seasonFit}">Real size</button></div>
+    ${benched(m) && s.driver && !s.small_only ? `<p class="note smallonly">Outside agriculture a seasonal window only counts when COT points the same way. Here it does not, so this window is shown for information and is not part of this week's verdict. (Tested 2019–26: letting the calendar stand alone only on agricultural markets raised the board from +0.80% to +1.22% per verdict, better in both halves.)</p>` : ""}
     ${s.small_only && s.driver ? `<p class="note smallonly">This window's usual move is ${s.driver.move_days} normal days of ${esc(m.name)} (${sgn(s.driver.avg)}%); a window needs at least 3 to carry a bias alone. It can only back a COT signal pointing the same way, so it is shown for information and is not part of this week's verdict.</p>` : ""}
     <div id="seaschart">${seasonChart(m)}</div>${pastYears(m)}</div>`;
 }
@@ -832,7 +837,7 @@ function testedSection() {
       const c = o => o ? `<td class="n">${o.n}</td><td class="n">${o.win}%</td><td class="n">${sgn(o.avg)}%</td>` : `<td class="n">–</td><td class="n">–</td><td class="n">–</td>`;
       return `<tr><th>${esc(M[k].name)}</th>${c(a)}${c(b)}</tr>`; }).join("")}</tbody></table></div>
     <p class="note">Per market the samples are small (a few dozen trades over 7–10 years), so single rows swing a lot; the pooled rows above are the more reliable read.</p>
-    <p class="note">How the board uses this: each engine may carry the bias alone, but a seasonal window that carries it alone (no COT agreeing) must usually move at least 3 normal daily moves of that market (tested: verdicts 57% vs 54% without it); a window that agrees with COT counts at any size. A COT signal only counts if its past setups on that market usually moved at least 0.5 normal daily moves in its direction (tested on a grid of thresholds: chosen on 2019–22, confirmed on 2023–26, 63.5% won vs 59.5% without it); on the US indices only bullish COT signals count; on currencies (provisional, since October 2026) a COT signal counts when one of its live lookbacks clears Bernd's evidence bar (at least 6 earlier cases, 60% right, positive average), which tested better on currencies since 2020 than the record minimum. Finally, a bias becomes no bias when nothing is left in it: on US indices, gold and silver when the US macro score points the other way, and anywhere when the setup has already made its usual move. In a contradiction the calendar stands if the window already paid in at least 2 of 3 past years when COT was against it (at least 3 such years); otherwise there is no bias. Tested, that split made no difference: the calendar won 50.5% when the window had played out against COT and 50.0% when it had not. In contradictions the calendar won about half the time and COT only slightly more, so neither earns the right to overrule the other. Both edges are small: the COT read, held while lit, wins about 55-60% with a small average and is only clearly above zero pooled across all markets; the seasonal windows have not beaten a coin flip out of sample.</p></details>`;
+    <p class="note">How the board uses this: COT may carry the bias alone. A seasonal window may carry it alone only on agricultural markets (harvest, planting and weather repeat every year), and there it must usually move at least 3 normal daily moves; on all other markets the calendar only counts when COT points the same way (tested 2019–26: board +0.80% → +1.22% per verdict, t 2.7 → 4.3, better in 2019–22 and 2023–26). A window that agrees with COT counts at any size. A COT signal only counts if its past setups on that market usually moved at least 0.5 normal daily moves in its direction (tested on a grid of thresholds: chosen on 2019–22, confirmed on 2023–26, 63.5% won vs 59.5% without it); on the US indices only bullish COT signals count; on currencies (provisional, since October 2026) a COT signal counts when one of its live lookbacks clears Bernd's evidence bar (at least 6 earlier cases, 60% right, positive average), which tested better on currencies since 2020 than the record minimum. Finally, a bias becomes no bias when nothing is left in it: on US indices, gold and silver when the US macro score points the other way, and anywhere when the setup has already made its usual move. In a contradiction the calendar stands if the window already paid in at least 2 of 3 past years when COT was against it (at least 3 such years); otherwise there is no bias. Tested, that split made no difference: the calendar won 50.5% when the window had played out against COT and 50.0% when it had not. In contradictions the calendar won about half the time and COT only slightly more, so neither earns the right to overrule the other. Both edges are small: the COT read, held while lit, wins about 55-60% with a small average and is only clearly above zero pooled across all markets; seasonal windows alone are near a coin flip out of sample except on agricultural markets, and strong next to COT (top setups).</p></details>`;
 }
 function render(k) {
   const m = M[k], P = $("#panel");
