@@ -189,7 +189,7 @@ body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border
 .live .lst span.r{color:var(--bull);border-color:var(--bull-soft)} .live .lst span.w{color:var(--bear);border-color:var(--bear-soft)}
 .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px}
 .fcard{position:relative;text-align:left;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px 12px 12px 44px;cursor:pointer;display:flex;flex-direction:column;gap:10px;min-width:0;transition:transform .18s cubic-bezier(.3,1.6,.5,1)}
-.fcard:hover{transform:translateY(-3px)} .fcard:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.fcard:hover{transform:translateY(-3px)} .pcard{cursor:default;padding-left:12px} .pcard:hover{transform:none} .pcard .up{color:var(--bull);font-weight:600} .pcard .dn{color:var(--bear);font-weight:600} .fcard:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
 .frank{position:absolute;left:12px;top:12px;font:800 22px/1 var(--display);color:var(--mute)}
 .fh{display:flex;justify-content:space-between;align-items:flex-start;gap:8px} .fh .nm{font:700 16px/1.15 var(--display)} .fh .tk{font:12px var(--mono);color:var(--mute)}
 .fs{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px} .fs b{display:block;font:700 16px/1 var(--mono)} .fs span{font-size:11px;color:var(--mute)}
@@ -223,6 +223,7 @@ body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border
 <div class="wrap">
   <div id="outlook-view">
     <section class="focus" id="focus"></section>
+    <section class="focus" id="pairs" hidden></section>
     <section class="live" id="live"></section>
     <div id="boards"></div>
     <section class="panel" id="panel" aria-live="polite"></section>
@@ -366,6 +367,18 @@ function focusStrip() {
     ${keys.length ? `<div class="fgrid">${keys.map(card).join("")}</div>` : `<p class="note">No top setup this week.</p>`}`;
   $("#focus").hidden = false;
   document.querySelectorAll(".fcard").forEach(b => b.addEventListener("click", () => select(b.dataset.k, true)));
+}
+function pairStrip() {
+  // one currency bullish and another bearish: that cross carries both board trades in one position (bias/pairs.py)
+  const P = D.fx_pairs || [], T = D.pair_test && D.pair_test.pairs, U = D.pair_test && D.pair_test.vs_usd;
+  if (!P.length) { $("#pairs").hidden = true; return; }
+  const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
+  const leg = (x, v) => `<span class="${v === "BULLISH" ? "up" : "dn"}">${x.cur} ${v.toLowerCase()}</span> <span class="tk">(${esc(x.basis)})</span>`;
+  const card = p => `<div class="fcard pcard"><div class="fh"><div><div class="nm">${p.side} ${p.pair}</div><div class="tk">${leg(p.bull, "BULLISH")} · ${leg(p.bear, "BEARISH")}</div></div>${pill(p.side === "Long" ? "BULLISH" : "BEARISH", p.side)}</div></div>`;
+  $("#pairs").innerHTML = `<div class="fhead"><h2 class="sec" style="margin:0">Currency pairs this week</h2>
+      <p class="note" style="margin:0">One currency bullish and another bearish on the board: the cross between them carries both verdicts in one position, with the US dollar cancelled out${T ? `. Tested ${D.pair_test.first}–${D.pair_test.last}: ${T.win}% won, ${pc(T.avg)} per pair (${T.n} pairs in ${T.months} months; ${pc(T["2019-22"])} in 2019–22, ${pc(T["2023-26"])} in 2023–26), against ${U.win}% and ${pc(U.avg)} for a single currency against the dollar` : ""}. It is the same edge as taking both currency verdicts, not extra evidence; held while both verdicts last. A cross against a currency without a verdict did no better than the currency against the dollar, so only opposite pairs are listed.</p></div>
+    <div class="fgrid">${P.map(card).join("")}</div>`;
+  $("#pairs").hidden = false;
 }
 function evBadge(m) {
   if (!m.events) return "";
@@ -966,7 +979,7 @@ addEventListener("keydown", e => {
 });
 
 $("#meta").textContent = `Week of ${new Date(D.today + "T00:00:00").toLocaleDateString("en-GB", {day: "numeric", month: "long", year: "numeric"})} · COT as of ${D.asof}`;
-focusStrip(); liveRecord(); boards(); qboards();
+focusStrip(); pairStrip(); liveRecord(); boards(); qboards();
 let start = (location.hash || "").slice(1);
 if (start.startsWith("q-")) { qselect(start.slice(2), false); setView("quant", false); start = ""; }
 if (!M[start]) start = KEYS.find(k => M[k].timing && M[k].timing.closing && M[k].timing.flip) || KEYS[0];

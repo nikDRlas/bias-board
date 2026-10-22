@@ -19,6 +19,7 @@ import events as EV                                # noqa: E402
 import verdict as VD                               # noqa: E402
 import track as TR                                 # noqa: E402
 import macro as MC                                 # noqa: E402
+import pairs as PR                                 # noqa: E402
 
 ASOF, TODAY, M = R.ASOF, R.TODAY, R.M
 LB, HIST = R.LB, R.HIST
@@ -939,6 +940,9 @@ if __name__ == "__main__":
             top_test = {"n": len(g), "win": round(100 * float((g.r > 0).mean()), 1), "avg": round(float(g.r.mean()), 2),
                         "first": str(vt.t.min())[:4], "last": str(vt.exit.max())[:4],
                         "2019-22": round(float(g[g.t < "2023"].r.mean()), 2), "2023-26": round(float(g[g.t >= "2023"].r.mean()), 2)}
+    # currency pairs: one currency bullish, another bearish = that cross (bias/pairs.py, tested on the replay)
+    pair_test = PR.test(VERDICT) if os.path.exists(VERDICT) else None
+    fx_pairs = PR.current(res)
     mtp = os.path.join(ROOT, "data", "research", "tools_macro_align.json")
     macro_test = None
     if os.path.exists(mtp):
@@ -948,7 +952,7 @@ if __name__ == "__main__":
     md_test = json.load(open(mdp)) if os.path.exists(mdp) else None
     json.dump({"asof": str(ASOF.date()), "today": str(TODAY.date()), "tested": tested, "verdict_test": vsum, "focus": focus,
                "move_done_test": md_test, "track": track, "macro_test": macro_test, "top_test": top_test,
-               "markets": res, "quant": quant},
+               "pair_test": pair_test, "fx_pairs": fx_pairs, "markets": res, "quant": quant},
               open(f"{ROOT}/data/live/outlook.json", "w"), indent=1, default=float)
     os.makedirs(f"{ROOT}/site", exist_ok=True)
     out = f"{ROOT}/site/outlook.html"
