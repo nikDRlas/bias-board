@@ -477,7 +477,10 @@ def cot_record(reader, p, side, k):
     return {"n": len(r), "w": int((r > 0).sum()), "avg": round(float(r.mean()), 2), "median": round(float(np.median(r)), 2),
             "mfe": round(float(np.mean([c["mfe"] for c in cases])), 2), "mae": round(float(np.mean([c["mae"] for c in cases])), 2),
             "weeks": round(float(np.mean([c["weeks"] for c in cases])), 1), "after": R.HOLD_AFTER,
-            "rec": int((r[-4:] > 0).sum()), "first": cases[0]["d"][:4], "cases": cases, "live": live}
+            "rec": int((r[-4:] > 0).sum()), "first": cases[0]["d"][:4], "cases": cases, "live": live,
+            # how far the winners ran at best, and one normal week of this market now (for stops and targets)
+            "win_mfe": round(float(np.mean([c["mfe"] for c in cases if c["r"] > 0])), 2) if (r > 0).any() else None,
+            "week_pct": round(float(np.std(np.diff(np.log(p.to_numpy(float)[-253:]))) * 100 * np.sqrt(5)), 2)}
 
 
 def move_done(c, s, basis):
@@ -943,6 +946,8 @@ if __name__ == "__main__":
     # currency pairs: one currency bullish, another bearish = that cross (bias/pairs.py, tested on the replay)
     pair_test = PR.test(VERDICT) if os.path.exists(VERDICT) else None
     fx_pairs = PR.current(res)
+    chp = os.path.join(ROOT, "data", "research", "cot_hold.json")
+    cot_hold = json.load(open(chp)) if os.path.exists(chp) else None
     mtp = os.path.join(ROOT, "data", "research", "tools_macro_align.json")
     macro_test = None
     if os.path.exists(mtp):
@@ -952,7 +957,7 @@ if __name__ == "__main__":
     md_test = json.load(open(mdp)) if os.path.exists(mdp) else None
     json.dump({"asof": str(ASOF.date()), "today": str(TODAY.date()), "tested": tested, "verdict_test": vsum, "focus": focus,
                "move_done_test": md_test, "track": track, "macro_test": macro_test, "top_test": top_test,
-               "pair_test": pair_test, "fx_pairs": fx_pairs, "markets": res, "quant": quant},
+               "pair_test": pair_test, "cot_hold": cot_hold, "fx_pairs": fx_pairs, "markets": res, "quant": quant},
               open(f"{ROOT}/data/live/outlook.json", "w"), indent=1, default=float)
     os.makedirs(f"{ROOT}/site", exist_ok=True)
     out = f"{ROOT}/site/outlook.html"

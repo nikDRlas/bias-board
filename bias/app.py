@@ -551,6 +551,12 @@ function seasonPaths(m) {
   const proj = []; for (let i = k0; i < n; i++) proj.push([i, A15[i]]);
   return {n, mc, cur, a5: A5, a10: A10, a15: A15, proj, k};
 }
+function holdNote(m, rc) {
+  // how to hold a COT verdict with a technical entry (research/cot_hold_test.py)
+  const H = D.cot_hold && D.cot_hold[m.sector === "FX" ? "currencies" : "other"]; if (!H || !rc.week_pct) return "";
+  const t = H.targets, R = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}R`;
+  return `<p class="note">How to hold it: stop about one normal week against your entry (±${rc.week_pct}%), no tight target, and stay in until the board drops the bias (one week after the COT signal goes dark; usually about ${Math.round(H.hold_weeks)} weeks). Tested on all ${m.sector === "FX" ? "currency" : "non-currency"} COT verdicts 2019–26: target 1 normal week ${R(t["1"].R)} per trade, 2 weeks ${R(t["2"].R)}, 3 weeks ${R(t["3"].R)}, 4 weeks ${R(t["4"].R)} (positive in 2019–22 and 2023–26); the bigger targets are rarely hit (${t["3"].hit}% for 3 weeks), the gain comes from holding until the verdict ends. Measured from the verdict's own entry; a 4h entry comes at another time and price, so read it as a guide.</p>`;
+}
 function cotStats(m) {
   // like the seasonal window stats: what the live COT signal has done so far, against its usual result while lit
   const rc = m.cot.record, lv = rc && rc.live; if (!lv) return "";
@@ -563,7 +569,8 @@ function cotStats(m) {
     ${cell(pc(bw[0]), "usual best point for the signal along the way")}
     ${doneCell(m.done && m.done.cot, "cot", m.cot.read)}
     ${cell(pc(bw[1]), "usual worst point for the signal along the way")}
-  </div>`;
+    ${rc.win_mfe != null ? cell(pc(raw(rc.win_mfe, sd)), `how far the winning setups usually ran at best (${rc.week_pct ? `about ${(rc.win_mfe / rc.week_pct).toFixed(1)} normal weeks; ` : ""}a normal week of ${esc(m.name)} is ±${rc.week_pct}% now)`) : ""}
+  </div>${holdNote(m, rc)}`;
 }
 function upcomingNote(m) {
   const U = m.seas.upcoming || []; if (!U.length) return "";
