@@ -25,6 +25,7 @@ SECTOR = lambda k: {"FX": "Currencies", "Indices": "Indices", "Agriculture": "Ag
 
 LB_CFG = {"15": [(15, 12)], "10": [(10, 8)], "15,10": [(15, 12), (10, 8)]}[os.environ.get("SEAS_LB", os.environ.get("SEAS_YEARS", "15"))]
 SKIP_SLOW = os.environ.get("SKIP_SLOW") == "1"
+KEEP_SLOW_IN = set(os.environ.get("KEEP_SLOW_IN", "").split(",")) - {""}   # sectors (core.M) where slow signals are kept anyway
 OUT = os.environ.get("OUT", "verdict.json")
 GATES = os.environ.get("GATES", "macro,done")
 FX_COT = os.environ.get("FX_COT", "bernd")              # currency COT rule: min (board) / none / bernd (his evidence gate)          # the final 'nothing left' rules (bias/verdict.py final_read)
@@ -50,7 +51,8 @@ if __name__ == "__main__":
         p = C.load_px(k)
         cal, rd = SS.Calendar(p), C.CotReader(k)
         sp = speed_series(k)
-        lit = C.lit_sides(rd, sp, skip_slow=SKIP_SLOW)
+        skip_k = SKIP_SLOW and C.M[k][3] not in KEEP_SLOW_IN
+        lit = C.lit_sides(rd, sp, skip_slow=skip_k)
         busy = pd.Timestamp("1900-01-01")
         for t in pd.date_range("2019-01-05", end, freq="W-SAT"):
             if t <= busy:
@@ -58,7 +60,7 @@ if __name__ == "__main__":
             cot = rd.read(t)
             i_rep = rd.dates.searchsorted(t - pd.Timedelta(days=3), "right") - 1
             spd = speed_of(sp, i_rep, cot) if cot in VD.SIDES else None
-            if SKIP_SLOW and spd == "slow":
+            if skip_k and spd == "slow":
                 cot = "NEUTRAL"
             fx = C.M[k][3] == "FX"
             if cot in VD.SIDES and fx and FX_COT == "bernd":
