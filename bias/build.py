@@ -209,7 +209,7 @@ def combine(k, reader, cal, speed=None):
     g = reader.last_groups
     if speed == "slow":
         v = "NEUTRAL"
-    if v not in VD.SIDES:                     # outside currencies a COT verdict is held at least 8 weeks (core.held_side)
+    if v not in VD.SIDES:                     # held COT verdicts (core.held_side; off unless COT_MIN_WEEKS is set)
         lit = R.lit_sides(reader, R.speed_series(k))
         i0 = reader.dates.searchsorted(TODAY - pd.Timedelta(days=3), "right") - 1
         hs, _ = R.held_side(reader.dates, lit, i0, TODAY, k)
@@ -968,7 +968,7 @@ if __name__ == "__main__":
     md_test = json.load(open(mdp)) if os.path.exists(mdp) else None
     json.dump({"asof": str(ASOF.date()), "today": str(TODAY.date()), "tested": tested, "verdict_test": vsum, "focus": focus,
                "move_done_test": md_test, "track": track, "macro_test": macro_test, "top_test": top_test,
-               "pair_test": pair_test, "cot_hold": cot_hold, "fx_pairs": fx_pairs, "markets": res, "quant": quant},
+               "pair_test": pair_test, "cot_hold": cot_hold, "cot_min_weeks": R.COT_MIN_WEEKS, "fx_pairs": fx_pairs, "markets": res, "quant": quant},
               open(f"{ROOT}/data/live/outlook.json", "w"), indent=1, default=float)
     os.makedirs(f"{ROOT}/site", exist_ok=True)
     out = f"{ROOT}/site/outlook.html"

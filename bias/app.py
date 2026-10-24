@@ -353,7 +353,7 @@ function liveRecord() {
   const open = (L.open || []).map(r => `<span title="${esc(r.name)} · ${esc(r.basis)} · since ${r.entry || r.entry_from}${r.best != null ? ` · best point so far ${pc(r.best)} for the bias` : ""}${r.stopped ? " · a one-week stop would have been hit" : ""}">${r.m} ${r.verdict === "BULLISH" ? "▲" : "▼"} ${r.move != null ? pc(r.move) : "waiting"}</span>`).join("");
   el.innerHTML = `<div class="lh"><b>Live record since ${fmtD(L.since)}</b><span>${head}</span>${by ? `<span class="note" style="margin:0">${by}</span>` : ""}</div>
     ${recent ? `<div class="lst">${recent}</div>` : ""}${open ? `<p class="note" style="margin:8px 0 0">Open: </p><div class="lst">${open}</div>` : ""}
-    <p class="note" style="margin:8px 0 0">Every verdict saved as given on its Saturday and scored when its exit passes (calendar: window end; COT: one week after the signal goes dark, outside currencies at least 8 weeks after the signal unless COT flips), one position per market at a time; price moves shown as + up / − down. Also scored the way you would hold it with a technical entry: the best point along the way, and the result in R with a stop one normal week against the entry (hover a verdict for its numbers). The replay numbers elsewhere were tested on 2019–26; this record is the board on weeks its rules have never seen.</p>`;
+    <p class="note" style="margin:8px 0 0">Every verdict saved as given on its Saturday and scored when its exit passes (calendar: window end; COT: one week after the signal goes dark), one position per market at a time; price moves shown as + up / − down. Also scored the way you would hold it with a technical entry: the best point along the way, and the result in R with a stop one normal week against the entry (hover a verdict for its numbers). The replay numbers elsewhere were tested on 2019–26; this record is the board on weeks its rules have never seen.</p>`;
 }
 function focusStrip() {
   // Top setups: COT + calendar outside currencies, the board's best tested verdict type (the old focus picks no
@@ -419,7 +419,7 @@ const benched = m => !m.seas.solo_ok && m.basis !== "COT + calendar";   // outsi
 const NEEDS_COT = "outside agriculture a seasonal window only counts when COT agrees (tested: calendar-alone verdicts made money only on agricultural markets)";
 const HOLD_FX = "held while the signal stays lit, out one week after it goes dark";
 const HOLD_OTHER = "held at least 8 weeks after the signal (longer while it stays lit, out one week after it goes dark), unless COT flips to the other side";
-const holdTxt = m => m.sector === "FX" ? HOLD_FX : HOLD_OTHER;
+const holdTxt = m => m.sector === "FX" || !D.cot_min_weeks ? HOLD_FX : HOLD_OTHER;
 const heldLive = m => m.cot.record && m.cot.record.live && m.cot.record.live.held ? m.cot.record.live : null;
 function heldNote(m) {
   const h = heldLive(m); if (!h) return "";
@@ -852,7 +852,7 @@ function testedSection() {
   const hd = `<thead><tr><th></th><th>Trades</th><th>Won</th><th>Avg</th><th>t</th></tr></thead>`;
   const sc = T.seas_by_cot, cs = T.cot_by_seasonal, cc = T.cot;
   return `<details><summary>How the board is tested<small>walk-forward, no hindsight</small></summary>
-    <p class="note">Every Saturday since the data allows, the board's own rules were run with only what was known that day: the COT report released by then and the seasonal windows picked from the 15 years before. One trade per market at a time. Seasonal trades run from the window start (or that Saturday) to the window end; COT trades are held while the signal stays lit, out one week after the last lit report; outside currencies at least 8 weeks after the signal unless COT flips to the other side (tested: entries in the weeks after the signal went dark still worked outside currencies, board +549% → +763% in 2019–26, better in both halves, win rate 62% → 58%; on currencies not, so they keep the shorter hold).</p>
+    <p class="note">Every Saturday since the data allows, the board's own rules were run with only what was known that day: the COT report released by then and the seasonal windows picked from the 15 years before. One trade per market at a time. Seasonal trades run from the window start (or that Saturday) to the window end; COT trades are held while the signal stays lit, out one week after the last lit report. A longer hold (at least 8 weeks, like Bernd) looked better on 2019–26 but failed the check on the untouched years 2006–18, so it is not used.</p>
     <h4 class="note" style="font-weight:600;color:var(--ink)">The seasonal window, split by what COT said (${T.first_seas.slice(0, 4)}–${T.last.slice(0, 4)})</h4>
     <div class="tbl"><table>${hd}<tbody>${row("All seasonal trades", T.seas_all)}${row("COT agreed", sc.agree)}${row("COT against", sc.against)}${row("COT no side", sc.neutral)}${row("COT groups disagreed", sc.mixed)}</tbody></table></div>
     <h4 class="note" style="font-weight:600;color:var(--ink);margin-top:12px">The COT read, split by what the calendar said (${T.first_cot.slice(0, 4)}–${T.last.slice(0, 4)})</h4>

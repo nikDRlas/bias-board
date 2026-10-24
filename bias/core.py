@@ -238,10 +238,10 @@ def lit_sides(reader, sp=None, skip_slow=True):
     return out
 
 
-# outside currencies a COT bias is held at least this many weeks after its signal's release, unless COT flips to the
-# other side: entries in weeks 4-8 after the signal went dark still worked like early ones (research/cot_late_entry_test.py:
-# +1 normal week before -1 in 55.8%, 57% in 2019-22 and 55% in 2023-26); on currencies they did not (48% in 2019-22).
-COT_MIN_WEEKS = int(os.environ.get("COT_MIN_WEEKS", "8"))
+# research switch (default OFF): hold a COT bias at least this many weeks after its signal outside currencies, unless COT
+# flips. It helped on 2019-26 (board +549% -> +763%) but FAILED the 2006-18 holdout (research/holdout_cot_hold.py: 8-week
+# hold -1.15% vs blind, lit + 1 week -0.33%), so the board keeps lit + 1 week.
+COT_MIN_WEEKS = int(os.environ.get("COT_MIN_WEEKS", "0"))
 
 
 def min_weeks(k):

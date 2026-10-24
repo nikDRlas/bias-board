@@ -1,0 +1,42 @@
+{
+ "holdout 2006-18 | outside currencies": {
+  "signals": 246,
+  "lit+1 minus blind": -0.42,
+  "8w hold minus blind": -1.62,
+  "lit+1 per week": -0.13,
+  "8w per week": -0.214,
+  "late entries": 1187,
+  "late target_first": 49.1,
+  "late 4w minus blind": -0.4
+ },
+ "holdout 2006-18 | currencies": {
+  "signals": 304,
+  "lit+1 minus blind": -0.01,
+  "8w hold minus blind": -0.01,
+  "lit+1 per week": -0.002,
+  "8w per week": -0.002,
+  "late entries": 1406,
+  "late target_first": 47.9,
+  "late 4w minus blind": -0.23
+ },
+ "chosen on 2019-26 | outside currencies": {
+  "signals": 141,
+  "lit+1 minus blind": 0.63,
+  "8w hold minus blind": 0.72,
+  "lit+1 per week": 0.188,
+  "8w per week": 0.095,
+  "late entries": 675,
+  "late target_first": 56.1,
+  "late 4w minus blind": 0.76
+ },
+ "chosen on 2019-26 | currencies": {
+  "signals": 150,
+  "lit+1 minus blind": 0.39,
+  "8w hold minus blind": 0.39,
+  "lit+1 per week": 0.104,
+  "8w per week": 0.104,
+  "late entries": 653,
+  "late target_first": 53.8,
+  "late 4w minus blind": 0.39
+ }
+}
