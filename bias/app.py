@@ -456,7 +456,7 @@ function metrics(m) {
   const st = setupStats(m), side = m.verdict, rc = m.cot.record, d = m.seas.driver;
   const runs = calLedM(m) ? (d && d.mfe != null ? dirSg(side) * d.mfe : null) : (rc && rc.win_mfe != null ? raw(rc.win_mfe, side) : null);
   const cell = (lab, big, sm) => `<div class="mc"><span>${lab}</span><b>${big}${sm ? `<small>${sm}</small>` : ""}</b></div>`;
-  return `<div class="mcs">${st ? cell("This setup won", `${Math.round(100 * st.w / st.n)}%`, `${st.w} of ${st.n}`) : ""}${m.week_pct ? cell("Stop about", `±${m.week_pct}%`, "one normal week") : ""}${runs != null ? cell(calLedM(m) ? "Usual best point" : "Winners usually run", pcx(runs)) : ""}</div>`;
+  return `<div class="mcs">${st ? cell("This setup won", `${Math.round(100 * st.w / st.n)}%`, `${st.w} of ${st.n}`) : ""}${m.week_pct ? cell(`Stop distance <span class="ib" style="padding:0" title="One normal week: how far ${esc(m.name)} typically moves in a week (past year). The tested way to hold a verdict is a stop about this far from your entry; tighter stops get hit by normal weekly noise.">ⓘ</span>`, `±${m.week_pct}%`, "one normal week") : ""}${runs != null ? cell(calLedM(m) ? "Usual best point" : "Winners usually run", pcx(runs)) : ""}</div>`;
 }
 function evBadge(m) {
   if (!m.events) return "";
@@ -631,18 +631,18 @@ function holdNote(m, rc) {
   return `<p class="note keep">How to hold it: stop about one normal week against your entry (±${rc.week_pct}%), no tight target, and stay in until the board drops the bias (${holdTxt(m)}; usually about ${Math.round(H.hold_weeks)} weeks). Tested on all ${m.sector === "FX" ? "currency" : "non-currency"} COT verdicts 2019–26: target 1 normal week ${R(t["1"].R)} per trade, 2 weeks ${R(t["2"].R)}, 3 weeks ${R(t["3"].R)}, 4 weeks ${R(t["4"].R)} (positive in 2019–22 and 2023–26); the bigger targets are rarely hit (${t["3"].hit}% for 3 weeks), the gain comes from holding until the verdict ends. Measured from the verdict's own entry; a 4h entry comes at another time and price, so read it as a guide.</p>`;
 }
 function cotStats(m) {
-  // like the seasonal window stats: what the live COT signal has done so far, against its usual result while lit
+  // three numbers for the live COT signal: where price is, how far winners usually run (and how much of it is made),
+  // how far it usually goes against first
   const rc = m.cot.record, lv = rc && rc.live; if (!lv) return "";
   const sd = m.cot.read, bw = bestPx(rc.mfe, rc.mae, sd);
   const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
   const cell = (big, small) => `<div><b>${big}</b><span>${small}</span></div>`;
+  const made = rc.win_mfe ? Math.round(100 * lv.move / rc.win_mfe) : null;
+  const done = m.done && m.done.cot && m.done.cot.state === "done";
   return `<div class="wstats">
-    ${cell(pc(raw(lv.move, sd)), `price so far since the ${sd.toLowerCase()} signal (report ${fmtD(lv.since)}, entry ${fmtD(lv.entry)}) · running ${lv.weeks.toFixed(1)} weeks (usually about ${rc.weeks}) · ${lv.held ? `signal gone dark, bias held until ${fmtD(lv.until)}` : holdTxt(m)}`)}
-    ${cell(pc(raw(rc.avg, sd)), `usual price move at the exit · went the signal's way ${rc.w} of ${rc.n} times${m.cot.usual_days != null ? ` · ${m.cot.usual_days} normal days in the signal's direction (the board needs ${m.cot.min_move})` : ""}`)}
-    ${cell(pc(bw[0]), "usual best point for the signal along the way")}
-    ${doneCell(m.done && m.done.cot, "cot", m.cot.read)}
-    ${cell(pc(bw[1]), "usual worst point for the signal along the way")}
-    ${rc.win_mfe != null ? cell(pc(raw(rc.win_mfe, sd)), `how far the winning setups usually ran at best (${rc.week_pct ? `about ${(rc.win_mfe / rc.week_pct).toFixed(1)} normal weeks; ` : ""}a normal week of ${esc(m.name)} is ±${rc.week_pct}% now)`) : ""}
+    ${cell(pc(raw(lv.move, sd)), `price so far, since ${fmtD(lv.entry)} (${lv.weeks.toFixed(1)} weeks${lv.held ? `; held until ${fmtD(lv.until)}` : ""})`)}
+    ${rc.win_mfe != null ? cell(pc(raw(rc.win_mfe, sd)), `winners usually run (best point) · ${done ? "usual move already made" : made == null ? "" : made < 0 ? "price is against the setup so far" : `${made}% of it made so far`}`) : ""}
+    ${cell(pc(bw[1]), `usually goes against first (worst point along the way, all ${rc.n} setups)`)}
   </div>${holdNote(m, rc)}`;
 }
 function upcomingNote(m) {
