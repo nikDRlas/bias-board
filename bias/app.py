@@ -101,6 +101,18 @@ details.rest summary{font:600 13px var(--body);color:var(--mute)}
 .mc{background:var(--bg);border-radius:12px;padding:11px 14px;display:flex;flex-direction:column;gap:4px}
 .mc span{font-size:12.5px;color:var(--mute)} .mc b{font:700 22px var(--mono)} .mc small{font:12px var(--body);color:var(--mute);margin-left:6px}
 details.liveD{margin-top:18px;background:var(--card)}
+.check{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:6px}
+.check li{display:flex;gap:10px;align-items:baseline;font-size:15px}
+.ck{flex:none;width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:700 12px var(--body);transform:translateY(3px)}
+.ck.y{background:var(--bull-soft);color:var(--bull)} .ck.n{background:var(--bear-soft);color:var(--bear)} .ck.o{background:var(--flat-soft);color:var(--flat)}
+.check b{font-weight:700}
+.ptabs{display:flex;gap:4px;margin-top:22px;border-bottom:1.5px solid var(--line)}
+.ptab{font:600 14px var(--body);background:none;border:0;border-bottom:3px solid transparent;color:var(--mute);padding:10px 14px;cursor:pointer;margin-bottom:-1.5px}
+.ptab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)} .ptab:focus-visible{outline:3px solid var(--sun);outline-offset:-3px}
+.tabc{padding-top:16px;display:flex;flex-direction:column;gap:18px}
+.ib{font:500 12.5px var(--body);color:var(--mute);background:none;border:0;padding:2px 0;cursor:pointer;text-align:left;align-self:flex-start}
+.ib:hover{color:var(--ink)} .ib:focus-visible{outline:2px solid var(--sun)}
+#how-view .panel{animation:none}
 @media (max-width:640px){.whead,.wrow{grid-template-columns:minmax(0,1fr) auto;row-gap:2px}.whead span:nth-child(n+3){display:none}.wrow .wmute{grid-column:1/-1}}
 .card{border:1px solid var(--line);border-radius:16px;padding:14px 16px 10px;min-width:0}
 .card h3{font:700 19px/1.2 var(--display);margin:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -229,6 +241,7 @@ body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border
   <div class="views" role="tablist" aria-label="View">
     <button class="vbtn" id="v-outlook" role="tab" aria-selected="true">Outlook</button>
     <button class="vbtn q" id="v-quant" role="tab" aria-selected="false">Quant strategies</button>
+    <button class="vbtn" id="v-how" role="tab" aria-selected="false">How it works</button>
   </div>
   <div class="meta" id="meta"></div>
   <div class="filters" id="filters" hidden></div>
@@ -240,6 +253,7 @@ body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border
     <section class="panel" id="panel" aria-live="polite"></section>
     <section id="live"></section>
   </div>
+  <div id="how-view" hidden><section class="panel" id="howpanel"></section></div>
   <div id="quant-view" hidden>
     <p class="qintro">Fixed rules with a known cause, defined before testing and validated on the 20 years after they were published. Each one trades on its own dates, separate from the weekly outlook.</p>
     <div id="qboards"></div>
@@ -394,6 +408,48 @@ function weekList() {
     + (on.length ? "" : `<p class="wmute" style="padding:12px 18px;margin:0;border-top:1px solid var(--line)">No bias this week.</p>`)
     + `<details class="rest"><summary>${off.length} markets without a bias</summary><div class="restg">${off.map(k => `<button class="rchip" data-k="${k}">${esc(M[k].name)} <span class="wmute">· ${esc(whyShort(M[k]))}</span></button>`).join("")}</div></details>`;
   document.querySelectorAll("#week [data-k]").forEach(b => b.addEventListener("click", () => select(b.dataset.k, true)));
+}
+function checklist(m) {
+  const c = m.cot, s = m.seas, d = s.driver, lv = c.record && c.record.live, rows = [];
+  const li = (k, txt) => rows.push(`<li><span class="ck ${k}">${k === "y" ? "✓" : k === "n" ? "✗" : "–"}</span><span>${txt}</span></li>`);
+  const win = d ? `${d.side === "BUY" ? "buy" : "sell"} window, ${d.wins} of 15 years, ${fmtD(d.start)}–${fmtD(d.end)}` : "";
+  const used = m.basis.startsWith("COT") || m.basis === "Move done" || m.basis === "Macro against";
+  if (lv && lv.held) li("y", `<b>COT</b>: signal of ${fmtD(lv.since)} has gone dark, the bias is held until ${fmtD(lv.until)}`);
+  else if (c.read === "BULLISH" || c.read === "BEARISH") {
+    const g = c.info && c.info.comm ? c.info.comm.lit : null;
+    if (c.speed && c.speed.speed === "slow") li("n", `<b>COT</b>: ${c.read.toLowerCase()}, but the commercials crept in slowly, so it is skipped`);
+    else if (c.index_short_skipped) li("n", `<b>COT</b>: bearish, but bearish COT is not used on the US indices`);
+    else if (c.small_record) li("n", `<b>COT</b>: ${c.read.toLowerCase()}, but its past setups on ${esc(m.name)} moved too little to count`);
+    else if (c.gate_fail) li("n", `<b>COT</b>: ${c.read.toLowerCase()}, but no lookback clears the currency bar`);
+    else li(used || m.basis === "Calendar over COT" ? "y" : "o", `<b>COT</b>: ${c.read.toLowerCase()}, commercials at an extreme on ${g != null ? g + " of 5" : "several"} lookbacks, ${esc(c.conv)}`);
+  } else li("o", `<b>COT</b>: no signal`);
+  if (!d) li("o", `<b>Calendar</b>: no seasonal window in play`);
+  else if (m.basis === "COT + calendar") li("y", `<b>Calendar</b> agrees: ${win}`);
+  else if (calLedM(m)) li("y", `<b>Calendar</b>: ${win} (agriculture: can carry a bias alone)`);
+  else if (s.small_only) li("o", `<b>Calendar</b>: ${win}, too small to count`);
+  else if (!s.solo_ok) li("o", `<b>Calendar</b>: ${win}, ignored: outside agriculture it only counts when COT agrees`);
+  else li("o", `<b>Calendar</b>: ${win}`);
+  const x = m.macro;
+  if (x) li(x.rel === "agrees" ? "y" : x.rel === "against" ? "n" : "o", `<b>US macro</b>: ${x.rel === "agrees" ? "agrees" : x.rel === "against" ? "against, so the bias is cancelled" : x.rel === "flat" ? "neutral, so the bias is cancelled" : "score " + (x.total > 0 ? "+" : "") + x.total} (score ${x.total > 0 ? "+" : ""}${x.total})`);
+  const dn = m.done && (m.done.cot || m.done.seas);
+  if (m.basis === "Move done") li("n", `<b>Move</b>: the usual move is already made, so the bias is off`);
+  else if (dn && m.verdict !== "STAND ASIDE" && dn.share != null) li(dn.share >= 100 ? "o" : "y", `<b>Room left</b>: ${dn.share < 0 ? "price is against the setup so far" : dn.share + "% of the usual move made so far"}`);
+  return `<ul class="check">${rows.join("")}</ul>`;
+}
+function infoize(root) {
+  // long explanations sit behind a small button instead of under every chart
+  root.querySelectorAll(".tabc p.note:not(.keep)").forEach(n => {
+    if (n.textContent.length < 110 || n.previousElementSibling && n.previousElementSibling.classList.contains("ib")) return;
+    const b = document.createElement("button"); b.className = "ib"; b.type = "button"; b.textContent = "ⓘ Explain"; b.setAttribute("aria-expanded", "false");
+    n.before(b); n.hidden = true;
+    b.addEventListener("click", () => { n.hidden = !n.hidden; b.setAttribute("aria-expanded", String(!n.hidden)); b.textContent = n.hidden ? "ⓘ Explain" : "ⓘ Hide"; });
+  });
+}
+function trackSlim(m) {
+  const T = (m.cot.track || []).filter(r => r.board && r.r8 && r.dir === m.cot.read).sort((a, b) => b.r8.n - a.r8.n);
+  if (!T.length) return `<p class="note keep">No COT picture on the board this week.</p>`;
+  const r = T[0], o = r.r8;
+  return `<div class="wstats"><div><b>${o.w} of ${o.n}</b><span>times this exact picture (${esc(r.label)}, ${r.lb}) went the commercials' way, held while it lasted</span></div><div><b>${pcx(raw(o.avg, r.dir))}</b><span>average price move</span></div></div>`;
 }
 function metrics(m) {
   if (m.verdict === "STAND ASIDE") return "";
@@ -572,7 +628,7 @@ function holdNote(m, rc) {
   // how to hold a COT verdict with a technical entry (research/cot_hold_test.py)
   const H = D.cot_hold && D.cot_hold[m.sector === "FX" ? "currencies" : "other"]; if (!H || !rc.week_pct) return "";
   const t = H.targets, R = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}R`;
-  return `<p class="note">How to hold it: stop about one normal week against your entry (±${rc.week_pct}%), no tight target, and stay in until the board drops the bias (${holdTxt(m)}; usually about ${Math.round(H.hold_weeks)} weeks). Tested on all ${m.sector === "FX" ? "currency" : "non-currency"} COT verdicts 2019–26: target 1 normal week ${R(t["1"].R)} per trade, 2 weeks ${R(t["2"].R)}, 3 weeks ${R(t["3"].R)}, 4 weeks ${R(t["4"].R)} (positive in 2019–22 and 2023–26); the bigger targets are rarely hit (${t["3"].hit}% for 3 weeks), the gain comes from holding until the verdict ends. Measured from the verdict's own entry; a 4h entry comes at another time and price, so read it as a guide.</p>`;
+  return `<p class="note keep">How to hold it: stop about one normal week against your entry (±${rc.week_pct}%), no tight target, and stay in until the board drops the bias (${holdTxt(m)}; usually about ${Math.round(H.hold_weeks)} weeks). Tested on all ${m.sector === "FX" ? "currency" : "non-currency"} COT verdicts 2019–26: target 1 normal week ${R(t["1"].R)} per trade, 2 weeks ${R(t["2"].R)}, 3 weeks ${R(t["3"].R)}, 4 weeks ${R(t["4"].R)} (positive in 2019–22 and 2023–26); the bigger targets are rarely hit (${t["3"].hit}% for 3 weeks), the gain comes from holding until the verdict ends. Measured from the verdict's own entry; a 4h entry comes at another time and price, so read it as a guide.</p>`;
 }
 function cotStats(m) {
   // like the seasonal window stats: what the live COT signal has done so far, against its usual result while lit
@@ -739,14 +795,15 @@ function trackNow(m) {
 }
 function windowsTbl(m) {
   const s = m.seas, rows = s.table || [];
-  if (!rows.length) return `<p class="note">No seasonal window with 12 of 15 years or better in the coming months.</p>`;
+  if (!rows.length) return `<p class="note keep">No seasonal window with 12 of 15 years or better in the coming months.</p>`;
   const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
-  const when = w => w.days_to <= 0 ? `<span class="st live">running</span>` : `in ${w.days_to} trading days`;
-  const role = w => s.driver && w.start === s.driver.start && w.side === s.driver.side && !s.small_only && !benched(m) ? `<span class="st live">driver</span>`
-    : w.small ? `<span class="st" title="usual move below 3 normal days: can only back a COT signal">small · ${w.move_days}d</span>` : !s.solo_ok ? `<span class="st" title="outside agriculture a window only counts when COT agrees">${w.move_days}d · needs COT</span>` : `<span class="st">${w.move_days}d · can stand alone</span>`;
-  return `<div class="tbl"><table><thead><tr><th>Trade</th><th>Window</th><th>When</th><th>Size</th><th>Trading days</th><th>Win ratio</th><th>Avg</th><th>Median</th><th>Best / worst</th><th>Usually against</th><th>Trend removed</th><th>Last 4</th></tr></thead><tbody>` +
-    rows.map(w => `<tr><td>${pill(sideV(w.side), title(w.side))}</td><td>${fmtD(w.start)} – ${fmtD(w.end)}</td><td>${when(w)}</td><td>${role(w)}</td><td class="n">${w.len}</td><td class="n">${w.wins} of 15</td><td class="n">${pc(w.avg)}</td><td class="n">${w.median != null ? pc(w.median) : "–"}</td><td class="n">${w.best != null ? (([b0, w0]) => `${pc(b0)} / ${pc(w0)}`)(bestPx(w.best, w.worst, w.side)) : "–"}</td><td class="n">${w.mae != null ? pc(dirSg(w.side) * w.mae) : "–"}</td><td class="n">${w.wins_true != null ? `${w.wins_true} of 15` : "–"}</td><td class="n">${w.rec != null ? `${w.rec}/4` : "–"}</td></tr>`).join("") +
-    `</tbody></table></div><p class="note">Every window with at least 12 of 15 years in its direction that is running now or comes next, however far ahead, counted in trading days over the last 15 years. Size: the usual move in normal daily moves of this market. On agricultural markets a window of at least 3 can carry a bias alone and a smaller one can only back COT; on all other markets every window only counts when COT points the same way (calendar-alone verdicts were a coin flip in currencies and lost in metals and energy; agriculture, with harvest, planting and weather behind it, made +1.9% per verdict in both halves of 2019–26). Only the driver is part of this week's verdict. All moves are price moves (+ = up, − = down; a sell window wants −); best and worst are the best and worst year for the trade, as price moves; usually against is the average worst point inside the window before its end (how far price went the wrong way on the way), for stops and entries, not a rule; trend removed counts the years after taking out the market's normal drift.</p>`;
+  const role = w => s.driver && w.start === s.driver.start && w.side === s.driver.side && !s.small_only && !benched(m) ? ` <span class="st live">driver</span>`
+    : w.small ? ` <span class="st">small</span>` : !s.solo_ok ? ` <span class="st">needs COT</span>` : "";
+  const when = w => (w.days_to <= 0 ? `<span class="st live">running</span>` : `in ${w.days_to} td`) + role(w);
+  const tip = w => `${w.len} trading days · median ${w.median != null ? pc(w.median) : "–"} · best/worst year ${w.best != null ? bestPx(w.best, w.worst, w.side).map(pc).join(" / ") : "–"} · trend removed ${w.wins_true != null ? w.wins_true + " of 15" : "–"} · last 4 years ${w.rec != null ? w.rec + "/4" : "–"} · usual move ${w.move_days} normal days`;
+  return `<div class="tbl"><table><thead><tr><th>Trade</th><th>Window</th><th>When</th><th>Won</th><th>Avg</th><th>Usually against</th></tr></thead><tbody>` +
+    rows.map(w => `<tr title="${esc(tip(w))}"><td>${pill(sideV(w.side), title(w.side))}</td><td>${fmtD(w.start)} – ${fmtD(w.end)}</td><td>${when(w)}</td><td class="n">${w.wins} of 15</td><td class="n">${pc(w.avg)}</td><td class="n">${w.mae != null ? pc(dirSg(w.side) * w.mae) : "–"}</td></tr>`).join("") +
+    `</tbody></table></div><p class="note">Every window with at least 12 of 15 years in its direction, running now or coming next, measured over the last 15 years in trading days (td). Avg is the usual price move (+ up, − down); usually against is how far price usually went the wrong way inside the window. Driver = the window behind this week's verdict; needs COT = outside agriculture a window only counts when COT agrees; small = its usual move is under 3 normal days. Hover a row for its median, best and worst year, the trend-removed count and the last 4 years.</p>`;
 }
 function eventsCard(m) {
   const ev = m.events; if (!ev) return "";
@@ -876,25 +933,34 @@ function testedSection() {
     <p class="note">Per market the samples are small (a few dozen trades over 7–10 years), so single rows swing a lot; the pooled rows above are the more reliable read.</p>
     <p class="note">How the board uses this: COT may carry the bias alone. A seasonal window may carry it alone only on agricultural markets (harvest, planting and weather repeat every year), and there it must usually move at least 3 normal daily moves; on all other markets the calendar only counts when COT points the same way (tested 2019–26: board +0.80% → +1.22% per verdict, t 2.7 → 4.3, better in 2019–22 and 2023–26). A window that agrees with COT counts at any size. A COT signal only counts if its past setups on that market usually moved at least 0.5 normal daily moves in its direction (tested on a grid of thresholds: chosen on 2019–22, confirmed on 2023–26, 63.5% won vs 59.5% without it); on the US indices only bullish COT signals count; on currencies (provisional, since October 2026) a COT signal counts when one of its live lookbacks clears Bernd's evidence bar (at least 6 earlier cases, 60% right, positive average), which tested better on currencies since 2020 than the record minimum. Finally, a bias becomes no bias when nothing is left in it: on US indices, gold and silver when the US macro score points the other way, and anywhere when the setup has already made its usual move. In a contradiction the calendar stands if the window already paid in at least 2 of 3 past years when COT was against it (at least 3 such years); otherwise there is no bias. Tested, that split made no difference: the calendar won 50.5% when the window had played out against COT and 50.0% when it had not. In contradictions the calendar won about half the time and COT only slightly more, so neither earns the right to overrule the other. Both edges are small: the COT read, held while lit, wins about 55-60% with a small average and is only clearly above zero pooled across all markets; seasonal windows alone are near a coin flip out of sample except on agricultural markets, and strong next to COT (top setups).</p></details>`;
 }
+let ptab = null;
 function render(k) {
   const m = M[k], P = $("#panel");
-  const lead = calLedM(m) || (m.verdict === "STAND ASIDE" && !cotLed(m) && m.cot.read === "STAND ASIDE") ? "seas" : "cot";
+  const lead = calLedM(m) || (!cotLed(m) && m.cot.read === "STAND ASIDE" && m.seas.driver) ? "seas" : "cot";
+  ptab = lead;
   const u = untilTxt(m);
   const sent = m.verdict === "STAND ASIDE" ? `No bias · ${whyShort(m)}` : `${m.verdict === "BULLISH" ? "Long" : "Short"} · ${whyShort(m)}${u ? ` · until ${u}` : ""}`;
   const macroTxt = m.macro && m.macro.rel === "agrees" && m.verdict !== "STAND ASIDE" ? ` US macro (score ${m.macro.total > 0 ? "+" : ""}${m.macro.total}) is <b>with</b> this bias, which historically made them clearly stronger.` : "";
-  const mac = macroCard(m) + cycleCard(m);
-  const sec = (t, sub, body, open) => body ? `<details${open ? " open" : ""}><summary>${t}<small>${sub}</small></summary>${body}</details>` : "";
+  const pa = T && T.per_asset && T.per_asset[k], rec = o => o ? `${o.win}% of ${o.n} won, ${sgn(o.avg)}% on average` : "–";
+  const own = pa ? `<div class="wstats"><div><b>${pa.cot ? pa.cot.win + "%" : "–"}</b><span>this market's COT trades in the walk-forward (${rec(pa.cot)})</span></div><div><b>${pa.seas ? pa.seas.win + "%" : "–"}</b><span>its seasonal trades (${rec(pa.seas)})</span></div></div>` : "";
+  const tabs = [["cot", "COT"], ["seas", "Seasonality"], ["bg", "Background"]];
+  const body = {
+    cot: cotCard(m, true) + `<h4 class="note" style="margin:0;font-weight:600;color:var(--ink)">The current picture before</h4>` + trackSlim(m),
+    seas: seasonCard(m, true) + `<h4 class="note" style="margin:0;font-weight:600;color:var(--ink)">Seasonal windows</h4>` + windowsTbl(m) + (m.seas.neigh ? `<h4 class="note" style="margin:0">Same window shifted</h4>${nbrs(m)}` : ""),
+    bg: `<div><h4 class="note" style="margin:0 0 6px;font-weight:600;color:var(--ink)">Full reasoning</h4><p class="why" style="margin:0">${why(m)}${smallRecord(m)}${macroTxt}</p></div>${testedHero(m)}${macroCard(m)}${cycleCard(m)}${own ? `<div><h4 class="note" style="margin:0 0 6px;font-weight:600;color:var(--ink)">${esc(m.name)} in the walk-forward test</h4>${own}</div>` : ""}<p class="note keep">The board's rules and the tests behind them: <a href="#how" id="howlink">How it works</a>.</p>`,
+  };
   P.style.animation = "none"; void P.offsetWidth; P.style.animation = "";
   P.innerHTML = `<div class="phead"><h1>${esc(m.name)}</h1>${pill(m.verdict, m.verdict === "STAND ASIDE" ? "No bias" : m.verdict === "BULLISH" ? "Long" : "Short")}</div>
-    <p class="psent">${esc(sent)}</p>${metrics(m)}${banner(m)}
-    <div class="charts">${lead === "cot" ? cotCard(m, true) : seasonCard(m, true)}</div>
-    ${sec("Why this verdict", "the full reasoning and records", `<p class="why">${why(m)}${smallRecord(m)}${macroTxt}</p>${testedHero(m)}`)}
-    ${sec(lead === "cot" ? "Seasonality" : "COT positioning", lead === "cot" ? "the calendar chart" : "the positioning chart", lead === "cot" ? seasonCard(m, false) : cotCard(m, false))}
-    ${sec("Seasonal windows", "running now and coming next", windowsTbl(m) + (m.seas.neigh ? `<h4 class="note" style="margin-top:12px">Neighbour test</h4>${nbrs(m)}` : ""))}
-    ${sec("Macro", "US data surprises", mac)}
-    ${sec("COT track record", "the current picture and what it did before", trackNow(m))}
-    ${sec("Years most like this one", "analog cross-check", analogs(m))}${testedSection()}`;
-  hookTips(P, m); hookCot(m); hookFit(m);
+    <p class="psent">${esc(sent)}</p>${metrics(m)}${checklist(m)}${banner(m)}
+    <div class="ptabs" role="tablist">${tabs.map(([id, lab]) => `<button class="ptab" role="tab" data-tab="${id}" aria-selected="${id === lead}">${lab}</button>`).join("")}</div>
+    ${tabs.map(([id]) => `<div class="tabc" data-tabc="${id}" ${id === lead ? "" : "hidden"}>${body[id]}</div>`).join("")}`;
+  P.querySelectorAll(".ptab").forEach(b => b.addEventListener("click", () => {
+    ptab = b.dataset.tab;
+    P.querySelectorAll(".ptab").forEach(x => x.setAttribute("aria-selected", x === b));
+    P.querySelectorAll(".tabc").forEach(c => c.hidden = c.dataset.tabc !== ptab);
+  }));
+  const hl = $("#howlink"); if (hl) hl.addEventListener("click", e => { e.preventDefault(); setView("how", true); scrollTo({top: 0}); });
+  hookTips(P, m); hookCot(m); hookFit(m); infoize(P);
 }
 function hookFit(m) {
   document.querySelectorAll("#panel [data-fit]").forEach(b => b.addEventListener("click", () => {
@@ -912,7 +978,7 @@ function hookCot(m) {
 }
 function refreshCot(m, card) {
   const holder = document.createElement("div"); holder.innerHTML = cotCard(m, card.querySelector(".tag") !== null);
-  card.replaceWith(holder.firstElementChild); hookTips($("#panel"), m); hookCot(m);
+  card.replaceWith(holder.firstElementChild); hookTips($("#panel"), m); hookCot(m); infoize($("#panel"));
 }
 function select(k, user) {
   if (!M[k]) k = KEYS[0];
@@ -979,14 +1045,16 @@ function qselect(id, user) {
 let view = "outlook";
 function setView(v, user) {
   view = v;
-  $("#outlook-view").hidden = v !== "outlook"; $("#quant-view").hidden = v !== "quant"; $("#filters").hidden = v !== "outlook";
+  $("#outlook-view").hidden = v !== "outlook"; $("#quant-view").hidden = v !== "quant"; $("#how-view").hidden = v !== "how";
   document.body.classList.toggle("quant", v === "quant");
-  $("#v-outlook").setAttribute("aria-selected", v === "outlook"); $("#v-quant").setAttribute("aria-selected", v === "quant");
+  ["outlook", "quant", "how"].forEach(x => $("#v-" + x).setAttribute("aria-selected", v === x));
   if (v === "quant" && !qstate) qselect(null, false);
-  if (user) { try { history.replaceState(null, "", v === "quant" ? "#q-" + qstate : "#" + state.k); } catch (e) {} }
+  if (v === "how" && !$("#howpanel").innerHTML) $("#howpanel").innerHTML = `<div class="phead"><h1>How it works</h1></div><p class="psent">The board's rules and how each was tested. The same for every market.</p>` + testedSection().replace("<details>", "<details open>");
+  if (user) { try { history.replaceState(null, "", v === "quant" ? "#q-" + qstate : v === "how" ? "#how" : "#" + state.k); } catch (e) {} }
 }
 $("#v-outlook").addEventListener("click", () => setView("outlook", true));
 $("#v-quant").addEventListener("click", () => setView("quant", true));
+$("#v-how").addEventListener("click", () => setView("how", true));
 
 /* ---------- filters + keys ---------- */
 function filt(f) {
@@ -1008,6 +1076,7 @@ $("#meta").textContent = `Week of ${new Date(D.today + "T00:00:00").toLocaleDate
 weekList(); liveRecord(); qboards();
 let start = (location.hash || "").slice(1);
 if (start.startsWith("q-")) { qselect(start.slice(2), false); setView("quant", false); start = ""; }
+if (start === "how") { setView("how", false); start = ""; }
 if (!M[start]) { const r = $("#week .wrow"); start = r ? r.dataset.k : KEYS[0]; }
 select(start, false);
 </script>
