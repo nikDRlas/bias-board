@@ -50,8 +50,16 @@ def score(entries, today):
         j = b if done else len(p) - 1
         move = 100 * float(p.iloc[j] / p.iloc[a] - 1)
         sg = 1 if e["verdict"] == "BULLISH" else -1
+        # as a technical trader would hold it (research/cot_hold_test.py): best point along the way, and the result
+        # in R with a stop one normal week against the entry (one week's usual move before the entry), else the exit
+        x = p.to_numpy(float)
+        path = sg * (x[a:j + 1] / x[a] - 1) * 100
+        wk = float(np.std(np.diff(np.log(x[max(0, a - 252):a]))) * 100 * np.sqrt(5)) if a > 20 else None
+        stopped = bool(wk and (path <= -wk).any())
         row.update(status="done" if done else "open", entry=str(p.index[a].date()), exit=str(p.index[j].date()),
-                   move=round(move, 2), right=bool(sg * move > 0))
+                   move=round(move, 2), right=bool(sg * move > 0), best=round(float(path.max()), 2),
+                   week_pct=round(wk, 2) if wk else None, stopped=stopped,
+                   R=(-1.0 if stopped else round(float(path[-1]) / wk, 2)) if wk else None)
         out.append(row)
     return out
 
@@ -86,8 +94,11 @@ def summary(today):
         if not rs:
             return None
         sg = [1 if r["verdict"] == "BULLISH" else -1 for r in rs]
+        Rs = [r["R"] for r in rs if r.get("R") is not None]
         return {"n": len(rs), "right": sum(r["right"] for r in rs),
-                "avg_dir": round(float(np.mean([s * r["move"] for s, r in zip(sg, rs)])), 2)}
+                "avg_dir": round(float(np.mean([s * r["move"] for s, r in zip(sg, rs)])), 2),
+                "avg_R": round(float(np.mean(Rs)), 2) if Rs else None,
+                "avg_best": round(float(np.mean([r["best"] for r in rs if r.get("best") is not None])), 2)}
     return {"since": min((r["week"] for r in rows), default=None), "done": agg(done),
             "by_basis": {b: agg([r for r in done if r["basis"] == b]) for b in sorted({r["basis"] for r in done})},
             "by_macro": {x: agg([r for r in done if r.get("macro") == x]) for x in ("agrees", "against", "flat")},

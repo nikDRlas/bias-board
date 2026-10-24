@@ -25,6 +25,7 @@ SECTOR = lambda k: {"FX": "Currencies", "Indices": "Indices", "Agriculture": "Ag
 
 LB_CFG = {"15": [(15, 12)], "10": [(10, 8)], "15,10": [(15, 12), (10, 8)]}[os.environ.get("SEAS_LB", os.environ.get("SEAS_YEARS", "15"))]
 SKIP_SLOW = os.environ.get("SKIP_SLOW") == "1"
+COT_MIN_WEEKS = int(os.environ.get("COT_MIN_WEEKS", "0"))
 KEEP_SLOW_IN = set(os.environ.get("KEEP_SLOW_IN", "").split(",")) - {""}   # sectors (core.M) where slow signals are kept anyway
 OUT = os.environ.get("OUT", "verdict.json")
 GATES = os.environ.get("GATES", "macro,done")
@@ -86,6 +87,8 @@ if __name__ == "__main__":
                 ex = C.cot_exit(rd.dates, lit, i_rep) if 0 <= i_rep and lit[i_rep] == cot else None
                 if ex is None:
                     continue
+                if COT_MIN_WEEKS:                      # research switch: hold a COT verdict at least this many weeks
+                    ex = max(ex, t + pd.Timedelta(days=1) + pd.Timedelta(weeks=COT_MIN_WEEKS))
                 x = ret(p, t + pd.Timedelta(days=1), ex, v, C.COT_REF_DAYS)
             if not x or pd.Timestamp(x["exit"]) > end:
                 continue
