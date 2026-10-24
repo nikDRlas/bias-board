@@ -97,5 +97,16 @@
   "entry_from": "2026-10-18",
   "window_end": "2026-11-06",
   "macro": "against"
+ },
+ {
+  "week": "2026-10-24",
+  "m": "6S",
+  "name": "Swiss Franc",
+  "verdict": "BEARISH",
+  "basis": "COT + calendar",
+  "macro": null,
+  "report": "2026-10-20",
+  "entry_from": "2026-10-25",
+  "window_end": null
  }
 ]
