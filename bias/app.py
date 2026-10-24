@@ -641,13 +641,21 @@ function seasonPaths(m) {
   const proj = []; for (let i = k0; i < n; i++) proj.push([i, A15[i]]);
   return {n, mc, cur, a5: A5, a10: A10, a15: A15, proj, k};
 }
+function holdSmall(m, u) {
+  // what the hold date means: the earliest end, a fixed end, or open
+  const lv = m.cot.record && m.cot.record.live;
+  if (u.startsWith("at least")) return "8 weeks after the signal; longer while COT stays lit, sooner if COT flips or the move is done";
+  if (lv && lv.held) return "end of the 8-week hold; sooner if COT flips or the move is done";
+  if (u === "while COT is lit") return "until one week after the COT signal goes dark; the date is not known yet";
+  return "the board drops the bias then";
+}
 function holdNote(m, rc) {
   // how to hold a COT verdict with a technical entry (research/cot_hold_test.py): three boxes, the test behind Explain
   const H = D.cot_hold && D.cot_hold[m.sector === "FX" ? "currencies" : "other"]; if (!H || !rc.week_pct) return "";
   const t = H.targets, R = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}R`, u = untilTxt(m);
   return `<div class="hold"><div><span>Normal weekly swing</span><b>±${rc.week_pct}%</b><small>size the position for this</small></div>
       <div><span>Target</span><b>none</b><small>no tight target, let it run</small></div>
-      <div><span>Hold until</span><b>${u ? esc(u.replace("at least ", "≥ ")) : "–"}</b><small>the board drops the bias</small></div></div>
+      <div><span>${u.startsWith("at least") ? "Hold at least until" : u === "while COT is lit" || !u ? "Hold" : "Hold until"}</span><b>${esc(u.startsWith("at least") ? u.replace("at least ", "") : u === "while COT is lit" ? "while COT is lit" : u || "–")}</b><small>${holdSmall(m, u)}</small></div></div>
     <p class="note">The weekly swing is how far ${esc(m.name)} moves in a normal week (past year). Your stop comes from the 4h structure; a stop much tighter than this swing relies on your entry timing, because the bias works on a weekly scale. Tested on all ${m.sector === "FX" ? "currency" : "non-currency"} COT verdicts 2019–26 with a stop one normal week from the entry: a target of 1 normal week made ${R(t["1"].R)} per trade, 2 weeks ${R(t["2"].R)}, 3 weeks ${R(t["3"].R)}, 4 weeks ${R(t["4"].R)} (positive in 2019–22 and 2023–26). Bigger targets are rarely hit (${t["3"].hit}% for 3 weeks); the gain comes from staying in until the verdict ends (${holdTxt(m)}; usually about ${Math.round(H.hold_weeks)} weeks). Measured from the verdict's own entry; a 4h entry comes at another time and price, so read it as a guide.</p>`;
 }
 function cotStats(m) {
@@ -1097,7 +1105,7 @@ addEventListener("keydown", e => {
   select(KEYS[j], true);
 });
 
-$("#meta").textContent = `Week of ${new Date(D.today + "T00:00:00").toLocaleDateString("en-GB", {day: "numeric", month: "long", year: "numeric"})} · COT as of ${D.asof}`;
+$("#meta").textContent = `Updated ${new Date(D.today + "T00:00:00").toLocaleDateString("en-GB", {weekday: "short", day: "numeric", month: "long", year: "numeric"})} · prices daily, COT as of ${D.asof}`;
 weekList(); liveRecord(); qboards();
 let start = (location.hash || "").slice(1);
 if (start.startsWith("q-")) { qselect(start.slice(2), false); setView("quant", false); start = ""; }

@@ -2,7 +2,8 @@ name: Weekly Bias Board
 
 on:
   schedule:
-    - cron: "0 7 * * 6"        # Saturday 07:00 UTC, after the Friday COT release
+    - cron: "0 7 * * 6"        # Saturday 07:00 UTC, after the Friday COT release (records the live verdicts)
+    - cron: "30 22 * * 1-5"    # Mon-Fri 22:30 UTC, after the US close: fresh prices, room left, windows, macro
   push:
     branches: [main]           # every push rebuilds and redeploys the site
   workflow_dispatch:
@@ -36,12 +37,12 @@ jobs:
       - name: Build outlook and app
         env:
           OUTLOOK_DATE: ${{ github.event.inputs.outlook_date }}
-          TRACK: ${{ github.event_name == 'schedule' && '1' || '' }}   # record verdicts only on the Saturday run
+          TRACK: ${{ github.event.schedule == '0 7 * * 6' && '1' || '' }}   # record verdicts only on the Saturday run
         run: |
           python bias/build.py
           python bias/app.py
       - name: Save the live record
-        if: github.event_name == 'schedule'
+        if: github.event.schedule == '0 7 * * 6'
         run: |
           git config user.name "bias-board"
           git config user.email "bias-board@users.noreply.github.com"
