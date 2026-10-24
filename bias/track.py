@@ -26,10 +26,14 @@ def _exit(e):
     rd = R.CotReader(e["m"])
     lit = R.lit_sides(rd, R.speed_series(e["m"]))
     i = rd.dates.searchsorted(pd.Timestamp(e["report"]), "right") - 1
+    if 0 <= i < len(lit) and lit[i] != e["verdict"]:
+        hs, q = R.held_side(rd.dates, lit, i, pd.Timestamp(e["week"]), e["m"])     # a verdict held after its signal
+        if hs == e["verdict"]:
+            i = q
     if i < 0 or lit[i] != e["verdict"]:
         # the signal on the report the verdict used is not in the board's list (rule changed since): hold 1 week
         return pd.Timestamp(e["report"]) + pd.Timedelta(days=10)
-    return R.cot_exit(rd.dates, lit, i)
+    return R.cot_exit(rd.dates, lit, i, k=e["m"])
 
 
 def score(entries, today):

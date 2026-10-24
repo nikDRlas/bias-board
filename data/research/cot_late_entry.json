@@ -1,0 +1,54 @@
+{
+ "other early": {
+  "entries": 1406,
+  "target_first": 58.4,
+  "tf_2019_22": 57.6,
+  "tf_2023_26": 59.5,
+  "move2w": 0.82,
+  "move4w": 1.4,
+  "excess2w": 0.45,
+  "excess4w": 0.65,
+  "ex4_2019_22": 0.55,
+  "ex4_2023_26": 0.76,
+  "t_excess4w_month": 1.8
+ },
+ "other late": {
+  "entries": 378,
+  "target_first": 52.7,
+  "tf_2019_22": 56.9,
+  "tf_2023_26": 47.3,
+  "move2w": -0.05,
+  "move4w": -0.28,
+  "excess2w": -0.36,
+  "excess4w": -0.91,
+  "ex4_2019_22": -0.41,
+  "ex4_2023_26": -1.52,
+  "t_excess4w_month": -1.0
+ },
+ "currencies early": {
+  "entries": 711,
+  "target_first": 56.8,
+  "tf_2019_22": 50.0,
+  "tf_2023_26": 63.4,
+  "move2w": 0.18,
+  "move4w": 0.34,
+  "excess2w": 0.18,
+  "excess4w": 0.35,
+  "ex4_2019_22": 0.16,
+  "ex4_2023_26": 0.5,
+  "t_excess4w_month": 1.6
+ },
+ "currencies late": {
+  "entries": 854,
+  "target_first": 54.0,
+  "tf_2019_22": 47.9,
+  "tf_2023_26": 61.5,
+  "move2w": 0.15,
+  "move4w": 0.24,
+  "excess2w": 0.15,
+  "excess4w": 0.25,
+  "ex4_2019_22": 0.2,
+  "ex4_2023_26": 0.3,
+  "t_excess4w_month": 0.5
+ }
+}

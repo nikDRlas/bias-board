@@ -209,6 +209,12 @@ def combine(k, reader, cal, speed=None):
     g = reader.last_groups
     if speed == "slow":
         v = "NEUTRAL"
+    if v not in VD.SIDES:                     # outside currencies a COT verdict is held at least 8 weeks (core.held_side)
+        lit = R.lit_sides(reader, R.speed_series(k))
+        i0 = reader.dates.searchsorted(TODAY - pd.Timedelta(days=3), "right") - 1
+        hs, _ = R.held_side(reader.dates, lit, i0, TODAY, k)
+        if hs:
+            v = hs
     if v in VD.SIDES and not R.cot_counts(k, v, TODAY):
         v = "NEUTRAL"                 # currencies: Bernd's evidence gate; others: the COT minimum
     verdict, basis, used = VD.board_read(v, cal, TODAY, reader)
@@ -252,7 +258,7 @@ def setup_profile(k, p, cal, reader, s, basis, verdict):
             v = lit[i]
             if v != verdict or (i > 0 and lit[i - 1] == v):
                 continue                                   # one case per lit run, from its first report
-            ex = R.cot_exit(reader.dates, lit, i)
+            ex = R.cot_exit(reader.dates, lit, i, k=k)
             if ex is None:
                 continue
             rel = reader.dates[i] + pd.Timedelta(days=3)
@@ -450,7 +456,7 @@ def cot_record(reader, p, side, k):
     for i in range(len(reads)):
         if reads[i] == side and (i == 0 or reads[i - 1] != side):
             rel = reader.dates[i] + pd.Timedelta(days=3)
-            ex = R.cot_exit(reader.dates, reads, i)
+            ex = R.cot_exit(reader.dates, reads, i, k=k)
             if rel < p.index[0] or ex is None:
                 continue
             a = p.index.searchsorted(rel)
@@ -466,12 +472,17 @@ def cot_record(reader, p, side, k):
     # the live signal: when the read switched to `side`, and what price has done since the first close after its release
     i0 = reader.dates.searchsorted(TODAY - pd.Timedelta(days=3), "right") - 1
     live = None
+    hs, hq = R.held_side(reader.dates, reads, i0, TODAY, k) if 0 <= i0 < len(reads) and reads[i0] != side else (None, None)
+    if hs == side:
+        i0 = hq                                            # held after its signal went dark (outside currencies)
     if 0 <= i0 < len(reads) and reads[i0] == side:
         j = R.lit_start(reads, i0)
         rel = reader.dates[j] + pd.Timedelta(days=3)
         a = p.index.searchsorted(rel)
         if a < len(p):
+            ex0 = R.cot_exit(reader.dates, reads, i0, k=k)
             live = {"since": str(reader.dates[j].date()), "entry": str(p.index[a].date()),
+                    "held": hs == side, "until": str(ex0.date()) if ex0 is not None else None,
                     "move": round(100 * sg * float(p.iloc[-1] / p.iloc[a] - 1), 2),
                     "weeks": round(float((p.index[-1] - p.index[a]).days) / 7, 1)}
     return {"n": len(r), "w": int((r > 0).sum()), "avg": round(float(r.mean()), 2), "median": round(float(np.median(r)), 2),

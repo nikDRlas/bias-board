@@ -98,6 +98,9 @@ def final_read(k, v, basis, t, p, cal, ws, rd, lit, macro_sign=None):
     else:
         import core as C
         i = rd.dates.searchsorted(t - pd.Timedelta(days=3), "right") - 1
+        if 0 <= i < len(lit) and lit[i] != v:
+            hs, q = C.held_side(rd.dates, lit, i, t, k)
+            i = q if hs == v else -1                       # a held verdict: its own run
         if 0 <= i < len(lit) and lit[i] == v:
             j = C.lit_start(lit, i)
             a = p.index.searchsorted(rd.dates[j] + pd.Timedelta(days=3))

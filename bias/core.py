@@ -238,15 +238,47 @@ def lit_sides(reader, sp=None, skip_slow=True):
     return out
 
 
-def cot_exit(dates, lit, i, after=HOLD_AFTER):
-    """exit date of a COT trade on report i: `after` weeks past the release of the last report of its lit run.
-    None while the run is still lit on the latest report (the exit is not known yet)."""
+# outside currencies a COT bias is held at least this many weeks after its signal's release, unless COT flips to the
+# other side: entries in weeks 4-8 after the signal went dark still worked like early ones (research/cot_late_entry_test.py:
+# +1 normal week before -1 in 55.8%, 57% in 2019-22 and 55% in 2023-26); on currencies they did not (48% in 2019-22).
+COT_MIN_WEEKS = int(os.environ.get("COT_MIN_WEEKS", "8"))
+
+
+def min_weeks(k):
+    return COT_MIN_WEEKS if k is not None and M[k][3] != "FX" else 0
+
+
+def cot_exit(dates, lit, i, after=HOLD_AFTER, k=None):
+    """exit date of a COT trade on report i: `after` weeks past the release of the last report of its lit run; for
+    market k outside currencies at least min_weeks(k) after the run's first release, but not past the release of a
+    report lit on the other side. None while the run is still lit on the latest report (the exit is not known yet)."""
     v, j = lit[i], i
     while j + 1 < len(lit) and lit[j + 1] == v:
         j += 1
     if j + 1 >= len(lit):
         return None
-    return dates[j] + pd.Timedelta(days=3) + pd.Timedelta(weeks=after)
+    ex = dates[j] + pd.Timedelta(days=3) + pd.Timedelta(weeks=after)
+    mw = min_weeks(k)
+    if mw:
+        ex = max(ex, dates[lit_start(lit, i)] + pd.Timedelta(days=3) + pd.Timedelta(weeks=mw))
+        flip = next((q for q in range(j + 1, len(lit)) if lit[q] not in (None, v)), None)
+        if flip is not None:
+            ex = min(ex, dates[flip] + pd.Timedelta(days=3))
+    return ex
+
+
+def held_side(dates, lit, i, t, k):
+    """outside currencies: the side a COT verdict is still held on at day t after its signal went dark, and the report
+    index of that run; (None, None) if nothing is held (lit now, or past the hold, or currencies)"""
+    if not min_weeks(k) or i < 0 or i >= len(lit) or lit[i] is not None:
+        return None, None
+    q = i
+    while q >= 0 and lit[q] is None:
+        q -= 1
+    if q < 0:
+        return None, None
+    ex = cot_exit(dates, lit, q, k=k)
+    return (lit[q], q) if ex is not None and t < ex else (None, None)
 
 
 def lit_start(lit, i):
@@ -277,7 +309,7 @@ def cot_cases(k):
         v = lit[i]
         if not v or (i and lit[i - 1] == v):
             continue
-        ex = cot_exit(rd.dates, lit, i)
+        ex = cot_exit(rd.dates, lit, i, k=k)
         rel = rd.dates[i] + pd.Timedelta(days=3)
         if ex is None or rel < p.index[0]:
             continue
