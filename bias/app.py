@@ -101,6 +101,17 @@ details.rest summary{font:600 13px var(--body);color:var(--mute)}
 .mc{background:var(--bg);border-radius:12px;padding:11px 14px;display:flex;flex-direction:column;gap:4px}
 .mc span{font-size:12.5px;color:var(--mute)} .mc b{font:700 22px var(--mono)} .mc small{font:12px var(--body);color:var(--mute);margin-left:6px}
 details.liveD{margin-top:18px;background:var(--card)}
+.hold{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:4px}
+.hold div{border:1px solid var(--line);border-radius:12px;padding:9px 12px;display:flex;flex-direction:column;gap:2px}
+.hold span{font-size:12px;color:var(--mute)} .hold b{font:700 17px var(--mono)} .hold small{font-size:12px;color:var(--mute)}
+.hmap{display:grid;gap:8px;margin-top:4px}
+.hrow{display:grid;grid-template-columns:110px minmax(0,1fr) minmax(0,150px);gap:12px;align-items:center}
+.hg{font-weight:700;font-size:14px}
+.hcells{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+.hc{font:600 11px var(--mono);text-align:center;padding:6px 2px;border-radius:7px;background:var(--bg);color:var(--mute)}
+.hc.hi,.hc.lo{background:var(--ink);color:var(--bg)}
+.hsum{font-size:12.5px;color:var(--mute)}
+@media (max-width:640px){.hrow{grid-template-columns:minmax(0,1fr)}.hold{grid-template-columns:1fr}}
 .check{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:6px}
 .check li{display:flex;gap:10px;align-items:baseline;font-size:15px}
 .ck{flex:none;width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:700 12px var(--body);transform:translateY(3px)}
@@ -625,10 +636,13 @@ function seasonPaths(m) {
   return {n, mc, cur, a5: A5, a10: A10, a15: A15, proj, k};
 }
 function holdNote(m, rc) {
-  // how to hold a COT verdict with a technical entry (research/cot_hold_test.py)
+  // how to hold a COT verdict with a technical entry (research/cot_hold_test.py): three boxes, the test behind Explain
   const H = D.cot_hold && D.cot_hold[m.sector === "FX" ? "currencies" : "other"]; if (!H || !rc.week_pct) return "";
-  const t = H.targets, R = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}R`;
-  return `<p class="note keep">How to hold it: stop about one normal week against your entry (±${rc.week_pct}%), no tight target, and stay in until the board drops the bias (${holdTxt(m)}; usually about ${Math.round(H.hold_weeks)} weeks). Tested on all ${m.sector === "FX" ? "currency" : "non-currency"} COT verdicts 2019–26: target 1 normal week ${R(t["1"].R)} per trade, 2 weeks ${R(t["2"].R)}, 3 weeks ${R(t["3"].R)}, 4 weeks ${R(t["4"].R)} (positive in 2019–22 and 2023–26); the bigger targets are rarely hit (${t["3"].hit}% for 3 weeks), the gain comes from holding until the verdict ends. Measured from the verdict's own entry; a 4h entry comes at another time and price, so read it as a guide.</p>`;
+  const t = H.targets, R = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}R`, u = untilTxt(m);
+  return `<div class="hold"><div><span>Stop</span><b>±${rc.week_pct}%</b><small>one normal week from your entry</small></div>
+      <div><span>Target</span><b>none</b><small>no tight target, let it run</small></div>
+      <div><span>Hold until</span><b>${u ? esc(u.replace("at least ", "≥ ")) : "–"}</b><small>the board drops the bias</small></div></div>
+    <p class="note">Tested on all ${m.sector === "FX" ? "currency" : "non-currency"} COT verdicts 2019–26 with a stop one normal week from the entry: a target of 1 normal week made ${R(t["1"].R)} per trade, 2 weeks ${R(t["2"].R)}, 3 weeks ${R(t["3"].R)}, 4 weeks ${R(t["4"].R)} (positive in 2019–22 and 2023–26). Bigger targets are rarely hit (${t["3"].hit}% for 3 weeks); the gain comes from staying in until the verdict ends (${holdTxt(m)}; usually about ${Math.round(H.hold_weeks)} weeks). Measured from the verdict's own entry; a 4h entry comes at another time and price, so read it as a guide.</p>`;
 }
 function cotStats(m) {
   // three numbers for the live COT signal: where price is, how far winners usually run (and how much of it is made),
@@ -764,9 +778,14 @@ function hookTips(root, m) {
 
 /* ---------- evidence ---------- */
 function heat(m) {
-  return `<div class="tbl"><table class="hm"><thead><tr><th>Percentile</th>${LBS.slice().reverse().map(l => `<th style="text-align:right">${l}</th>`).join("")}</tr></thead><tbody>` +
-    ["retail", "comm", "fund"].map(g => `<tr><th style="color:${GC[g]}">${GN[g]}</th>${m.cot.groups[g].slice().reverse().map(r => `<td class="n ${r.side || ""}">${r.pct.toFixed(1)}</td>`).join("")}</tr>`).join("") +
-    `</tbody></table></div>`;
+  // one line per group: the five lookbacks (short to long), lit only at an extreme; exact percentiles on hover
+  const row = g => {
+    const R = m.cot.groups[g], lit = R.filter(r => r.side), hi = lit.filter(r => r.side === "hi").length, lo = lit.length - hi;
+    const sum = !lit.length ? "no extreme" : `${hi >= lo ? "high" : "low"} extreme on ${Math.max(hi, lo)} of 5`;
+    return `<div class="hrow"><span class="hg" style="color:${GC[g]}">${GN[g]}</span><div class="hcells">${R.map(r => `<span class="hc ${r.side || ""}" title="${r.lb}: ${r.pct.toFixed(1)}th percentile${r.side ? (r.side === "hi" ? " (high extreme)" : " (low extreme)") : ""}">${r.lb.replace("Multi-yr", "Multi")}</span>`).join("")}</div><span class="hsum">${sum}</span></div>`;
+  };
+  return `<div class="hmap">${["comm", "retail", "fund"].map(row).join("")}</div>
+    <p class="note">Each block is one lookback, from 6 months to multi-year; it is filled when the group's net position is at an extreme on it (above the 80th or below the 20th percentile). Hover a block for its exact percentile. The board needs the commercials at an extreme on at least 2 of 5, with retail or funds at the opposite extreme.</p>`;
 }
 function track(m, h) {
   const rows = [];
