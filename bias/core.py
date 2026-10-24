@@ -318,7 +318,8 @@ def cot_cases(k):
             continue
         sg = 1 if v == "BULLISH" else -1
         seg = sg * (px[a:b + 1] / px[a] - 1)
-        out.append({"side": v, "start": rd.dates[i], "exit": p.index[b], "end": 100 * float(seg[-1]), "mae": 100 * float(seg.min())})
+        out.append({"side": v, "start": rd.dates[i], "exit": p.index[b], "end": 100 * float(seg[-1]), "mae": 100 * float(seg.min()),
+                    "mfe": 100 * float(seg.max())})
     _CASES[k] = (out, p)
     return _CASES[k]
 
