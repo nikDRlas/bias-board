@@ -969,7 +969,7 @@ if __name__ == "__main__":
     md_test = json.load(open(mdp)) if os.path.exists(mdp) else None
     json.dump({"asof": str(ASOF.date()), "today": str(TODAY.date()), "tested": tested, "verdict_test": vsum, "focus": focus,
                "move_done_test": md_test, "track": track, "macro_test": macro_test, "top_test": top_test,
-               "pair_test": pair_test, "cot_hold": cot_hold, "cot_min_weeks": R.COT_MIN_WEEKS, "fx_pairs": fx_pairs, "markets": res, "quant": quant},
+               "pair_test": pair_test, "cot_hold": cot_hold, "cot_min_weeks": R.COT_MIN_WEEKS, "stale": os.environ.get("DATA_STALE") == "1", "fx_pairs": fx_pairs, "markets": res, "quant": quant},
               open(f"{ROOT}/data/live/outlook.json", "w"), indent=1, default=float)
     os.makedirs(f"{ROOT}/site", exist_ok=True)
     out = f"{ROOT}/site/outlook.html"

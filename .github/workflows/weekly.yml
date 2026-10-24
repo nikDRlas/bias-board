@@ -30,19 +30,35 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install numpy pandas
+      - name: Restore the last pulled data
+        uses: actions/cache/restore@v4
+        with:
+          path: data/live
+          key: lse-data-${{ github.run_id }}
+          restore-keys: lse-data-
       - name: Pull COT and prices from LSE
+        id: pull
+        continue-on-error: true      # an LSE outage falls back to the last saved data instead of stopping the build
         env:
           LSE_KEY: ${{ secrets.LSE_KEY }}
         run: python bias/pull.py
+      - name: Save the pulled data for the next run
+        if: steps.pull.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: data/live
+          key: lse-data-${{ github.run_id }}
       - name: Build outlook and app
+        if: steps.pull.outcome == 'success' || hashFiles('data/live/cot.json') != ''
         env:
+          DATA_STALE: ${{ steps.pull.outcome != 'success' && '1' || '' }}
           OUTLOOK_DATE: ${{ github.event.inputs.outlook_date }}
-          TRACK: ${{ github.event.schedule == '0 7 * * 6' && '1' || '' }}   # record verdicts only on the Saturday run
+          TRACK: ${{ github.event.schedule == '0 7 * * 6' && steps.pull.outcome == 'success' && '1' || '' }}   # record verdicts only on the Saturday run
         run: |
           python bias/build.py
           python bias/app.py
       - name: Save the live record
-        if: github.event.schedule == '0 7 * * 6'
+        if: github.event.schedule == '0 7 * * 6' && steps.pull.outcome == 'success'
         run: |
           git config user.name "bias-board"
           git config user.email "bias-board@users.noreply.github.com"

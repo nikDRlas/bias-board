@@ -1105,6 +1105,7 @@ addEventListener("keydown", e => {
   select(KEYS[j], true);
 });
 
+if (D.stale) { const w = document.createElement("p"); w.className = "banner hot"; w.style.margin = "14px 0 0"; w.textContent = "The data source (LSE) could not be reached on the last update, so the board shows the last saved prices and COT. It updates again once the source is back."; $("#outlook-view").prepend(w); }
 $("#meta").textContent = `Updated ${new Date(D.today + "T00:00:00").toLocaleDateString("en-GB", {weekday: "short", day: "numeric", month: "long", year: "numeric"})} · prices daily, COT as of ${D.asof}`;
 weekList(); liveRecord(); qboards();
 let start = (location.hash || "").slice(1);
