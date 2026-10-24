@@ -921,6 +921,7 @@ if __name__ == "__main__":
         c["conv"] = {2: "vs retail & funds", 1: "vs one group"}.get(groups, "None") if c["read"] != "STAND ASIDE" else "None"
         cal_obj = s.pop("_cal", None)
         res[k] = {"name": m[0], "sector": m[3], "cot": c, "seas": s, "verdict": v, "lineup": why,
+                  "week_pct": round(float(np.std(np.diff(np.log(p.to_numpy(float)[-253:]))) * 100 * np.sqrt(5)), 2),
 
                   "basis": why, "groups": groups, "timing": timing(s),
                   "confidence": None, "setup": setup_record(k, why),

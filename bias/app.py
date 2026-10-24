@@ -79,6 +79,29 @@ h2.sec{font:700 12px/1 var(--body);letter-spacing:.12em;text-transform:uppercase
 .eng.lead{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
 .eng .k{font:700 10.5px/1 var(--body);letter-spacing:.1em;text-transform:uppercase}
 .charts{display:flex;flex-direction:column;gap:22px;margin-top:22px}
+.week{margin-top:18px;background:var(--card);border:1.5px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}
+.whead,.wrow{display:grid;grid-template-columns:minmax(0,1.6fr) 96px minmax(0,1.3fr) minmax(0,1fr);gap:10px;align-items:center;padding:12px 18px}
+.whead{font-size:12px;color:var(--mute);padding-top:14px;padding-bottom:8px}
+.whead span:first-child{font:700 15px var(--display);color:var(--ink)}
+.wrow{width:100%;background:none;border:0;border-top:1px solid var(--line);font:inherit;color:var(--ink);text-align:left;cursor:pointer;transition:background .15s}
+.wrow:hover{background:color-mix(in srgb,var(--ink) 4%,transparent)} .wrow[aria-current="true"]{background:color-mix(in srgb,var(--ink) 7%,transparent)}
+.wrow:focus-visible,.rchip:focus-visible{outline:3px solid var(--sun);outline-offset:-3px}
+.wrow .nm{font-weight:700;font-size:15px}
+.dir{font-weight:700;font-size:14px} .dir.up{color:var(--bull)} .dir.dn{color:var(--bear)}
+.wmute{color:var(--mute);font-size:13px}
+.tagt{font:600 11px var(--body);padding:2px 8px;border-radius:8px;margin-left:8px;vertical-align:1px}
+.tagt.top{background:var(--sun-soft);color:var(--ink)} .tagt.pair{background:var(--flat-soft);color:var(--mute)}
+details.rest{border:0;border-top:1px solid var(--line);border-radius:0;margin:0;padding:2px 18px}
+details.rest summary{font:600 13px var(--body);color:var(--mute)}
+.restg{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0 10px}
+.rchip{font:inherit;font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:5px 11px;cursor:pointer}
+.phead{display:flex;align-items:center;gap:14px;flex-wrap:wrap} .phead h1{font:800 clamp(28px,4.5vw,42px)/1 var(--display);letter-spacing:-.03em;margin:0}
+.psent{font-size:17px;margin:10px 0 0;color:var(--ink)}
+.mcs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px}
+.mc{background:var(--bg);border-radius:12px;padding:11px 14px;display:flex;flex-direction:column;gap:4px}
+.mc span{font-size:12.5px;color:var(--mute)} .mc b{font:700 22px var(--mono)} .mc small{font:12px var(--body);color:var(--mute);margin-left:6px}
+details.liveD{margin-top:18px;background:var(--card)}
+@media (max-width:640px){.whead,.wrow{grid-template-columns:minmax(0,1fr) auto;row-gap:2px}.whead span:nth-child(n+3){display:none}.wrow .wmute{grid-column:1/-1}}
 .card{border:1px solid var(--line);border-radius:16px;padding:14px 16px 10px;min-width:0}
 .card h3{font:700 19px/1.2 var(--display);margin:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .card h3 .tag{font:600 10.5px/1 var(--body);letter-spacing:.1em;text-transform:uppercase;padding:4px 7px;border-radius:999px;background:var(--ink);color:var(--bg)}
@@ -208,32 +231,21 @@ body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border
     <button class="vbtn q" id="v-quant" role="tab" aria-selected="false">Quant strategies</button>
   </div>
   <div class="meta" id="meta"></div>
-  <div class="filters" id="filters" role="group" aria-label="Filter markets">
-    <button class="chip" id="f-all" aria-pressed="true">All</button>
-    <button class="chip" id="f-BULLISH" aria-pressed="false">Bullish</button>
-    <button class="chip" id="f-BEARISH" aria-pressed="false">Bearish</button>
-    <button class="chip" id="f-STAND ASIDE" aria-pressed="false">Stand aside</button>
-    <button class="chip" id="f-both" aria-pressed="false">Both engines agree</button>
-    <button class="chip" id="f-hot" aria-pressed="false">Window ending</button>
-    <button class="chip" id="f-done" aria-pressed="false">Move done</button>
-    <a class="chip" href="outlook.html" style="text-decoration:none">Full report</a>
-  </div>
+  <div class="filters" id="filters" hidden></div>
 </div></div>
 
 <div class="wrap">
   <div id="outlook-view">
-    <section class="focus" id="focus"></section>
-    <section class="focus" id="pairs" hidden></section>
-    <section class="live" id="live"></section>
-    <div id="boards"></div>
+    <section class="week" id="week" aria-label="This week's biases"></section>
     <section class="panel" id="panel" aria-live="polite"></section>
+    <section id="live"></section>
   </div>
   <div id="quant-view" hidden>
     <p class="qintro">Fixed rules with a known cause, defined before testing and validated on the 20 years after they were published. Each one trades on its own dates, separate from the weekly outlook.</p>
     <div id="qboards"></div>
     <section class="panel qpanel" id="qpanel" aria-live="polite"></section>
   </div>
-  <p class="foot">COT: CFTC legacy report via LSE (CFTC history for WTI and natural gas). Prices: LSE daily spot, yen, franc and Canadian dollar in futures direction, dollar index rebuilt from its legs. Seasonal windows: Seasonax-style scan in trading days, 15 prior years, 5 to 30 trading days long, win ratio 12 of 15 or better; a window that carries the bias alone must usually move at least 3 normal daily moves. Move between markets with <span class="kbd">←</span> <span class="kbd">→</span>. A bias is not a trade. Educational, not advice.</p>
+  <p class="foot">COT: CFTC legacy report via LSE (CFTC history for WTI and natural gas). Prices: LSE daily spot, yen, franc and Canadian dollar in futures direction, dollar index rebuilt from its legs. Seasonal windows: Seasonax-style scan in trading days, 15 prior years, 5 to 30 trading days long, win ratio 12 of 15 or better; a window that carries the bias alone must usually move at least 3 normal daily moves. Move between markets with <span class="kbd">←</span> <span class="kbd">→</span>. <a href="outlook.html">Full report</a>. A bias is not a trade. Educational, not advice.</p>
 </div>
 
 <script>
@@ -351,35 +363,44 @@ function liveRecord() {
   const by = Object.entries(L.by_basis || {}).filter(([, o]) => o).map(([b, o]) => `${esc(b)} ${o.right}/${o.n}`).concat(Object.entries(L.by_macro || {}).filter(([, o]) => o).map(([b, o]) => `macro ${b} ${o.right}/${o.n}`)).join(" · ");
   const recent = (L.recent || []).map(r => `<span class="${r.right ? "r" : "w"}" title="${esc(r.name)} · ${esc(r.basis)} · ${r.entry} → ${r.exit} · price ${pc(r.move)} · best point ${pc(r.best)} for the bias${r.R != null ? ` · ${r.stopped ? "stopped out, −1R" : R(r.R)} with a one-week stop (±${r.week_pct}%)` : ""}">${r.m} ${r.verdict === "BULLISH" ? "▲" : "▼"} ${pc(r.move)}${r.R != null ? ` · ${R(r.R)}` : ""}</span>`).join("");
   const open = (L.open || []).map(r => `<span title="${esc(r.name)} · ${esc(r.basis)} · since ${r.entry || r.entry_from}${r.best != null ? ` · best point so far ${pc(r.best)} for the bias` : ""}${r.stopped ? " · a one-week stop would have been hit" : ""}">${r.m} ${r.verdict === "BULLISH" ? "▲" : "▼"} ${r.move != null ? pc(r.move) : "waiting"}</span>`).join("");
-  el.innerHTML = `<div class="lh"><b>Live record since ${fmtD(L.since)}</b><span>${head}</span>${by ? `<span class="note" style="margin:0">${by}</span>` : ""}</div>
+  el.innerHTML = `<details class="liveD"><summary>Live record since ${fmtD(L.since)}<small>${head}</small></summary>${by ? `<p class="note" style="margin:0">${by}</p>` : ""}
     ${recent ? `<div class="lst">${recent}</div>` : ""}${open ? `<p class="note" style="margin:8px 0 0">Open: </p><div class="lst">${open}</div>` : ""}
-    <p class="note" style="margin:8px 0 0">Every verdict saved as given on its Saturday and scored when its exit passes (calendar: window end; COT: one week after the signal goes dark, outside currencies at least 8 weeks after the signal unless COT flips), one position per market at a time; price moves shown as + up / − down. Also scored the way you would hold it with a technical entry: the best point along the way, and the result in R with a stop one normal week against the entry (hover a verdict for its numbers). The replay numbers elsewhere were tested on 2019–26; this record is the board on weeks its rules have never seen.</p>`;
+    <p class="note" style="margin:8px 0 0">Every verdict saved as given on its Saturday and scored when its exit passes (calendar: window end; COT: one week after the signal goes dark, outside currencies at least 8 weeks after the signal unless COT flips), one position per market at a time; price moves shown as + up / − down. Also scored the way you would hold it with a technical entry: the best point along the way, and the result in R with a stop one normal week against the entry (hover a verdict for its numbers). The replay numbers elsewhere were tested on 2019–26; this record is the board on weeks its rules have never seen.</p></details>`;
 }
-function focusStrip() {
-  // Top setups: COT + calendar outside currencies, the board's best tested verdict type (the old focus picks no
-  // longer beat the other verdicts and were switched off)
-  const T = D.top_test, keys = KEYS.filter(k => M[k].basis === "COT + calendar" && M[k].sector !== "FX");
-  const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
-  const card = k => { const m = M[k], st = setupStats(m);
-    return `<button class="fcard" data-k="${k}"><div class="fh"><div><div class="nm">${esc(m.name)}</div><div class="tk">${k} · COT + calendar</div></div>${pill(m.verdict)}</div>
-      <div class="fs">${st ? `<div><b>${st.w}/${st.n}</b><span>this setup's years</span></div><div><b>${pc(st.avg)}</b><span>avg price move</span></div>` : ""}</div></button>`; };
-  $("#focus").innerHTML = `<div class="fhead"><h2 class="sec" style="margin:0">Top setups this week</h2>
-      <p class="note" style="margin:0">COT and the seasonal window agree, outside currencies: the board's strongest tested verdict type${T ? ` (${T.first}–${T.last}: ${T.win}% won, ${pc(T.avg)} per verdict, ${pc(T["2019-22"])} in 2019–22 and ${pc(T["2023-26"])} in 2023–26)` : ""}. On currencies this combination tested as a coin flip, so they are not listed.</p></div>
-    ${keys.length ? `<div class="fgrid">${keys.map(card).join("")}</div>` : `<p class="note">No top setup this week.</p>`}`;
-  $("#focus").hidden = false;
-  document.querySelectorAll(".fcard").forEach(b => b.addEventListener("click", () => select(b.dataset.k, true)));
+/* ---------- this week: one list ---------- */
+const calLedM = m => m.basis === "Calendar only" || m.basis === "Calendar over COT";
+function untilTxt(m) {
+  if (m.verdict === "STAND ASIDE") return "";
+  const d = m.seas.driver, lv = m.cot.record && m.cot.record.live;
+  if (calLedM(m)) return d ? fmtD(d.end) : "";
+  if (lv && lv.held && lv.until) return fmtD(lv.until);
+  if (m.sector !== "FX" && D.cot_min_weeks && lv) { const t = new Date(lv.since + "T00:00:00"); t.setDate(t.getDate() + 3 + 7 * D.cot_min_weeks); return `at least ${t.toLocaleDateString("en-GB", {day: "2-digit", month: "short"})}`; }
+  return "while COT is lit";
 }
-function pairStrip() {
-  // one currency bullish and another bearish: that cross carries both board trades in one position (bias/pairs.py)
-  const P = D.fx_pairs || [], T = D.pair_test && D.pair_test.pairs, U = D.pair_test && D.pair_test.vs_usd;
-  if (!P.length) { $("#pairs").hidden = true; return; }
-  const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
-  const leg = (x, v) => `<span class="${v === "BULLISH" ? "up" : "dn"}">${x.cur} ${v.toLowerCase()}</span> <span class="tk">(${esc(x.basis)})</span>`;
-  const card = p => `<div class="fcard pcard"><div class="fh"><div><div class="nm">${p.side} ${p.pair}</div><div class="tk">${leg(p.bull, "BULLISH")} · ${leg(p.bear, "BEARISH")}</div></div>${pill(p.side === "Long" ? "BULLISH" : "BEARISH", p.side)}</div></div>`;
-  $("#pairs").innerHTML = `<div class="fhead"><h2 class="sec" style="margin:0">Currency pairs this week</h2>
-      <p class="note" style="margin:0">One currency bullish and another bearish on the board: the cross between them carries both verdicts in one position, with the US dollar cancelled out${T ? `. Tested ${D.pair_test.first}–${D.pair_test.last}: ${T.win}% won, ${pc(T.avg)} per pair (${T.n} pairs in ${T.months} months; ${pc(T["2019-22"])} in 2019–22, ${pc(T["2023-26"])} in 2023–26), against ${U.win}% and ${pc(U.avg)} for a single currency against the dollar` : ""}. It is the same edge as taking both currency verdicts, not extra evidence; held while both verdicts last. A cross against a currency without a verdict did no better than the currency against the dollar, so only opposite pairs are listed.</p></div>
-    <div class="fgrid">${P.map(card).join("")}</div>`;
-  $("#pairs").hidden = false;
+function whyShort(m) {
+  if (m.verdict === "STAND ASIDE") return {"Macro against": "macro against", "Move done": "move done"}[m.basis] || (m.basis.startsWith("Conflict") ? "COT and calendar disagree" : "no signal");
+  const lv = m.cot.record && m.cot.record.live;
+  return m.basis + (cotLed(m) && lv && lv.held ? " (held)" : "");
+}
+function weekList() {
+  const rank = m => m.basis === "COT + calendar" ? (m.sector === "FX" ? 1 : 0) : cotLed(m) ? 2 : 3;
+  const on = KEYS.filter(k => M[k].verdict !== "STAND ASIDE").sort((a, b) => rank(M[a]) - rank(M[b]));
+  const off = KEYS.filter(k => M[k].verdict === "STAND ASIDE");
+  const row = (k, name, tag, v, why, until) => `<button class="wrow" data-k="${k}" aria-current="false"><span class="nm">${esc(name)}${tag}</span><span class="dir ${v === "BULLISH" ? "up" : "dn"}">${v === "BULLISH" ? "▲ Long" : "▼ Short"}</span><span class="wmute">${esc(why)}</span><span class="wmute">${esc(until)}</span></button>`;
+  const top = m => m.basis === "COT + calendar" && m.sector !== "FX" ? `<span class="tagt top" title="COT and calendar agree outside currencies: the strongest tested verdict type">top setup</span>` : "";
+  const pairs = (D.fx_pairs || []).map(p => row(p.bull.k, p.pair, `<span class="tagt pair" title="one currency bullish, the other bearish: both verdicts in one cross">pair</span>`, p.side === "Long" ? "BULLISH" : "BEARISH", `${p.bull.cur} up, ${p.bear.cur} down`, "while both last"));
+  $("#week").innerHTML = `<div class="whead"><span>This week</span><span>Bias</span><span>Why</span><span>Until</span></div>`
+    + on.map(k => row(k, M[k].name, top(M[k]), M[k].verdict, whyShort(M[k]), untilTxt(M[k]))).join("") + pairs.join("")
+    + (on.length ? "" : `<p class="wmute" style="padding:12px 18px;margin:0;border-top:1px solid var(--line)">No bias this week.</p>`)
+    + `<details class="rest"><summary>${off.length} markets without a bias</summary><div class="restg">${off.map(k => `<button class="rchip" data-k="${k}">${esc(M[k].name)} <span class="wmute">· ${esc(whyShort(M[k]))}</span></button>`).join("")}</div></details>`;
+  document.querySelectorAll("#week [data-k]").forEach(b => b.addEventListener("click", () => select(b.dataset.k, true)));
+}
+function metrics(m) {
+  if (m.verdict === "STAND ASIDE") return "";
+  const st = setupStats(m), side = m.verdict, rc = m.cot.record, d = m.seas.driver;
+  const runs = calLedM(m) ? (d && d.mfe != null ? dirSg(side) * d.mfe : null) : (rc && rc.win_mfe != null ? raw(rc.win_mfe, side) : null);
+  const cell = (lab, big, sm) => `<div class="mc"><span>${lab}</span><b>${big}${sm ? `<small>${sm}</small>` : ""}</b></div>`;
+  return `<div class="mcs">${st ? cell("This setup won", `${Math.round(100 * st.w / st.n)}%`, `${st.w} of ${st.n}`) : ""}${m.week_pct ? cell("Stop about", `±${m.week_pct}%`, "one normal week") : ""}${runs != null ? cell(calLedM(m) ? "Usual best point" : "Winners usually run", pcx(runs)) : ""}</div>`;
 }
 function evBadge(m) {
   if (!m.events) return "";
@@ -388,19 +409,6 @@ function evBadge(m) {
   if (soon.length) return `<div class="row"><span class="evb">○ ${esc(soon.map(e => e.name.split(" (")[0]).join(", "))} in ${Math.min(...soon.map(e => e.days_to))}d</span></div>`;
   return "";
 }
-function boards() {
-  const secs = {};
-  KEYS.forEach(k => (secs[M[k].sector] ||= []).push(k));
-  $("#boards").innerHTML = Object.entries(secs).map(([s, ks]) => `<h2 class="sec">${s}</h2><div class="board">` + ks.map(k => {
-    const m = M[k];
-    return `<button class="tile" id="t-${k}" data-k="${k}" aria-current="false">${ring(m)}
-      <div><div class="nm">${esc(m.name)}</div><div class="tk">${k}</div></div>
-      <div class="row">${pill(m.verdict)}${setupBadge(m)}</div>
-      <div class="basis">${basisIcon(m)}${esc(m.basis)}</div>${spark(m)}</button>`;
-  }).join("") + `</div>`).join("");
-  document.querySelectorAll(".tile").forEach(b => b.addEventListener("click", () => select(b.dataset.k, true)));
-}
-
 /* ---------- hero ---------- */
 function dial(m) {
   const pos = {BULLISH: 1, BEARISH: -1}[m.verdict] || 0;
@@ -870,20 +878,22 @@ function testedSection() {
 }
 function render(k) {
   const m = M[k], P = $("#panel");
-  const cEss = cotLed(m) || m.basis.startsWith("Conflict"), sEss = seasonLed(m) || m.basis.startsWith("Conflict");
-  const evc = "";
-  const cards = (m.basis === "Calendar only" || m.basis === "Calendar over COT") ? [seasonCard(m, true), macroCard(m), cycleCard(m), evc, cotCard(m, m.basis !== "Calendar only")] : [cotCard(m, cEss), seasonCard(m, sEss), macroCard(m), cycleCard(m), evc];
-  const extra = [];
+  const lead = calLedM(m) || (m.verdict === "STAND ASIDE" && !cotLed(m) && m.cot.read === "STAND ASIDE") ? "seas" : "cot";
+  const u = untilTxt(m);
+  const sent = m.verdict === "STAND ASIDE" ? `No bias · ${whyShort(m)}` : `${m.verdict === "BULLISH" ? "Long" : "Short"} · ${whyShort(m)}${u ? ` · until ${u}` : ""}`;
+  const macroTxt = m.macro && m.macro.rel === "agrees" && m.verdict !== "STAND ASIDE" ? ` US macro (score ${m.macro.total > 0 ? "+" : ""}${m.macro.total}) is <b>with</b> this bias, which historically made them clearly stronger.` : "";
+  const mac = macroCard(m) + cycleCard(m);
+  const sec = (t, sub, body, open) => body ? `<details${open ? " open" : ""}><summary>${t}<small>${sub}</small></summary>${body}</details>` : "";
   P.style.animation = "none"; void P.offsetWidth; P.style.animation = "";
-  P.innerHTML = `<div class="hero"><div><h1>${esc(m.name)}</h1><div class="sub">${k} · ${m.sector} · ${pill(m.verdict)} <span style="margin-left:6px">${m.basis}</span></div>
-      <p class="why">${why(m)}${smallRecord(m)}${m.macro && m.macro.rel === "agrees" && m.verdict !== "STAND ASIDE" ? ` US macro (score ${m.macro.total > 0 ? "+" : ""}${m.macro.total}) is ${m.macro.rel === "agrees" ? "<b>with</b>" : m.macro.rel === "against" ? "<b>against</b>" : "neutral on"} this bias${m.macro.rel === "against" ? ", which historically made such biases on US indices, gold and silver much weaker" : m.macro.rel === "agrees" ? ", which historically made them clearly stronger" : ""}.` : ""}</p>${testedHero(m)}</div>${dial(m)}</div>${banner(m)}
-    <div class="engines"><div class="eng ${cEss ? "lead" : ""}">${ICON.cot.replace("<svg", '<svg width="16" height="16"')}<span class="k">COT</span><b>${c_read(m)}</b>${m.cot.conv}</div>
-      <div class="eng ${sEss ? "lead" : ""}">${ICON.cal.replace("<svg", '<svg width="16" height="16"')}<span class="k">Seasonality</span><b>${title(m.seas.read)}</b>${m.seas.strength ? title(m.seas.strength) : "–"}</div></div>
-    <div class="charts">${cards.filter(Boolean).join("")}</div>${extra.join("")}
-    <details><summary>Track record<small>the current COT picture, and what it did before</small></summary>${trackNow(m)}</details>
-    <details open><summary>Seasonal windows<small>running now and coming next</small></summary>${windowsTbl(m)}${m.seas.neigh ? `<h4 class="note" style="margin-top:12px">Neighbour test</h4>${nbrs(m)}` : ""}</details>
-    <details><summary>Years most like this one<small>analog cross-check</small></summary>${analogs(m)}</details>${testedSection()}`;
-  requestAnimationFrame(() => requestAnimationFrame(() => { const n = $("#needle"); if (n) n.style.transform = `rotate(${n.dataset.a}deg)`; }));
+  P.innerHTML = `<div class="phead"><h1>${esc(m.name)}</h1>${pill(m.verdict, m.verdict === "STAND ASIDE" ? "No bias" : m.verdict === "BULLISH" ? "Long" : "Short")}</div>
+    <p class="psent">${esc(sent)}</p>${metrics(m)}${banner(m)}
+    <div class="charts">${lead === "cot" ? cotCard(m, true) : seasonCard(m, true)}</div>
+    ${sec("Why this verdict", "the full reasoning and records", `<p class="why">${why(m)}${smallRecord(m)}${macroTxt}</p>${testedHero(m)}`)}
+    ${sec(lead === "cot" ? "Seasonality" : "COT positioning", lead === "cot" ? "the calendar chart" : "the positioning chart", lead === "cot" ? seasonCard(m, false) : cotCard(m, false))}
+    ${sec("Seasonal windows", "running now and coming next", windowsTbl(m) + (m.seas.neigh ? `<h4 class="note" style="margin-top:12px">Neighbour test</h4>${nbrs(m)}` : ""))}
+    ${sec("Macro", "US data surprises", mac)}
+    ${sec("COT track record", "the current picture and what it did before", trackNow(m))}
+    ${sec("Years most like this one", "analog cross-check", analogs(m))}${testedSection()}`;
   hookTips(P, m); hookCot(m); hookFit(m);
 }
 function hookFit(m) {
@@ -907,7 +917,7 @@ function refreshCot(m, card) {
 function select(k, user) {
   if (!M[k]) k = KEYS[0];
   state.k = k; Object.assign(state, defaultCot(M[k]));
-  document.querySelectorAll(".tile").forEach(t => t.setAttribute("aria-current", t.dataset.k === k));
+  document.querySelectorAll("#week .wrow").forEach(t => t.setAttribute("aria-current", t.dataset.k === k));
   render(k);
   if (user) { try { history.replaceState(null, "", "#" + k); } catch (e) {} if ($("#panel").getBoundingClientRect().top > innerHeight * .6) $("#panel").scrollIntoView({behavior: "smooth", block: "start"}); }
 }
@@ -991,14 +1001,14 @@ addEventListener("keydown", e => {
   if (e.target.closest("input,textarea") || !["ArrowLeft", "ArrowRight"].includes(e.key)) return;
   if (view === "quant") { const ids = Q.map(q => q.id), i = ids.indexOf(qstate), j = (i + (e.key === "ArrowRight" ? 1 : -1) + ids.length) % ids.length; qselect(ids[j], true); $("#qt-" + ids[j]).focus({preventScroll: true}); return; }
   const i = KEYS.indexOf(state.k), j = (i + (e.key === "ArrowRight" ? 1 : -1) + KEYS.length) % KEYS.length;
-  select(KEYS[j], true); $("#t-" + KEYS[j]).focus({preventScroll: true});
+  select(KEYS[j], true);
 });
 
 $("#meta").textContent = `Week of ${new Date(D.today + "T00:00:00").toLocaleDateString("en-GB", {day: "numeric", month: "long", year: "numeric"})} · COT as of ${D.asof}`;
-focusStrip(); pairStrip(); liveRecord(); boards(); qboards();
+weekList(); liveRecord(); qboards();
 let start = (location.hash || "").slice(1);
 if (start.startsWith("q-")) { qselect(start.slice(2), false); setView("quant", false); start = ""; }
-if (!M[start]) start = KEYS.find(k => M[k].timing && M[k].timing.closing && M[k].timing.flip) || KEYS[0];
+if (!M[start]) { const r = $("#week .wrow"); start = r ? r.dataset.k : KEYS[0]; }
 select(start, false);
 </script>
 """
