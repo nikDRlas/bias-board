@@ -444,7 +444,6 @@ function checklist(m) {
   if (x) li(x.rel === "agrees" ? "y" : x.rel === "against" ? "n" : "o", `<b>US macro</b>: ${x.rel === "agrees" ? "agrees" : x.rel === "against" ? "against, so the bias is cancelled" : x.rel === "flat" ? "neutral, so the bias is cancelled" : "score " + (x.total > 0 ? "+" : "") + x.total} (score ${x.total > 0 ? "+" : ""}${x.total})`);
   const dn = m.done && (m.done.cot || m.done.seas);
   if (m.basis === "Move done") li("n", `<b>Move</b>: the usual move is already made, so the bias is off`);
-  else if (dn && m.verdict !== "STAND ASIDE" && dn.share != null) li(dn.share >= 100 ? "o" : "y", `<b>Room left</b>: ${dn.share < 0 ? "price is against the setup so far" : dn.share + "% of the usual move made so far"}`);
   return `<ul class="check">${rows.join("")}</ul>`;
 }
 function infoize(root) {
@@ -462,12 +461,19 @@ function trackSlim(m) {
   const r = T[0], o = r.r8;
   return `<div class="wstats"><div><b>${o.w} of ${o.n}</b><span>times this exact picture (${esc(r.label)}, ${r.lb}) went the commercials' way, held while it lasted</span></div><div><b>${pcx(raw(o.avg, r.dir))}</b><span>average price move</span></div></div>`;
 }
+function roomCell(m, cell) {
+  // how much of the usual move is still to go: COT against its usual winning move, the calendar against its window's move
+  const x = m.done && (calLedM(m) ? m.done.seas : (m.done.cot || m.done.seas)); if (!x || x.share == null) return "";
+  if (x.state === "done" || x.share >= 100) return cell("Room left", "none", "usual move already made");
+  if (x.share < 0) return cell("Room left", "all", "price is against the setup so far");
+  return cell("Room left", `${100 - x.share}%`, `of the usual move (${x.share}% made)`);
+}
 function metrics(m) {
   if (m.verdict === "STAND ASIDE") return "";
   const st = setupStats(m), side = m.verdict, rc = m.cot.record, d = m.seas.driver;
   const runs = calLedM(m) ? (d && d.mfe != null ? dirSg(side) * d.mfe : null) : (rc && rc.win_mfe != null ? raw(rc.win_mfe, side) : null);
   const cell = (lab, big, sm) => `<div class="mc"><span>${lab}</span><b>${big}${sm ? `<small>${sm}</small>` : ""}</b></div>`;
-  return `<div class="mcs">${st ? cell("This setup won", `${Math.round(100 * st.w / st.n)}%`, `${st.w} of ${st.n}`) : ""}${m.week_pct ? cell(`Stop distance <span class="ib" style="padding:0" title="One normal week: how far ${esc(m.name)} typically moves in a week (past year). The tested way to hold a verdict is a stop about this far from your entry; tighter stops get hit by normal weekly noise.">ⓘ</span>`, `±${m.week_pct}%`, "one normal week") : ""}${runs != null ? cell(calLedM(m) ? "Usual best point" : "Winners usually run", pcx(runs)) : ""}</div>`;
+  return `<div class="mcs">${st ? cell("This setup won", `${Math.round(100 * st.w / st.n)}%`, `${st.w} of ${st.n}`) : ""}${roomCell(m, cell)}${runs != null ? cell(calLedM(m) ? "Usual best point" : "Winners usually run", pcx(runs)) : ""}</div>`;
 }
 function evBadge(m) {
   if (!m.events) return "";
@@ -639,10 +645,10 @@ function holdNote(m, rc) {
   // how to hold a COT verdict with a technical entry (research/cot_hold_test.py): three boxes, the test behind Explain
   const H = D.cot_hold && D.cot_hold[m.sector === "FX" ? "currencies" : "other"]; if (!H || !rc.week_pct) return "";
   const t = H.targets, R = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}R`, u = untilTxt(m);
-  return `<div class="hold"><div><span>Stop</span><b>±${rc.week_pct}%</b><small>one normal week from your entry</small></div>
+  return `<div class="hold"><div><span>Normal weekly swing</span><b>±${rc.week_pct}%</b><small>size the position for this</small></div>
       <div><span>Target</span><b>none</b><small>no tight target, let it run</small></div>
       <div><span>Hold until</span><b>${u ? esc(u.replace("at least ", "≥ ")) : "–"}</b><small>the board drops the bias</small></div></div>
-    <p class="note">Tested on all ${m.sector === "FX" ? "currency" : "non-currency"} COT verdicts 2019–26 with a stop one normal week from the entry: a target of 1 normal week made ${R(t["1"].R)} per trade, 2 weeks ${R(t["2"].R)}, 3 weeks ${R(t["3"].R)}, 4 weeks ${R(t["4"].R)} (positive in 2019–22 and 2023–26). Bigger targets are rarely hit (${t["3"].hit}% for 3 weeks); the gain comes from staying in until the verdict ends (${holdTxt(m)}; usually about ${Math.round(H.hold_weeks)} weeks). Measured from the verdict's own entry; a 4h entry comes at another time and price, so read it as a guide.</p>`;
+    <p class="note">The weekly swing is how far ${esc(m.name)} moves in a normal week (past year). Your stop comes from the 4h structure; a stop much tighter than this swing relies on your entry timing, because the bias works on a weekly scale. Tested on all ${m.sector === "FX" ? "currency" : "non-currency"} COT verdicts 2019–26 with a stop one normal week from the entry: a target of 1 normal week made ${R(t["1"].R)} per trade, 2 weeks ${R(t["2"].R)}, 3 weeks ${R(t["3"].R)}, 4 weeks ${R(t["4"].R)} (positive in 2019–22 and 2023–26). Bigger targets are rarely hit (${t["3"].hit}% for 3 weeks); the gain comes from staying in until the verdict ends (${holdTxt(m)}; usually about ${Math.round(H.hold_weeks)} weeks). Measured from the verdict's own entry; a 4h entry comes at another time and price, so read it as a guide.</p>`;
 }
 function cotStats(m) {
   // three numbers for the live COT signal: where price is, how far winners usually run (and how much of it is made),
