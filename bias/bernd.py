@@ -10,6 +10,9 @@ import numpy as np, pandas as pd
 
 import core as C
 
+import os
+HORIZONS = tuple(int(x) for x in os.environ.get("BERND_H", "4,8").split(","))   # research switch: horizons (weeks) a row may qualify on
+
 
 class Gate:
     def __init__(self, k):
@@ -36,7 +39,7 @@ class Gate:
                     for i in cases:
                         d = self.dates[i]
                         out = {"i": i, "d": d}
-                        for h in (4, 8):
+                        for h in HORIZONS:
                             a = self.p.index.searchsorted(d)
                             b = self.p.index.searchsorted(d + pd.Timedelta(weeks=h))
                             out[h] = (sgn * (self.p.iloc[b] / self.p.iloc[a] - 1), self.p.index[b]) if b < len(self.p) else None
@@ -61,7 +64,7 @@ class Gate:
                 while j > 0 and lit[j - 1]:
                     j -= 1
                 t0 = self.dates[i] - pd.DateOffset(years=C.HIST[lb])
-                for h in (4, 8):
+                for h in HORIZONS:
                     r = [c[h][0] for c in cases if c["i"] < j and c["d"] >= t0 and c[h] and c[h][1] <= t]
                     if len(r) >= C.BAR_N and np.mean([x > 0 for x in r]) >= C.BAR_WIN / 100 and np.mean(r) > 0:
                         ok = True
