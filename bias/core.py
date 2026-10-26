@@ -56,8 +56,13 @@ def _cot_raw():
 
 
 def _asof():
-    d = sorted(_cot_raw()["date"].unique())
-    return pd.Timestamp(max(x for x in d if pd.Timestamp(x) + pd.Timedelta(days=3) <= TODAY))
+    """the latest COT report released by TODAY (Friday release = report Tuesday + 3 days), from LSE's archive or the
+    CFTC's own data, whichever is newer"""
+    d = [pd.Timestamp(x) for x in _cot_raw()["date"].unique()]
+    g = os.path.join(CFTC, "GC_legacy.json")
+    if os.path.exists(g):
+        d += [pd.Timestamp(r["report_date_as_yyyy_mm_dd"][:10]) for r in json.load(open(g))]
+    return max(x for x in d if x + pd.Timedelta(days=3) <= TODAY)
 
 
 ASOF = _asof() if os.path.exists(os.path.join(LIVE, "cot.json")) else None
@@ -127,6 +132,7 @@ def load_cot(k):
     assert (j.comm == j.comm_l).all() and (j.fund == j.fund_l).all(), k
     x = pd.concat([cf, lse[lse.index > cf.index.max()]]) if k in CFTC_ONLY \
         else pd.concat([cf[cf.index < lse.index.min()], lse])
+    x = pd.concat([x, cf[cf.index > x.index.max()]])          # the CFTC's newest reports, if LSE does not have them yet
     x["retail"] = -(x.comm + x.fund)                          # longs == shorts across the three groups
     return x[x.index <= ASOF]
 
