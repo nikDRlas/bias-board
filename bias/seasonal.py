@@ -19,6 +19,10 @@ OPEN_AHEAD = 10                      # a window may start up to 10 trading days 
 # that has to carry the bias ALONE (calendar only, calendar over COT): it has to be worth trading. A window that agrees
 # with COT needs no minimum. Tested: research/verdict_test.py, research/seasonal_config.json (3 = best of 0/1.5/2/3).
 SOLO_MIN_MOVE = float(os.environ.get("SEAS_MIN_MOVE", "3"))
+# re-tested 2026-10-27 with the ag-only rule (verdict_test SKIP_SLOW=1 SEAS_MIN_MOVE=0/1/2/3/4), agriculture
+# calendar-alone verdicts: 0 -> n464 55.0% +0.58% t1.8 (2019-22 t0.8); 1 -> +0.75% t2.1; 2 -> +0.97% t2.1 (2023-26 t0.6);
+# 3 -> n95 61.1% +1.92% t2.8 (both halves t>=1.6); 4 -> +3.22% t2.6 but n47 (2023-26 t0.8). The windows below 3 days
+# add ~+0.2% each (about one normal day, cost-thin) -> 3 kept
 # how windows are found: "scan" = every start and length (Seasonax-style screener), "swing" = from a turning point of
 # the 15-year average path to the next one (low to high = buy, high to low = sell); research/swing_windows_test.py
 MODE = os.environ.get("SEAS_MODE", "scan")
