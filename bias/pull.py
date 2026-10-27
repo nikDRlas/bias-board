@@ -40,6 +40,9 @@ PRICES = {
     "DAX": ("indices", "BDE40P"), "ESTX": ("indices", "BEZ50P"),     # quant strategies only (no CFTC COT)
     "DX": None,                                                      # rebuilt from its legs in core.load_px
 }
+# backup when LSE has no new days (LSE delisted SUGAR/USD on 16 Oct 2026, COFFEE/USD has no data since 7 Oct):
+# Yahoo Finance front-month futures, spliced onto the stored history by the same ratio check as the LSE rows
+YAHOO = {"SB": "SB=F", "KC": "KC=F"}
 # CFTC legacy futures-only contract codes (matched to data/cftc/*_legacy.json on 2026-08-11)
 CFTC_CODES = {"6A": "232741", "6B": "096742", "6C": "090741", "6E": "099741", "6J": "097741", "6N": "112741",
               "6S": "092741", "CL": "067651", "DX": "098662", "ES": "13874A", "GC": "088691", "HG": "085692",
@@ -111,6 +114,23 @@ def candles(market, symbol, start):
     return out
 
 
+def yahoo(symbol, start):
+    """daily bars from Yahoo Finance: {day: (open, high, low, close)}; bars with missing or inconsistent prices skipped"""
+    p1 = int(dt.datetime.fromisoformat(start).replace(tzinfo=dt.timezone.utc).timestamp())
+    url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(symbol)}"
+           f"?period1={p1}&period2={int(time.time())}&interval=1d")
+    r = subprocess.run(["curl", "-s", "-m", "60", "-A", "Mozilla/5.0", url], capture_output=True, text=True).stdout
+    d = json.loads(r)["chart"]["result"][0]
+    q = d["indicators"]["quote"][0]
+    out = {}
+    for t, o, h, l, c in zip(d["timestamp"], q["open"], q["high"], q["low"], q["close"]):
+        if None in (o, h, l, c) or not (l <= min(o, c) and max(o, c) <= h):
+            continue
+        day = (dt.datetime.fromtimestamp(t, dt.timezone.utc) - dt.timedelta(hours=4) + dt.timedelta(hours=6)).date()
+        out[day.isoformat()] = (o, h, l, c)
+    return out
+
+
 def refresh_prices():
     import pandas as pd
     for name, src in PRICES.items():
@@ -124,8 +144,16 @@ def refresh_prices():
                 new = candles(*src, start)
             except Exception as e:
                 print(f"{name:4s} {src[1]:11s} FAILED {e} (stored history only)")
+        if name in YAHOO and not any(d > last for d in new):
+            try:
+                start = (dt.date.fromisoformat(last) - dt.timedelta(days=21)).isoformat()
+                new, src = yahoo(YAHOO[name], start), ("yahoo", YAHOO[name])
+            except Exception as e:
+                print(f"{name:4s} {YAHOO[name]:11s} backup FAILED {e} (stored history only)")
         ratio = 1.0
-        ov = [(arch.set_index("day").close[d], new[d][3]) for d in new if d in set(arch.day)]
+        ov = [(arch.set_index("day").close[d], new[d][3]) for d in sorted(new) if d in set(arch.day)]
+        if src and src[0] == "yahoo":
+            ov = ov[-10:]                   # futures roll to the next contract: only the latest 10 shared days count
         if len(ov) >= 3:
             q = sorted(a / b for a, b in ov)
             ratio = q[len(q) // 2]

@@ -301,6 +301,8 @@ def lit_start(lit, i):
 # -0.25..1 in data/research/cot_min_grid.json: plateau 0-0.5, 0.5 chosen on 2019-22 and confirmed on 2023-26).
 COT_MIN_MOVE = float(os.environ.get("COT_MIN_MOVE", "0.5"))
 COT_REC_YEARS = int(os.environ.get("COT_REC_YEARS", "0"))      # 0 = the whole history since 2003
+# tested 2026-10-27 (walk-forward 2019-26): a record of only the last 5 / 7 years is worse in BOTH halves
+# (all history 58.8% won +1.53%/verdict; 5y 56.5% +0.88%; 7y 56.6% +0.83%; 2019-22 and 2023-26 both lower) -> keep 0
 _CASES = {}
 
 
