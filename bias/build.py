@@ -222,6 +222,50 @@ def combine(k, reader, cal, speed=None):
 
 
 VERDICT = os.path.join(ROOT, "data", "research", "verdict.json")
+
+
+def _up_swing(x):
+    """biggest rise from a low to a later high in x (fraction) and the low's position"""
+    lo = np.minimum.accumulate(x)
+    j = int(np.argmax(x / lo - 1))
+    return float(x[j] / lo[j] - 1), int(np.argmin(x[:j + 1]))
+
+
+def board_swings(min_n=5):
+    """target guide for S/D-timed entries: on the board's own WINNING verdicts 2019-26 (walk-forward, verdict.json),
+    the biggest move from the bottom to the following top while held (shorts: top to the following bottom), on
+    daily closes. Per market when it has >= min_n winners, else its sector. Display only: the swing size is mostly
+    the market's volatility (random windows of the same length swing about as much, research/swing_yardstick_test.py),
+    so it never decides which setups count"""
+    if not os.path.exists(VERDICT):
+        return {}
+    T = pd.DataFrame(json.load(open(VERDICT))["trades"])
+    T = T[T.r > 0]
+    rows = []
+    for k, g in T.groupby("m"):
+        if k not in M:
+            continue
+        p = R.load_px(k)
+        px = p.to_numpy(float)
+        for _, r in g.iterrows():
+            a = p.index.searchsorted(pd.Timestamp(r.t) + pd.Timedelta(days=1))
+            b = min(p.index.searchsorted(pd.Timestamp(r.exit)), len(px) - 1)
+            if b - a < 3:
+                continue
+            seg = px[a:b + 1] if r.v == "BULLISH" else 1 / px[a:b + 1]
+            sw, i0 = _up_swing(seg)
+            rows.append({"m": k, "sector": r.sector, "swing": 100 * sw, "dip": 100 * float(seg[i0] / seg[0] - 1)})
+    S = pd.DataFrame(rows)
+    if S.empty:
+        return {}
+    st = lambda g, scope: {"n": len(g), "med": round(float(g.swing.median()), 2), "p25": round(float(g.swing.quantile(.25)), 2),
+                           "dip": round(float(g.dip.median()), 2), "scope": scope}
+    sec = {s2: st(g, s2) for s2, g in S.groupby("sector")}
+    out = {}
+    for k in M:
+        g = S[S.m == k]
+        out[k] = st(g, "market") if len(g) >= min_n else sec.get(SECTOR_V(k))
+    return out
 SECTOR_V = lambda k: {"FX": "Currencies", "Indices": "Indices", "Agriculture": "Agriculture"}.get(M[k][3], "Metals & energy")
 MIN_CELL = 40
 
@@ -847,6 +891,7 @@ svg .band.b {{ fill:var(--bull-bg) }} svg .band.s {{ fill:var(--bear-bg) }} svg 
 
 if __name__ == "__main__":
     res = {}
+    SWINGS = board_swings()
     tested = tested_cells()
     try:
         mcal = MC.load_calendar()
@@ -920,7 +965,7 @@ if __name__ == "__main__":
         c["track"] = setup_track(k, p, reader)
         c["conv"] = {2: "vs retail & funds", 1: "vs one group"}.get(groups, "None") if c["read"] != "STAND ASIDE" else "None"
         cal_obj = s.pop("_cal", None)
-        res[k] = {"name": m[0], "sector": m[3], "cot": c, "seas": s, "verdict": v, "lineup": why,
+        res[k] = {"name": m[0], "sector": m[3], "cot": c, "seas": s, "verdict": v, "lineup": why, "swing": SWINGS.get(k),
                   "week_pct": round(float(np.std(np.diff(np.log(p.to_numpy(float)[-253:]))) * 100 * np.sqrt(5)), 2),
 
                   "basis": why, "groups": groups, "timing": timing(s),

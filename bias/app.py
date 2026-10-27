@@ -471,9 +471,9 @@ function roomCell(m, cell) {
 function metrics(m) {
   if (m.verdict === "STAND ASIDE") return "";
   const st = setupStats(m), side = m.verdict, rc = m.cot.record, d = m.seas.driver;
-  const runs = calLedM(m) ? (d && d.mfe != null ? dirSg(side) * d.mfe : null) : (rc && rc.win_mfe != null ? raw(rc.win_mfe, side) : null);
+  const sw = m.swing;
   const cell = (lab, big, sm) => `<div class="mc"><span>${lab}</span><b>${big}${sm ? `<small>${sm}</small>` : ""}</b></div>`;
-  return `<div class="mcs">${st ? cell("This setup won", `${Math.round(100 * st.w / st.n)}%`, `${st.w} of ${st.n}`) : ""}${roomCell(m, cell)}${runs != null ? cell(calLedM(m) ? "Usual best point" : "Winners usually run", pcx(runs)) : ""}</div>`;
+  return `<div class="mcs">${st ? cell("This setup won", `${Math.round(100 * st.w / st.n)}%`, `${st.w} of ${st.n}`) : ""}${roomCell(m, cell)}${sw ? cell("Winners' swing", pcx(raw(sw.med, side)), `bottom → top · 3 of 4 at least ${pcx(raw(sw.p25, side))}`) : ""}</div>`;
 }
 function evBadge(m) {
   if (!m.events) return "";
@@ -658,6 +658,12 @@ function holdNote(m, rc) {
       <div><span>${u.startsWith("at least") ? "Hold at least until" : u === "while COT is lit" || !u ? "Hold" : "Hold until"}</span><b>${esc(u.startsWith("at least") ? u.replace("at least ", "") : u === "while COT is lit" ? "while COT is lit" : u || "–")}</b><small>${holdSmall(m, u)}</small></div></div>
     <p class="note">The weekly swing is how far ${esc(m.name)} moves in a normal week (past year). Your stop comes from the 4h structure; a stop much tighter than this swing relies on your entry timing, because the bias works on a weekly scale. Tested on all ${m.sector === "FX" ? "currency" : "non-currency"} COT verdicts 2019–26 with a stop one normal week from the entry: a target of 1 normal week made ${R(t["1"].R)} per trade, 2 weeks ${R(t["2"].R)}, 3 weeks ${R(t["3"].R)}, 4 weeks ${R(t["4"].R)} (positive in 2019–22 and 2023–26). Bigger targets are rarely hit (${t["3"].hit}% for 3 weeks); the gain comes from staying in until the verdict ends (${holdTxt(m)}; usually about ${Math.round(H.hold_weeks)} weeks). Measured from the verdict's own entry; a 4h entry comes at another time and price, so read it as a guide.</p>`;
 }
+function swingCell(m, side, cell) {
+  // target guide for S/D-timed entries: the board's own winning verdicts 2019-26, bottom to the following top
+  const sw = m.swing; if (!sw) return "";
+  const where = sw.scope === "market" ? `${sw.n} winning ${esc(m.name)} verdicts` : `${sw.n} winning ${esc(sw.scope.toLowerCase())} verdicts (too few on ${esc(m.name)} alone)`;
+  return cell(pcx(raw(sw.med, side)), `winners' swing from the bottom to the top (median; 3 of 4 at least ${pcx(raw(sw.p25, side))}) · ${where}, 2019–26 · the bottom usually came ${pcx(raw(sw.dip, side))} from the entry`);
+}
 function cotStats(m) {
   // three numbers for the live COT signal: where price is, how far winners usually run (and how much of it is made),
   // how far it usually goes against first
@@ -665,11 +671,9 @@ function cotStats(m) {
   const sd = m.cot.read, bw = bestPx(rc.mfe, rc.mae, sd);
   const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
   const cell = (big, small) => `<div><b>${big}</b><span>${small}</span></div>`;
-  const made = rc.win_mfe ? Math.round(100 * lv.move / rc.win_mfe) : null;
-  const done = m.done && m.done.cot && m.done.cot.state === "done";
   return `<div class="wstats">
     ${cell(pc(raw(lv.move, sd)), `price so far, since ${fmtD(lv.entry)} (${lv.weeks.toFixed(1)} weeks${lv.held ? `; held until ${fmtD(lv.until)}` : ""})`)}
-    ${rc.win_mfe != null ? cell(pc(raw(rc.win_mfe, sd)), `winners usually run (best point) · ${done ? "usual move already made" : made == null ? "" : made < 0 ? "price is against the setup so far" : `${made}% of it made so far`}`) : ""}
+    ${swingCell(m, sd, cell)}
     ${cell(pc(bw[1]), `usually goes against first (worst point along the way, all ${rc.n} setups)`)}
   </div>${holdNote(m, rc)}`;
 }
