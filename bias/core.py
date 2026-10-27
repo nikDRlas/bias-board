@@ -219,6 +219,9 @@ def speed_of(sp, i, side, cut=None):
 
 
 SPEED_AT_START = os.environ.get("COT_SPEED_AT_START", "0") == "1"   # tested worse: kept off (data/research/cot_speed_start.json)
+# re-tested 2026-10-27 on the full board walk-forward (research/verdict_test.py SKIP_SLOW=1 COT_SPEED_AT_START=1):
+# weekly 520 verdicts 58.8% won +1.53% total +796% t4.9 (2019-22 +1.28, 2023-26 +1.82) vs judged at start 351 verdicts
+# 62.1% +1.66% total +583% t2.6 (2019-22 +0.63, 2023-26 +2.83): fails 2019-22, kept weekly
 
 
 def lit_sides(reader, sp=None, skip_slow=True):

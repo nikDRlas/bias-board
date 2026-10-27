@@ -60,8 +60,8 @@ if __name__ == "__main__":
             cot = rd.read(t)
             i_rep = rd.dates.searchsorted(t - pd.Timedelta(days=3), "right") - 1
             spd = speed_of(sp, i_rep, cot) if cot in VD.SIDES else None
-            if skip_k and spd == "slow":
-                cot = "NEUTRAL"
+            if skip_k and spd == "slow" and not (C.SPEED_AT_START and 0 <= i_rep < len(lit) and lit[i_rep] == cot):
+                cot = "NEUTRAL"                        # COT_SPEED_AT_START=1: a run judged fast/medium at its start stays
             held_q = None
             if cot not in VD.SIDES:                    # outside currencies a COT verdict is held at least 8 weeks
                 hs, held_q = C.held_side(rd.dates, lit, i_rep, t, k)
