@@ -297,15 +297,9 @@ def setup_profile(k, p, cal, reader, s, basis, verdict):
     sig = np.diff(lc)[-252:].std()
     cases = []
     if basis == "COT only":
-        lit = R.lit_sides(reader, R.speed_series(k))         # slow signals count as no side, as on the board
-        for i in range(len(reader.dates)):
-            v = lit[i]
-            if v != verdict or (i > 0 and lit[i - 1] == v):
-                continue                                   # one case per lit run, from its first report
-            ex = R.cot_exit(reader.dates, lit, i, k=k)
-            if ex is None:
+        for i, rel, ex, v in R.cot_setups(reader, k):        # one case per setup (core.cot_setups)
+            if v != verdict:
                 continue
-            rel = reader.dates[i] + pd.Timedelta(days=3)
             a, b = p.index.searchsorted(rel), p.index.searchsorted(ex)
             if b >= len(p) or a < 1 or b <= a:
                 continue
@@ -495,13 +489,11 @@ def cot_record(reader, p, side, k):
     if side not in ("BULLISH", "BEARISH"):
         return None
     sg = 1 if side == "BULLISH" else -1
-    reads = R.lit_sides(reader, R.speed_series(k))
+    reads = reader.lit
     cases = []
-    for i in range(len(reads)):
-        if reads[i] == side and (i == 0 or reads[i - 1] != side):
-            rel = reader.dates[i] + pd.Timedelta(days=3)
-            ex = R.cot_exit(reader.dates, reads, i, k=k)
-            if rel < p.index[0] or ex is None:
+    for i, rel, ex, v in R.cot_setups(reader, k):            # one case per setup (core.cot_setups)
+        if v == side:
+            if rel < p.index[0]:
                 continue
             a = p.index.searchsorted(rel)
             b = p.index.searchsorted(ex)

@@ -166,6 +166,13 @@ class CotReader:
     def read(self, t):
         return self.read_at(self.dates.searchsorted(t - pd.Timedelta(days=3), "right") - 1)
 
+    @property
+    def lit(self):
+        """the board's signal on every report (slow signals = None), cached"""
+        if not hasattr(self, "_lit"):
+            self._lit = lit_sides(self, speed_series(self.k))
+        return self._lit
+
     def side(self, g, i):
         s = [("hi" if v >= HI else "lo") for v in (self.P[g][lb][i] for lb in LB) if np.isfinite(v) and (v >= HI or v <= LO)]
         return s[0] if len(s) >= 2 and len(set(s)) == 1 else None
@@ -311,21 +318,37 @@ COT_REC_YEARS = int(os.environ.get("COT_REC_YEARS", "0"))      # 0 = the whole h
 _CASES = {}
 
 
+def cot_setups(rd, k):
+    """the starts of market k's COT setups: (report index, release date, exit date, side), one per setup. A run
+    starts a setup on its first lit report; a run that begins while the previous same-side setup is still held (a
+    slow week inside one extreme splits the run, and outside currencies the first piece is held 8 weeks) is the same
+    setup and is NOT a new case (before 2026-10-27 it was: 19% of all cases were such second pieces of one move)"""
+    lit = rd.lit
+    out, held_to = [], {}
+    for i in range(len(rd.dates)):
+        v = lit[i]
+        if not v or (i and lit[i - 1] == v):
+            continue
+        rel = rd.dates[i] + pd.Timedelta(days=3)
+        if v in held_to and rel < held_to[v]:
+            continue
+        ex = cot_exit(rd.dates, lit, i, k=k)
+        if ex is None:
+            break                                    # the live run: nothing finished after it
+        held_to[v] = ex
+        out.append((i, rel, ex, v))
+    return out
+
+
 def cot_cases(k):
     """every finished COT setup of market k: side, exit date, end move and worst move along the way (in %)"""
     if k in _CASES:
         return _CASES[k]
     p, rd = load_px(k), CotReader(k)
-    lit = lit_sides(rd, speed_series(k))
     px = p.to_numpy(float)
     out = []
-    for i in range(len(rd.dates)):
-        v = lit[i]
-        if not v or (i and lit[i - 1] == v):
-            continue
-        ex = cot_exit(rd.dates, lit, i, k=k)
-        rel = rd.dates[i] + pd.Timedelta(days=3)
-        if ex is None or rel < p.index[0]:
+    for i, rel, ex, v in cot_setups(rd, k):
+        if rel < p.index[0]:
             continue
         a, b = p.index.searchsorted(rel), p.index.searchsorted(ex)
         if b >= len(p) or b <= a:

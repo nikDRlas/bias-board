@@ -1,187 +1,187 @@
 {
  "first": "2019-01-05",
- "last": "2026-10-16",
+ "last": "2026-10-23",
  "all": {
-  "n": 509,
-  "win": 58.2,
-  "avg": 1.5,
-  "z": 0.276,
-  "t": 5.36
+  "n": 538,
+  "win": 58.9,
+  "avg": 1.66,
+  "z": 0.283,
+  "t": 5.45
  },
  "by_basis": {
   "COT + calendar": {
-   "n": 197,
-   "win": 58.9,
-   "avg": 1.91,
-   "z": 0.352,
-   "t": 3.87
+   "n": 217,
+   "win": 60.8,
+   "avg": 2.34,
+   "z": 0.391,
+   "t": 4.47
   },
   "COT only": {
-   "n": 217,
-   "win": 56.2,
-   "avg": 0.94,
-   "z": 0.207,
-   "t": 2.83
+   "n": 228,
+   "win": 56.1,
+   "avg": 0.88,
+   "z": 0.178,
+   "t": 2.3
   },
   "Calendar only": {
-   "n": 92,
-   "win": 60.9,
-   "avg": 1.98,
-   "z": 0.281,
-   "t": 2.44
+   "n": 90,
+   "win": 61.1,
+   "avg": 2.06,
+   "z": 0.294,
+   "t": 2.55
   },
   "Calendar over COT": {
    "n": 3,
    "win": 66.7,
-   "avg": 0.13,
-   "z": 0.077,
-   "t": 0.2
+   "avg": 0.48,
+   "z": 0.157,
+   "t": 0.35
   }
  },
  "by_cell": {
   "COT + calendar | Agriculture": {
-   "n": 33,
-   "win": 66.7,
-   "avg": 5.65,
-   "z": 0.797,
-   "t": 2.59
+   "n": 38,
+   "win": 63.2,
+   "avg": 4.8,
+   "z": 0.666,
+   "t": 2.41
   },
   "COT + calendar | Currencies": {
    "n": 88,
-   "win": 52.3,
-   "avg": 0.23,
-   "z": 0.152,
-   "t": 1.87
+   "win": 54.5,
+   "avg": 0.27,
+   "z": 0.15,
+   "t": 1.85
   },
   "COT + calendar | Indices": {
-   "n": 45,
-   "win": 62.2,
-   "avg": 1.96,
-   "z": 0.517,
-   "t": 2.35
+   "n": 51,
+   "win": 66.7,
+   "avg": 2.92,
+   "z": 0.649,
+   "t": 3.16
   },
   "COT + calendar | Metals & energy": {
-   "n": 31,
-   "win": 64.5,
-   "avg": 2.61,
-   "z": 0.208,
-   "t": 0.81
+   "n": 40,
+   "win": 65.0,
+   "avg": 3.79,
+   "z": 0.331,
+   "t": 1.45
   },
   "COT only | Agriculture": {
-   "n": 35,
-   "win": 37.1,
-   "avg": -0.43,
-   "z": -0.167,
-   "t": -0.96
+   "n": 38,
+   "win": 36.8,
+   "avg": -0.53,
+   "z": -0.282,
+   "t": -1.43
   },
   "COT only | Currencies": {
-   "n": 106,
-   "win": 64.2,
-   "avg": 0.62,
-   "z": 0.304,
-   "t": 3.23
+   "n": 111,
+   "win": 64.0,
+   "avg": 0.59,
+   "z": 0.297,
+   "t": 3.29
   },
   "COT only | Indices": {
-   "n": 5,
-   "win": 80.0,
-   "avg": 2.44,
-   "z": 0.537,
-   "t": 1.78
+   "n": 6,
+   "win": 66.7,
+   "avg": 1.99,
+   "z": 0.441,
+   "t": 1.67
   },
   "COT only | Metals & energy": {
-   "n": 71,
-   "win": 52.1,
+   "n": 73,
+   "win": 53.4,
    "avg": 1.97,
-   "z": 0.223,
-   "t": 1.5
+   "z": 0.215,
+   "t": 1.3
   },
   "Calendar only | Agriculture": {
-   "n": 92,
-   "win": 60.9,
-   "avg": 1.98,
-   "z": 0.281,
-   "t": 2.44
+   "n": 90,
+   "win": 61.1,
+   "avg": 2.06,
+   "z": 0.294,
+   "t": 2.55
   },
   "Calendar over COT | Agriculture": {
    "n": 3,
    "win": 66.7,
-   "avg": 0.13,
-   "z": 0.077,
-   "t": 0.2
+   "avg": 0.48,
+   "z": 0.157,
+   "t": 0.35
   }
  },
  "by_sector": {
   "Agriculture": {
-   "n": 163,
-   "win": 57.1,
-   "avg": 2.17,
-   "z": 0.286,
-   "t": 2.86
+   "n": 169,
+   "win": 56.2,
+   "avg": 2.07,
+   "z": 0.246,
+   "t": 2.44
   },
   "Currencies": {
-   "n": 194,
-   "win": 58.8,
+   "n": 199,
+   "win": 59.8,
    "avg": 0.45,
-   "z": 0.235,
-   "t": 3.71
+   "z": 0.232,
+   "t": 3.75
   },
   "Indices": {
-   "n": 50,
-   "win": 64.0,
-   "avg": 2.01,
-   "z": 0.519,
-   "t": 2.6
+   "n": 57,
+   "win": 66.7,
+   "avg": 2.82,
+   "z": 0.627,
+   "t": 3.38
   },
   "Metals & energy": {
-   "n": 102,
-   "win": 55.9,
-   "avg": 2.17,
-   "z": 0.218,
-   "t": 1.69
+   "n": 113,
+   "win": 57.5,
+   "avg": 2.62,
+   "z": 0.256,
+   "t": 1.92
   }
  },
  "by_basis_speed": {
   "COT + calendar | fast": {
-   "n": 62,
-   "win": 53.2,
-   "avg": 1.13,
-   "z": 0.204,
-   "t": 1.15
+   "n": 68,
+   "win": 57.4,
+   "avg": 2.2,
+   "z": 0.312,
+   "t": 1.79
   },
   "COT + calendar | medium": {
-   "n": 101,
-   "win": 57.4,
-   "avg": 2.09,
-   "z": 0.366,
-   "t": 3.06
+   "n": 112,
+   "win": 58.0,
+   "avg": 2.07,
+   "z": 0.358,
+   "t": 3.04
   },
   "COT + calendar | slow": {
-   "n": 16,
-   "win": 75.0,
-   "avg": 2.96,
-   "z": 0.581,
-   "t": 1.56
+   "n": 18,
+   "win": 77.8,
+   "avg": 3.96,
+   "z": 0.674,
+   "t": 2.3
   },
   "COT only | fast": {
-   "n": 65,
-   "win": 63.1,
-   "avg": 1.48,
-   "z": 0.413,
-   "t": 2.86
+   "n": 74,
+   "win": 60.8,
+   "avg": 1.15,
+   "z": 0.333,
+   "t": 2.41
   },
   "COT only | medium": {
-   "n": 115,
-   "win": 56.5,
-   "avg": 0.82,
-   "z": 0.118,
-   "t": 1.19
+   "n": 122,
+   "win": 57.4,
+   "avg": 0.97,
+   "z": 0.107,
+   "t": 0.97
   },
   "COT only | slow": {
-   "n": 18,
-   "win": 44.4,
-   "avg": -0.67,
-   "z": 0.041,
-   "t": 0.18
+   "n": 15,
+   "win": 40.0,
+   "avg": -1.39,
+   "z": 0.04,
+   "t": 0.19
   },
   "Calendar over COT | fast": {
    "n": 2,
@@ -190,11 +190,11 @@
    "z": -0.227,
    "t": null
   },
-  "Calendar over COT | medium": {
+  "Calendar over COT | slow": {
    "n": 1,
    "win": 100.0,
-   "avg": 3.62,
-   "z": 0.687,
+   "avg": 4.67,
+   "z": 0.925,
    "t": null
   }
  },
@@ -318,34 +318,6 @@
   },
   {
    "m": "SI",
-   "t": "2019-02-02",
-   "v": "BEARISH",
-   "basis": "COT only",
-   "sector": "Metals & energy",
-   "speed": "fast",
-   "opp_short": false,
-   "opp_long": false,
-   "r": 0.05309576028462715,
-   "z": 0.014976695974503858,
-   "entry": "2019-02-04",
-   "exit": "2019-02-21"
-  },
-  {
-   "m": "SI",
-   "t": "2019-02-23",
-   "v": "BEARISH",
-   "basis": "COT only",
-   "sector": "Metals & energy",
-   "speed": "medium",
-   "opp_short": false,
-   "opp_long": false,
-   "r": 5.586562309527576,
-   "z": 1.6586123951680976,
-   "entry": "2019-02-25",
-   "exit": "2019-04-22"
-  },
-  {
-   "m": "SI",
    "t": "2019-06-01",
    "v": "BULLISH",
    "basis": "COT only",
@@ -357,48 +329,6 @@
    "z": 0.45201093892486566,
    "entry": "2019-06-03",
    "exit": "2019-07-05"
-  },
-  {
-   "m": "SI",
-   "t": "2019-07-27",
-   "v": "BEARISH",
-   "basis": "COT only",
-   "sector": "Metals & energy",
-   "speed": "medium",
-   "opp_short": false,
-   "opp_long": false,
-   "r": -9.453701388876201,
-   "z": -2.259443831307598,
-   "entry": "2019-07-29",
-   "exit": "2019-09-20"
-  },
-  {
-   "m": "SI",
-   "t": "2019-09-21",
-   "v": "BEARISH",
-   "basis": "COT only",
-   "sector": "Metals & energy",
-   "speed": "slow",
-   "opp_short": false,
-   "opp_long": false,
-   "r": 2.766423036327681,
-   "z": 0.4205128455695449,
-   "entry": "2019-09-23",
-   "exit": "2019-11-01"
-  },
-  {
-   "m": "SI",
-   "t": "2020-02-08",
-   "v": "BEARISH",
-   "basis": "COT only",
-   "sector": "Metals & energy",
-   "speed": "slow",
-   "opp_short": false,
-   "opp_long": false,
-   "r": -4.038896958966065,
-   "z": -0.8619351672388934,
-   "entry": "2020-02-10",
-   "exit": "2020-02-21"
   },
   {
    "m": "SI",
@@ -444,20 +374,6 @@
   },
   {
    "m": "SI",
-   "t": "2022-03-12",
-   "v": "BEARISH",
-   "basis": "COT only",
-   "sector": "Metals & energy",
-   "speed": "fast",
-   "opp_short": false,
-   "opp_long": false,
-   "r": 10.833549313184065,
-   "z": 1.9910610361245078,
-   "entry": "2022-03-14",
-   "exit": "2022-05-06"
-  },
-  {
-   "m": "SI",
    "t": "2022-05-07",
    "v": "BULLISH",
    "basis": "COT only",
@@ -487,22 +403,6 @@
   },
   {
    "m": "SI",
-   "t": "2023-01-07",
-   "v": "BEARISH",
-   "basis": "COT only",
-   "sector": "Metals & energy",
-   "speed": "medium",
-   "opp_short": true,
-   "opp_short_move": 2.43,
-   "opp_long": true,
-   "opp_long_move": 4.45,
-   "r": 10.058736375337919,
-   "z": 1.2500028064279132,
-   "entry": "2023-01-09",
-   "exit": "2023-03-03"
-  },
-  {
-   "m": "SI",
    "t": "2023-03-18",
    "v": "BULLISH",
    "basis": "COT only",
@@ -514,21 +414,6 @@
    "z": 1.493680756986131,
    "entry": "2023-03-20",
    "exit": "2023-04-28"
-  },
-  {
-   "m": "SI",
-   "t": "2023-05-20",
-   "v": "BEARISH",
-   "basis": "COT only",
-   "sector": "Metals & energy",
-   "speed": null,
-   "opp_short": true,
-   "opp_short_move": 0.89,
-   "opp_long": false,
-   "r": 4.9258620470465475,
-   "z": 0.7148508201338705,
-   "entry": "2023-05-22",
-   "exit": "2023-06-23"
   },
   {
    "m": "SI",
@@ -605,6 +490,20 @@
    "z": 0.571633226296697,
    "entry": "2024-10-07",
    "exit": "2024-11-15"
+  },
+  {
+   "m": "SI",
+   "t": "2025-01-18",
+   "v": "BULLISH",
+   "basis": "COT only",
+   "sector": "Metals & energy",
+   "speed": null,
+   "opp_short": false,
+   "opp_long": false,
+   "r": 4.037744488781292,
+   "z": 0.5715997167707918,
+   "entry": "2025-01-20",
+   "exit": "2025-02-07"
   },
   {
    "m": "SI",
@@ -701,10 +600,10 @@
    "speed": "medium",
    "opp_short": false,
    "opp_long": false,
-   "r": 0.7688556807155633,
-   "z": 0.1888878876351707,
+   "r": 5.8728063478616255,
+   "z": 1.4074016095729331,
    "entry": "2019-01-28",
-   "exit": "2019-03-08"
+   "exit": "2019-03-01"
   },
   {
    "m": "PL",
@@ -956,6 +855,18 @@
   },
   {
    "m": "PL",
+   "t": "2025-01-04",
+   "v": "BULLISH",
+   "basis": "COT + calendar",
+   "sector": "Metals & energy",
+   "speed": "fast",
+   "r": 0.9855889576220411,
+   "z": 0.16120716247804642,
+   "entry": "2025-01-06",
+   "exit": "2025-02-28"
+  },
+  {
+   "m": "PL",
    "t": "2025-04-12",
    "v": "BULLISH",
    "basis": "COT + calendar",
@@ -994,98 +905,6 @@
    "z": 1.7067060659915712,
    "entry": "2026-06-29",
    "exit": "2026-08-21"
-  },
-  {
-   "m": "PA",
-   "t": "2019-04-06",
-   "v": "BULLISH",
-   "basis": "COT only",
-   "sector": "Metals & energy",
-   "speed": "medium",
-   "opp_short": false,
-   "opp_long": false,
-   "r": -3.698501703185908,
-   "z": -0.49212703382494627,
-   "entry": "2019-04-08",
-   "exit": "2019-05-31"
-  },
-  {
-   "m": "PA",
-   "t": "2019-06-01",
-   "v": "BULLISH",
-   "basis": "COT only",
-   "sector": "Metals & energy",
-   "speed": "slow",
-   "opp_short": false,
-   "opp_long": false,
-   "r": 17.915258116438505,
-   "z": 1.966665694999111,
-   "entry": "2019-06-03",
-   "exit": "2019-07-05"
-  },
-  {
-   "m": "PA",
-   "t": "2020-01-25",
-   "v": "BULLISH",
-   "basis": "COT only",
-   "sector": "Metals & energy",
-   "speed": "medium",
-   "opp_short": false,
-   "opp_long": false,
-   "r": -4.910822299811546,
-   "z": -0.6736729171702145,
-   "entry": "2020-01-27",
-   "exit": "2020-04-17"
-  },
-  {
-   "m": "PA",
-   "t": "2021-03-20",
-   "v": "BULLISH",
-   "basis": "COT + calendar",
-   "sector": "Metals & energy",
-   "speed": "slow",
-   "r": 1.4065766964455495,
-   "z": 0.19224910533528874,
-   "entry": "2021-03-22",
-   "exit": "2021-04-05"
-  },
-  {
-   "m": "PA",
-   "t": "2021-05-29",
-   "v": "BULLISH",
-   "basis": "COT + calendar",
-   "sector": "Metals & energy",
-   "speed": "medium",
-   "r": -5.450370893677148,
-   "z": -0.8013413424819976,
-   "entry": "2021-05-31",
-   "exit": "2021-07-23"
-  },
-  {
-   "m": "PA",
-   "t": "2021-07-24",
-   "v": "BULLISH",
-   "basis": "COT only",
-   "sector": "Metals & energy",
-   "speed": "slow",
-   "opp_short": false,
-   "opp_long": false,
-   "r": -14.127052967020525,
-   "z": -1.7226207137689462,
-   "entry": "2021-07-26",
-   "exit": "2021-08-20"
-  },
-  {
-   "m": "PA",
-   "t": "2021-08-21",
-   "v": "BULLISH",
-   "basis": "COT + calendar",
-   "sector": "Metals & energy",
-   "speed": "slow",
-   "r": -20.103960910697584,
-   "z": -2.407313336213521,
-   "entry": "2021-08-23",
-   "exit": "2021-10-01"
   },
   {
    "m": "HG",
@@ -1326,17 +1145,15 @@
   },
   {
    "m": "HG",
-   "t": "2025-01-11",
+   "t": "2025-01-04",
    "v": "BULLISH",
-   "basis": "COT only",
+   "basis": "COT + calendar",
    "sector": "Metals & energy",
    "speed": "medium",
-   "opp_short": false,
-   "opp_long": false,
-   "r": 8.23277205024111,
-   "z": 1.4791181875010764,
-   "entry": "2025-01-13",
-   "exit": "2025-03-07"
+   "r": 9.350892874492356,
+   "z": 1.6854903282264961,
+   "entry": "2025-01-06",
+   "exit": "2025-02-28"
   },
   {
    "m": "CL",
@@ -1354,17 +1171,33 @@
   },
   {
    "m": "CL",
-   "t": "2019-11-16",
+   "t": "2019-10-12",
    "v": "BULLISH",
    "basis": "COT only",
    "sector": "Metals & energy",
-   "speed": null,
-   "opp_short": false,
+   "speed": "medium",
+   "opp_short": true,
+   "opp_short_move": 2.01,
    "opp_long": false,
-   "r": -2.6531723859223644,
-   "z": -0.27465452006956437,
-   "entry": "2019-11-18",
+   "r": 3.406248833476422,
+   "z": 0.3184837202681673,
+   "entry": "2019-10-14",
    "exit": "2019-11-29"
+  },
+  {
+   "m": "CL",
+   "t": "2021-07-24",
+   "v": "BULLISH",
+   "basis": "COT only",
+   "sector": "Metals & energy",
+   "speed": "medium",
+   "opp_short": true,
+   "opp_short_move": 0.75,
+   "opp_long": false,
+   "r": 2.569705687098911,
+   "z": 0.33030568719438436,
+   "entry": "2021-07-26",
+   "exit": "2021-09-24"
   },
   {
    "m": "CL",
@@ -1615,12 +1448,329 @@
    "exit": "2026-08-14"
   },
   {
+   "m": "NG",
+   "t": "2019-05-18",
+   "v": "BULLISH",
+   "basis": "COT + calendar",
+   "sector": "Metals & energy",
+   "speed": "medium",
+   "r": -7.008289374529008,
+   "z": -1.2613045926588267,
+   "entry": "2019-05-20",
+   "exit": "2019-07-12"
+  },
+  {
+   "m": "NG",
+   "t": "2019-07-13",
+   "v": "BULLISH",
+   "basis": "COT only",
+   "sector": "Metals & energy",
+   "speed": "medium",
+   "opp_short": true,
+   "opp_short_move": 1.3,
+   "opp_long": true,
+   "opp_long_move": 3.4,
+   "r": -10.248962655601668,
+   "z": -1.4896242842138732,
+   "entry": "2019-07-15",
+   "exit": "2019-08-23"
+  },
+  {
+   "m": "NG",
+   "t": "2019-10-19",
+   "v": "BULLISH",
+   "basis": "COT only",
+   "sector": "Metals & energy",
+   "speed": "fast",
+   "opp_short": true,
+   "opp_short_move": 1.33,
+   "opp_long": false,
+   "r": 1.7857142857142572,
+   "z": 0.2095058173554389,
+   "entry": "2019-10-21",
+   "exit": "2019-12-13"
+  },
+  {
+   "m": "NG",
+   "t": "2019-12-14",
+   "v": "BULLISH",
+   "basis": "COT only",
+   "sector": "Metals & energy",
+   "speed": "fast",
+   "opp_short": true,
+   "opp_short_move": 2.56,
+   "opp_long": true,
+   "opp_long_move": 5.54,
+   "r": -20.583190394511142,
+   "z": -2.1475850226559787,
+   "entry": "2019-12-16",
+   "exit": "2020-01-31"
+  },
+  {
+   "m": "NG",
+   "t": "2020-02-01",
+   "v": "BULLISH",
+   "basis": "COT only",
+   "sector": "Metals & energy",
+   "speed": "fast",
+   "opp_short": true,
+   "opp_short_move": 3.42,
+   "opp_long": true,
+   "opp_long_move": 3.43,
+   "r": 2.9940119760478945,
+   "z": 0.3209649655971352,
+   "entry": "2020-02-03",
+   "exit": "2020-03-13"
+  },
+  {
+   "m": "NG",
+   "t": "2021-04-10",
+   "v": "BULLISH",
+   "basis": "COT + calendar",
+   "sector": "Metals & energy",
+   "speed": "fast",
+   "r": 19.952681388012607,
+   "z": 1.3752340156630332,
+   "entry": "2021-04-12",
+   "exit": "2021-06-04"
+  },
+  {
+   "m": "NG",
+   "t": "2021-06-05",
+   "v": "BULLISH",
+   "basis": "COT + calendar",
+   "sector": "Metals & energy",
+   "speed": "medium",
+   "r": 28.258738974191445,
+   "z": 3.2476626186950512,
+   "entry": "2021-06-07",
+   "exit": "2021-07-30"
+  },
+  {
+   "m": "NG",
+   "t": "2021-07-31",
+   "v": "BULLISH",
+   "basis": "COT only",
+   "sector": "Metals & energy",
+   "speed": "medium",
+   "opp_short": true,
+   "opp_short_move": 0.86,
+   "opp_long": true,
+   "opp_long_move": 1.71,
+   "r": 26.71181339352895,
+   "z": 2.8341139468094303,
+   "entry": "2021-08-02",
+   "exit": "2021-09-17"
+  },
+  {
+   "m": "NG",
+   "t": "2022-01-01",
+   "v": "BULLISH",
+   "basis": "COT only",
+   "sector": "Metals & energy",
+   "speed": "medium",
+   "opp_short": false,
+   "opp_long": false,
+   "r": 16.590330788804053,
+   "z": 0.7791130379697617,
+   "entry": "2022-01-03",
+   "exit": "2022-02-25"
+  },
+  {
+   "m": "NG",
+   "t": "2022-09-10",
+   "v": "BULLISH",
+   "basis": "COT + calendar",
+   "sector": "Metals & energy",
+   "speed": "medium",
+   "r": -28.99940793368857,
+   "z": -1.8671147397889254,
+   "entry": "2022-09-12",
+   "exit": "2022-11-04"
+  },
+  {
+   "m": "NG",
+   "t": "2022-12-10",
+   "v": "BULLISH",
+   "basis": "COT only",
+   "sector": "Metals & energy",
+   "speed": "medium",
+   "opp_short": true,
+   "opp_short_move": 1.48,
+   "opp_long": true,
+   "opp_long_move": 2.19,
+   "r": -60.65857885615251,
+   "z": -4.895997995146716,
+   "entry": "2022-12-12",
+   "exit": "2023-02-03"
+  },
+  {
+   "m": "NG",
+   "t": "2023-02-04",
+   "v": "BULLISH",
+   "basis": "COT only",
+   "sector": "Metals & energy",
+   "speed": "slow",
+   "opp_short": true,
+   "opp_short_move": 1.36,
+   "opp_long": true,
+   "opp_long_move": 1.53,
+   "r": -6.291007333076037,
+   "z": -0.34131352734231557,
+   "entry": "2023-02-06",
+   "exit": "2023-03-10"
+  },
+  {
+   "m": "NG",
+   "t": "2023-03-11",
+   "v": "BULLISH",
+   "basis": "COT + calendar",
+   "sector": "Metals & energy",
+   "speed": "slow",
+   "r": -15.200000000000003,
+   "z": -0.8323424628637301,
+   "entry": "2023-03-13",
+   "exit": "2023-04-28"
+  },
+  {
+   "m": "NG",
+   "t": "2024-02-24",
+   "v": "BULLISH",
+   "basis": "COT only",
+   "sector": "Metals & energy",
+   "speed": "fast",
+   "opp_short": false,
+   "opp_long": false,
+   "r": -3.057025279247505,
+   "z": -0.18993636933978825,
+   "entry": "2024-02-26",
+   "exit": "2024-03-15"
+  },
+  {
+   "m": "NG",
+   "t": "2024-04-13",
+   "v": "BULLISH",
+   "basis": "COT + calendar",
+   "sector": "Metals & energy",
+   "speed": "fast",
+   "r": 44.424131627056674,
+   "z": 2.388714757098055,
+   "entry": "2024-04-15",
+   "exit": "2024-05-31"
+  },
+  {
+   "m": "NG",
+   "t": "2024-10-12",
+   "v": "BULLISH",
+   "basis": "COT only",
+   "sector": "Metals & energy",
+   "speed": "fast",
+   "opp_short": true,
+   "opp_short_move": 0.24,
+   "opp_long": false,
+   "r": 24.278438030560267,
+   "z": 1.7432644155429984,
+   "entry": "2024-10-14",
+   "exit": "2024-12-06"
+  },
+  {
+   "m": "NG",
+   "t": "2025-05-03",
+   "v": "BULLISH",
+   "basis": "COT + calendar",
+   "sector": "Metals & energy",
+   "speed": "medium",
+   "r": 4.027617951668594,
+   "z": 0.23849026059459447,
+   "entry": "2025-05-05",
+   "exit": "2025-06-27"
+  },
+  {
+   "m": "NG",
+   "t": "2025-09-27",
+   "v": "BULLISH",
+   "basis": "COT only",
+   "sector": "Metals & energy",
+   "speed": "medium",
+   "opp_short": false,
+   "opp_long": false,
+   "r": 46.94960212201593,
+   "z": 3.489466957198035,
+   "entry": "2025-09-29",
+   "exit": "2025-11-21"
+  },
+  {
+   "m": "NG",
+   "t": "2025-12-27",
+   "v": "BULLISH",
+   "basis": "COT + calendar",
+   "sector": "Metals & energy",
+   "speed": "medium",
+   "r": -20.070593962999016,
+   "z": -1.3949309245289956,
+   "entry": "2025-12-29",
+   "exit": "2026-02-20"
+  },
+  {
+   "m": "NG",
+   "t": "2026-02-28",
+   "v": "BULLISH",
+   "basis": "COT only",
+   "sector": "Metals & energy",
+   "speed": "medium",
+   "opp_short": false,
+   "opp_long": false,
+   "r": -19.5447409733124,
+   "z": -0.7125041054559302,
+   "entry": "2026-03-02",
+   "exit": "2026-04-24"
+  },
+  {
+   "m": "NG",
+   "t": "2026-04-25",
+   "v": "BULLISH",
+   "basis": "COT + calendar",
+   "sector": "Metals & energy",
+   "speed": "slow",
+   "r": 17.502872462657983,
+   "z": 0.6973708995022514,
+   "entry": "2026-04-27",
+   "exit": "2026-06-12"
+  },
+  {
+   "m": "NG",
+   "t": "2026-06-13",
+   "v": "BULLISH",
+   "basis": "COT + calendar",
+   "sector": "Metals & energy",
+   "speed": "medium",
+   "r": -6.6408768536428076,
+   "z": -0.6361136311579919,
+   "entry": "2026-06-15",
+   "exit": "2026-07-17"
+  },
+  {
+   "m": "NG",
+   "t": "2026-08-01",
+   "v": "BULLISH",
+   "basis": "COT only",
+   "sector": "Metals & energy",
+   "speed": "medium",
+   "opp_short": true,
+   "opp_short_move": 0.09,
+   "opp_long": false,
+   "r": 11.535688536409516,
+   "z": 1.0554375887628993,
+   "entry": "2026-08-03",
+   "exit": "2026-09-25"
+  },
+  {
    "m": "6E",
    "t": "2020-01-18",
    "v": "BEARISH",
    "basis": "COT only",
    "sector": "Currencies",
-   "speed": "medium",
+   "speed": "fast",
    "opp_short": true,
    "opp_short_move": 1.82,
    "opp_long": true,
@@ -1802,14 +1952,16 @@
   },
   {
    "m": "6E",
-   "t": "2025-03-29",
+   "t": "2025-03-22",
    "v": "BEARISH",
-   "basis": "COT + calendar",
+   "basis": "COT only",
    "sector": "Currencies",
    "speed": "fast",
-   "r": -1.2702227974484392,
-   "z": -0.4348472281672881,
-   "entry": "2025-03-31",
+   "opp_short": false,
+   "opp_long": false,
+   "r": -1.4108498426217198,
+   "z": -0.4771142244330321,
+   "entry": "2025-03-24",
    "exit": "2025-04-04"
   },
   {
@@ -1869,24 +2021,48 @@
    "speed": "medium",
    "opp_short": false,
    "opp_long": false,
-   "r": 0.25016228795333717,
-   "z": 0.25920474065285665,
+   "r": -0.008508621602587585,
+   "z": -0.008827575526964594,
    "entry": "2019-12-09",
-   "exit": "2020-01-24"
+   "exit": "2020-01-17"
   },
   {
    "m": "DX",
-   "t": "2020-03-28",
+   "t": "2020-06-06",
+   "v": "BULLISH",
+   "basis": "COT + calendar",
+   "sector": "Currencies",
+   "speed": "fast",
+   "r": -0.6384667493853913,
+   "z": -0.2624366047544746,
+   "entry": "2020-06-08",
+   "exit": "2020-07-17"
+  },
+  {
+   "m": "DX",
+   "t": "2020-08-01",
+   "v": "BULLISH",
+   "basis": "COT + calendar",
+   "sector": "Currencies",
+   "speed": "medium",
+   "r": -0.1348305470450062,
+   "z": -0.08689267644719682,
+   "entry": "2020-08-03",
+   "exit": "2020-08-07"
+  },
+  {
+   "m": "DX",
+   "t": "2020-08-15",
    "v": "BULLISH",
    "basis": "COT only",
    "sector": "Currencies",
-   "speed": "fast",
+   "speed": "medium",
    "opp_short": false,
    "opp_long": false,
-   "r": 1.470353476366948,
-   "z": 0.6003187868969665,
-   "entry": "2020-03-30",
-   "exit": "2020-04-03"
+   "r": 0.40725819400726504,
+   "z": 0.26636149485203997,
+   "entry": "2020-08-17",
+   "exit": "2020-08-21"
   },
   {
    "m": "DX",
@@ -2308,41 +2484,33 @@
   },
   {
    "m": "6B",
-   "t": "2023-12-16",
+   "t": "2023-12-23",
    "v": "BEARISH",
-   "basis": "COT + calendar",
+   "basis": "COT only",
    "sector": "Currencies",
    "speed": "fast",
-   "r": -0.5066032292992073,
-   "z": -0.2297676270415557,
-   "entry": "2023-12-18",
+   "opp_short": true,
+   "opp_short_move": 0.86,
+   "opp_long": false,
+   "r": -0.10232997481109951,
+   "z": -0.04605466936851979,
+   "entry": "2023-12-25",
    "exit": "2024-01-05"
   },
   {
    "m": "6B",
-   "t": "2024-01-27",
+   "t": "2024-03-16",
    "v": "BEARISH",
    "basis": "COT only",
    "sector": "Currencies",
-   "speed": "medium",
+   "speed": "fast",
    "opp_short": true,
-   "opp_short_move": 0.65,
-   "opp_long": false,
-   "r": 0.6686069377802362,
-   "z": 0.3576912693297685,
-   "entry": "2024-01-29",
-   "exit": "2024-02-09"
-  },
-  {
-   "m": "6B",
-   "t": "2024-02-17",
-   "v": "BEARISH",
-   "basis": "COT + calendar",
-   "sector": "Currencies",
-   "speed": "medium",
-   "r": -0.10487093724427243,
-   "z": -0.06319284062459014,
-   "entry": "2024-02-19",
+   "opp_short_move": 3.04,
+   "opp_long": true,
+   "opp_long_move": 3.68,
+   "r": 0.9885351920099983,
+   "z": 0.7480064558629822,
+   "entry": "2024-03-18",
    "exit": "2024-03-22"
   },
   {
@@ -2446,6 +2614,22 @@
    "exit": "2026-07-17"
   },
   {
+   "m": "6B",
+   "t": "2026-09-26",
+   "v": "BULLISH",
+   "basis": "COT only",
+   "sector": "Currencies",
+   "speed": "fast",
+   "opp_short": true,
+   "opp_short_move": 3.76,
+   "opp_long": true,
+   "opp_long_move": 3.25,
+   "r": 0.9234599569957425,
+   "z": 0.680175991325871,
+   "entry": "2026-09-28",
+   "exit": "2026-10-23"
+  },
+  {
    "m": "6J",
    "t": "2019-06-08",
    "v": "BEARISH",
@@ -2473,17 +2657,17 @@
   },
   {
    "m": "6J",
-   "t": "2021-03-27",
+   "t": "2021-04-03",
    "v": "BULLISH",
    "basis": "COT only",
    "sector": "Currencies",
    "speed": "fast",
    "opp_short": true,
-   "opp_short_move": 4.15,
+   "opp_short_move": 4.19,
    "opp_long": false,
-   "r": 1.8320044502132316,
-   "z": 1.4134253245613158,
-   "entry": "2021-03-29",
+   "r": 2.158353421101422,
+   "z": 1.754426496772258,
+   "entry": "2021-04-05",
    "exit": "2021-04-23"
   },
   {
@@ -2520,7 +2704,7 @@
    "v": "BULLISH",
    "basis": "COT + calendar",
    "sector": "Currencies",
-   "speed": "medium",
+   "speed": "fast",
    "r": -0.542534722222221,
    "z": -0.33526686076635576,
    "entry": "2022-01-17",
@@ -2990,6 +3174,33 @@
   },
   {
    "m": "6S",
+   "t": "2023-04-22",
+   "v": "BEARISH",
+   "basis": "COT + calendar",
+   "sector": "Currencies",
+   "speed": "fast",
+   "r": 1.382959800782635,
+   "z": 0.540641048275626,
+   "entry": "2023-04-24",
+   "exit": "2023-05-19"
+  },
+  {
+   "m": "6S",
+   "t": "2023-07-29",
+   "v": "BEARISH",
+   "basis": "COT only",
+   "sector": "Currencies",
+   "speed": "medium",
+   "opp_short": true,
+   "opp_short_move": 0.97,
+   "opp_long": false,
+   "r": 1.1555908369244694,
+   "z": 0.5702028683116619,
+   "entry": "2023-07-31",
+   "exit": "2023-08-18"
+  },
+  {
+   "m": "6S",
    "t": "2023-09-30",
    "v": "BULLISH",
    "basis": "COT only",
@@ -3097,6 +3308,22 @@
   },
   {
    "m": "6A",
+   "t": "2019-05-04",
+   "v": "BULLISH",
+   "basis": "COT only",
+   "sector": "Currencies",
+   "speed": "medium",
+   "opp_short": true,
+   "opp_short_move": 3.81,
+   "opp_long": true,
+   "opp_long_move": 3.22,
+   "r": 0.08151707568218036,
+   "z": 0.04532991161685639,
+   "entry": "2019-05-06",
+   "exit": "2019-05-10"
+  },
+  {
+   "m": "6A",
    "t": "2019-07-27",
    "v": "BEARISH",
    "basis": "COT + calendar",
@@ -3129,10 +3356,10 @@
    "opp_short": false,
    "opp_long": true,
    "opp_long_move": 3.08,
-   "r": 3.2708451133051986,
-   "z": 2.03282505682563,
+   "r": 3.053368709495019,
+   "z": 1.895545544289038,
    "entry": "2020-01-13",
-   "exit": "2020-02-07"
+   "exit": "2020-01-31"
   },
   {
    "m": "6A",
@@ -3183,23 +3410,9 @@
    "speed": "medium",
    "opp_short": false,
    "opp_long": false,
-   "r": -0.8840326492294048,
-   "z": -0.41878949554928746,
+   "r": 0.4094192505280647,
+   "z": 0.1952085860563436,
    "entry": "2021-01-04",
-   "exit": "2021-01-08"
-  },
-  {
-   "m": "6A",
-   "t": "2021-01-16",
-   "v": "BEARISH",
-   "basis": "COT only",
-   "sector": "Currencies",
-   "speed": "medium",
-   "opp_short": false,
-   "opp_long": false,
-   "r": 0.6077010163051177,
-   "z": 0.2550626884928607,
-   "entry": "2021-01-18",
    "exit": "2021-01-29"
   },
   {
@@ -3424,6 +3637,21 @@
   },
   {
    "m": "6A",
+   "t": "2025-10-11",
+   "v": "BEARISH",
+   "basis": "COT only",
+   "sector": "Currencies",
+   "speed": "medium",
+   "opp_short": true,
+   "opp_short_move": 1.36,
+   "opp_long": false,
+   "r": 0.2887066556098161,
+   "z": 0.14786477814334756,
+   "entry": "2025-10-13",
+   "exit": "2025-10-17"
+  },
+  {
+   "m": "6A",
    "t": "2025-12-13",
    "v": "BEARISH",
    "basis": "COT only",
@@ -3470,14 +3698,14 @@
    "v": "BULLISH",
    "basis": "COT only",
    "sector": "Currencies",
-   "speed": "medium",
+   "speed": "fast",
    "opp_short": true,
    "opp_short_move": 3.24,
    "opp_long": false,
-   "r": 1.508466036612366,
-   "z": 0.9416105870087467,
+   "r": 0.6182228174918425,
+   "z": 0.3876118152221556,
    "entry": "2019-01-07",
-   "exit": "2019-02-01"
+   "exit": "2019-01-25"
   },
   {
    "m": "6C",
@@ -3525,10 +3753,10 @@
    "basis": "COT + calendar",
    "sector": "Currencies",
    "speed": "medium",
-   "r": 1.8566403078865923,
-   "z": 1.87775779154694,
+   "r": 1.3188623772777852,
+   "z": 1.3302333448522858,
    "entry": "2020-01-13",
-   "exit": "2020-02-07"
+   "exit": "2020-01-31"
   },
   {
    "m": "6C",
@@ -3747,10 +3975,10 @@
    "basis": "COT + calendar",
    "sector": "Currencies",
    "speed": "medium",
-   "r": -0.856017686886823,
-   "z": -0.03712559290166287,
+   "r": 11.209188062338704,
+   "z": 0.45880142923189293,
    "entry": "2024-12-30",
-   "exit": "2025-01-17"
+   "exit": "2025-01-10"
   },
   {
    "m": "6C",
@@ -4187,10 +4415,10 @@
    "basis": "COT + calendar",
    "sector": "Currencies",
    "speed": "fast",
-   "r": -3.0016178444803976,
-   "z": -0.2681422340724145,
+   "r": -13.507280300161783,
+   "z": -1.2767505164451063,
    "entry": "2024-11-25",
-   "exit": "2025-01-31"
+   "exit": "2025-01-24"
   },
   {
    "m": "6N",
@@ -4300,7 +4528,7 @@
    "v": "BULLISH",
    "basis": "COT + calendar",
    "sector": "Indices",
-   "speed": null,
+   "speed": "slow",
    "r": 0.6618449781659486,
    "z": 0.2828996064222369,
    "entry": "2019-05-06",
@@ -4734,6 +4962,32 @@
   },
   {
    "m": "YM",
+   "t": "2019-02-16",
+   "v": "BULLISH",
+   "basis": "COT only",
+   "sector": "Indices",
+   "speed": "medium",
+   "opp_short": false,
+   "opp_long": false,
+   "r": -0.22390191551948657,
+   "z": -0.037921259557150505,
+   "entry": "2019-02-18",
+   "exit": "2019-03-15"
+  },
+  {
+   "m": "YM",
+   "t": "2019-05-25",
+   "v": "BULLISH",
+   "basis": "COT + calendar",
+   "sector": "Indices",
+   "speed": "medium",
+   "r": 5.878888347147715,
+   "z": 2.005765405247464,
+   "entry": "2019-05-27",
+   "exit": "2019-07-19"
+  },
+  {
+   "m": "YM",
    "t": "2019-12-28",
    "v": "BULLISH",
    "basis": "COT + calendar",
@@ -4746,14 +5000,50 @@
   },
   {
    "m": "YM",
-   "t": "2021-03-27",
+   "t": "2020-03-14",
    "v": "BULLISH",
    "basis": "COT + calendar",
    "sector": "Indices",
    "speed": "medium",
-   "r": 2.1420178953393876,
-   "z": 0.593936744693715,
-   "entry": "2021-03-29",
+   "r": 21.503363701809697,
+   "z": 1.7055244412194908,
+   "entry": "2020-03-16",
+   "exit": "2020-05-22"
+  },
+  {
+   "m": "YM",
+   "t": "2020-06-20",
+   "v": "BULLISH",
+   "basis": "COT + calendar",
+   "sector": "Indices",
+   "speed": "medium",
+   "r": 7.330377928194398,
+   "z": 0.7647684601254853,
+   "entry": "2020-06-22",
+   "exit": "2020-08-14"
+  },
+  {
+   "m": "YM",
+   "t": "2020-12-26",
+   "v": "BULLISH",
+   "basis": "COT + calendar",
+   "sector": "Indices",
+   "speed": "medium",
+   "r": 1.3246164460067655,
+   "z": 0.29607013049329867,
+   "entry": "2020-12-28",
+   "exit": "2021-01-15"
+  },
+  {
+   "m": "YM",
+   "t": "2021-03-06",
+   "v": "BULLISH",
+   "basis": "COT + calendar",
+   "sector": "Indices",
+   "speed": "fast",
+   "r": 6.586856467392677,
+   "z": 1.8954674146066222,
+   "entry": "2021-03-08",
    "exit": "2021-04-30"
   },
   {
@@ -4803,6 +5093,30 @@
    "z": -1.3157237916222948,
    "entry": "2022-03-28",
    "exit": "2022-04-29"
+  },
+  {
+   "m": "YM",
+   "t": "2022-10-01",
+   "v": "BULLISH",
+   "basis": "COT + calendar",
+   "sector": "Indices",
+   "speed": "fast",
+   "r": 16.438379386336678,
+   "z": 3.1395215801124405,
+   "entry": "2022-10-03",
+   "exit": "2022-11-25"
+  },
+  {
+   "m": "YM",
+   "t": "2022-12-17",
+   "v": "BULLISH",
+   "basis": "COT + calendar",
+   "sector": "Indices",
+   "speed": "medium",
+   "r": 3.504347958980958,
+   "z": 0.6228155910235377,
+   "entry": "2022-12-19",
+   "exit": "2023-02-10"
   },
   {
    "m": "YM",
@@ -4990,17 +5304,14 @@
   },
   {
    "m": "ZC",
-   "t": "2020-03-28",
+   "t": "2020-03-21",
    "v": "BULLISH",
-   "basis": "COT only",
+   "basis": "COT + calendar",
    "sector": "Agriculture",
    "speed": "medium",
-   "opp_short": true,
-   "opp_short_move": 1.04,
-   "opp_long": false,
-   "r": -2.7146650929477656,
-   "z": -0.5175661144807029,
-   "entry": "2020-03-30",
+   "r": -2.65721877767936,
+   "z": -0.511282371618069,
+   "entry": "2020-03-23",
    "exit": "2020-06-19"
   },
   {
@@ -5373,15 +5684,15 @@
   },
   {
    "m": "ZC",
-   "t": "2025-07-05",
+   "t": "2025-07-19",
    "v": "BEARISH",
    "basis": "Calendar over COT",
    "sector": "Agriculture",
-   "speed": "medium",
-   "r": 3.6165048543689293,
-   "z": 0.6873613595735689,
-   "entry": "2025-07-07",
-   "exit": "2025-08-04"
+   "speed": "slow",
+   "r": 4.672897196261683,
+   "z": 0.9248713547566166,
+   "entry": "2025-07-22",
+   "exit": "2025-08-13"
   },
   {
    "m": "ZC",
@@ -5472,16 +5783,16 @@
   },
   {
    "m": "ZW",
-   "t": "2019-02-02",
+   "t": "2019-01-26",
    "v": "BEARISH",
    "basis": "COT only",
    "sector": "Agriculture",
-   "speed": null,
+   "speed": "medium",
    "opp_short": false,
    "opp_long": false,
-   "r": 7.096027767065182,
-   "z": 1.6260641272536442,
-   "entry": "2019-02-04",
+   "r": 5.640423031727382,
+   "z": 1.2933012621340538,
+   "entry": "2019-01-28",
    "exit": "2019-02-22"
   },
   {
@@ -5550,14 +5861,26 @@
   },
   {
    "m": "ZW",
-   "t": "2020-02-22",
+   "t": "2020-02-01",
    "v": "BEARISH",
    "basis": "COT + calendar",
    "sector": "Agriculture",
-   "speed": "medium",
-   "r": 0.26070763500931626,
-   "z": 0.05177400542422714,
-   "entry": "2020-02-24",
+   "speed": "slow",
+   "r": 2.2415039768618916,
+   "z": 0.4630287348268087,
+   "entry": "2020-02-03",
+   "exit": "2020-03-20"
+  },
+  {
+   "m": "ZW",
+   "t": "2020-03-21",
+   "v": "BEARISH",
+   "basis": "COT + calendar",
+   "sector": "Agriculture",
+   "speed": null,
+   "r": 4.731412308786909,
+   "z": 0.8680054357916079,
+   "entry": "2020-03-23",
    "exit": "2020-04-17"
   },
   {
@@ -5661,6 +5984,33 @@
    "z": -0.4446410865878507,
    "entry": "2021-01-11",
    "exit": "2021-03-05"
+  },
+  {
+   "m": "ZW",
+   "t": "2021-03-06",
+   "v": "BEARISH",
+   "basis": "COT + calendar",
+   "sector": "Agriculture",
+   "speed": null,
+   "r": 2.821512081060018,
+   "z": 0.38055111328327823,
+   "entry": "2021-03-08",
+   "exit": "2021-03-19"
+  },
+  {
+   "m": "ZW",
+   "t": "2021-05-08",
+   "v": "BEARISH",
+   "basis": "COT only",
+   "sector": "Agriculture",
+   "speed": "medium",
+   "opp_short": true,
+   "opp_short_move": 0.78,
+   "opp_long": false,
+   "r": 10.744372324264596,
+   "z": 1.63728444296365,
+   "entry": "2021-05-10",
+   "exit": "2021-07-02"
   },
   {
    "m": "ZW",
@@ -5968,24 +6318,35 @@
    "opp_short": true,
    "opp_short_move": 0.88,
    "opp_long": false,
-   "r": -1.2941393973007864,
-   "z": -0.21637591138957768,
+   "r": -2.4218894435200644,
+   "z": -0.4072580024032133,
    "entry": "2024-11-18",
-   "exit": "2025-01-24"
+   "exit": "2025-01-17"
   },
   {
    "m": "ZW",
-   "t": "2025-03-08",
+   "t": "2025-02-01",
+   "v": "BULLISH",
+   "basis": "COT + calendar",
+   "sector": "Agriculture",
+   "speed": "medium",
+   "r": -7.0891514500536985,
+   "z": -1.337686750484311,
+   "entry": "2025-02-03",
+   "exit": "2025-03-28"
+  },
+  {
+   "m": "ZW",
+   "t": "2025-03-29",
    "v": "BULLISH",
    "basis": "COT only",
    "sector": "Agriculture",
    "speed": "medium",
-   "opp_short": true,
-   "opp_short_move": 1.47,
+   "opp_short": false,
    "opp_long": false,
-   "r": -4.6232253367309735,
-   "z": -0.744210501007895,
-   "entry": "2025-03-10",
+   "r": -0.8889729525250578,
+   "z": -0.13627006120804327,
+   "entry": "2025-03-31",
    "exit": "2025-05-30"
   },
   {
@@ -6093,15 +6454,17 @@
   },
   {
    "m": "ZS",
-   "t": "2019-03-30",
+   "t": "2019-03-16",
    "v": "BULLISH",
-   "basis": "Calendar only",
+   "basis": "COT only",
    "sector": "Agriculture",
-   "speed": null,
-   "r": -4.756537421100093,
-   "z": -1.5851351715445159,
-   "entry": "2019-04-01",
-   "exit": "2019-04-29"
+   "speed": "medium",
+   "opp_short": false,
+   "opp_long": false,
+   "r": -10.927004030452302,
+   "z": -3.645205541695055,
+   "entry": "2019-03-18",
+   "exit": "2019-05-10"
   },
   {
    "m": "ZS",
@@ -6342,6 +6705,18 @@
    "z": -1.0186243426223163,
    "entry": "2023-11-17",
    "exit": "2024-01-03"
+  },
+  {
+   "m": "ZS",
+   "t": "2024-01-06",
+   "v": "BULLISH",
+   "basis": "COT + calendar",
+   "sector": "Agriculture",
+   "speed": "medium",
+   "r": -3.7169290699561652,
+   "z": -0.8199465562327999,
+   "entry": "2024-01-08",
+   "exit": "2024-03-22"
   },
   {
    "m": "ZS",
@@ -6917,6 +7292,20 @@
   },
   {
    "m": "LE",
+   "t": "2023-04-22",
+   "v": "BEARISH",
+   "basis": "COT only",
+   "sector": "Agriculture",
+   "speed": "fast",
+   "opp_short": false,
+   "opp_long": false,
+   "r": -5.719733079122968,
+   "z": -2.2614052213058877,
+   "entry": "2023-04-24",
+   "exit": "2023-06-16"
+  },
+  {
+   "m": "LE",
    "t": "2023-07-22",
    "v": "BEARISH",
    "basis": "Calendar only",
@@ -6941,15 +7330,19 @@
   },
   {
    "m": "LE",
-   "t": "2024-12-07",
-   "v": "BULLISH",
-   "basis": "Calendar only",
+   "t": "2024-12-28",
+   "v": "BEARISH",
+   "basis": "COT only",
    "sector": "Agriculture",
-   "speed": null,
-   "r": 1.9172113289760429,
-   "z": 0.9430159159940199,
-   "entry": "2024-12-09",
-   "exit": "2024-12-30"
+   "speed": "medium",
+   "opp_short": true,
+   "opp_short_move": 2.36,
+   "opp_long": true,
+   "opp_long_move": 3.81,
+   "r": -3.1922473991734313,
+   "z": -1.199158853364422,
+   "entry": "2024-12-30",
+   "exit": "2025-02-07"
   }
  ]
 }

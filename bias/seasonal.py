@@ -378,7 +378,9 @@ class Calendar:
         for y in range(Y - w.get("ny", NY), Y):
             a = self.first[y][0] + w["s"]
             r = sg * (np.exp(self.lc[a + w["len"]] - self.lc[a]) - 1)
-            c = reader.read(self.dates[a]) if reader else "NEUTRAL"
+            # the board's own signal (slow signals = no side) on the latest report released by the window start
+            c = reader.lit[reader.dates.searchsorted(self.dates[a] - pd.Timedelta(days=3), "right") - 1] if reader else None
+            c = c or "NEUTRAL"
             rel = "agree" if c == side else "against" if c in ("BULLISH", "BEARISH") else "none"
             out.append({"y": y, "cot": c, "rel": rel, "r": round(100 * float(r), 2), "win": bool(r > 0)})
         summ = {rel: {"n": sum(x["rel"] == rel for x in out), "w": sum(x["win"] for x in out if x["rel"] == rel)}
