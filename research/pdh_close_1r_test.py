@@ -5,6 +5,11 @@ days. EVERY such close while the verdict is on: 47.7% / -0.052R (later ones lose
 verdict -0.171R (t -5.0): the verdict sets the direction, the trigger adds little. In weekly-ATR terms the 1:1 earns
 ~0.03 wk-ATR per trade vs ~0.21 for holding the verdict to its exit (0.75 wk-ATR stop, +0.275R): the 1:1 target cuts
 off the multi-week move. Control at the verdict's entry day with the same bracket: 18% of bars hit both, unreliable.
+RE-RUN + exits (2026-10-27, both scripts reproduce exactly): same first-close entry and break-day stop, target 2R
+39.6% / -0.201R (t -4.2), 3R 29.4% / -0.408R (t -9.0), held to the verdict exit 27.1% won / +0.256R (t 1.9): the
+break-day stop is too tight for a multi-week hold (73% stopped), the few survivors carry it. The same entry with the
+0.75 wk-ATR stop (pdh_close_entry_test) gives the same +0.254R at 56% won and t 3.4 -> if the close is used as the
+entry, the stop belongs at the wider level, not under the break day.
 Close beyond the previous day's extreme as a 1:1 trade (2026-10-27).
 Long: a daily close above the previous day's high; enter at that close, stop below the LOW OF THAT DAY (the day that
 broke the high), target 1R above the entry. Short mirrored (close below the previous low, stop above that day's high).
@@ -48,13 +53,16 @@ for k, meta in C.M.items():
             continue
         state[a:b] = r.sg; vex[a:b] = b; vid[a:b] = r.Index
 
-    def trade(i, sg):
+    def trade(i, sg, mult=1.0, hold=False):
         e = Cc[i]; stop = L[i] if sg > 0 else H[i]; R = sg * (e - stop)
         if R <= 0:
             return None
-        tp = e + sg * R
+        tp = e + sg * R * (mult if not hold else 1e9)
         out, j_end, amb = None, None, False
-        for j in range(i + 1, min(n, i + 1 + CAP)):
+        last = vex[i] if hold else min(n, i + 1 + CAP)
+        if hold and last < 0:
+            return None
+        for j in range(i + 1, last):
             if (O[j] <= stop) if sg > 0 else (O[j] >= stop):
                 out, j_end = sg * (O[j] - e) / R, j; break           # gap through the stop
             if (O[j] >= tp) if sg > 0 else (O[j] <= tp):
@@ -66,9 +74,12 @@ for k, meta in C.M.items():
             if ht:
                 out, j_end = 1.0, j; break
         if out is None:
-            if i + CAP >= n:
-                return None
-            j_end = i + CAP; out = sg * (Cc[j_end] - e) / R
+            if hold:
+                j_end = last; out = sg * (Cc[j_end] - e) / R
+            else:
+                if i + CAP >= n:
+                    return None
+                j_end = i + CAP; out = sg * (Cc[j_end] - e) / R
         # alternative: close at the verdict exit if that comes first
         b = vex[i]
         alt = out if (b < 0 or j_end <= b) else sg * (Cc[b] - e) / R
@@ -99,6 +110,11 @@ for k, meta in C.M.items():
             if first:
                 rows.append({"k": k, "d": idx[i], "sg": sg, "tag": tag, "mode": "first", "r": x[0], "alt": x[1],
                              "days": x[2] - i, "stop_wk": x[3], "stop_pct": x[4], "amb": x[5], "sector": meta[3]})
+                for md, kw in (("first 2R", {"mult": 2.0}), ("first 3R", {"mult": 3.0}), ("first hold", {"hold": True})):
+                    y = trade(i, sg, **kw)
+                    if y is not None:
+                        rows.append({"k": k, "d": idx[i], "sg": sg, "tag": tag, "mode": md, "r": y[0], "alt": y[1],
+                                     "days": y[2] - i, "stop_wk": y[3], "stop_pct": y[4], "amb": y[5], "sector": meta[3]})
     # control: the verdict's own entry day, same bracket (stop beyond that day's low/high, 1:1), no close condition
     for r in V[V.m == k].itertuples():
         a = idx.searchsorted(r.entry)
@@ -125,6 +141,11 @@ def line(g, lab, col="r"):
 
 
 line(T[T["mode"] == "verdict day"], "CONTROL verdict entry day, same bracket")
+print("\n=== FIRST close, stop beyond that day, other exits (R = the break-day stop) ===")
+for md in ("first", "first 2R", "first 3R", "first hold"):
+    g = T[T["mode"] == md]
+    line(g, md + (" (to verdict exit)" if md == "first hold" else ""))
+    line(g[g.sg > 0], "  longs"); line(g[g.sg < 0], "  shorts")
 for mode in ("first", "every"):
     G = T[T["mode"] == mode]
     print(f"\n=== {mode.upper()} close beyond the previous day's extreme, stop beyond that day, 1:1 ===")
