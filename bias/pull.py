@@ -41,8 +41,9 @@ PRICES = {
     "DX": None,                                                      # rebuilt from its legs in core.load_px
 }
 # backup when LSE has no new days (LSE delisted SUGAR/USD on 16 Oct 2026, COFFEE/USD has no data since 7 Oct):
-# Yahoo Finance front-month futures, spliced onto the stored history by the same ratio check as the LSE rows
-YAHOO = {"SB": "SB=F", "KC": "KC=F"}
+# Yahoo Finance front-month futures (SB=F, KC=F), made continuous across contract rolls (see yahoo()), then spliced
+# onto the stored history by the same ratio check as the LSE rows. (ICE root, delivery months)
+YAHOO = {"SB": ("SB", "HKNV"), "KC": ("KC", "HKNUZ")}
 # CFTC legacy futures-only contract codes (matched to data/cftc/*_legacy.json on 2026-08-11)
 CFTC_CODES = {"6A": "232741", "6B": "096742", "6C": "090741", "6E": "099741", "6J": "097741", "6N": "112741",
               "6S": "092741", "CL": "067651", "DX": "098662", "ES": "13874A", "GC": "088691", "HG": "085692",
@@ -114,20 +115,62 @@ def candles(market, symbol, start):
     return out
 
 
-def yahoo(symbol, start):
-    """daily bars from Yahoo Finance: {day: (open, high, low, close)}; bars with missing or inconsistent prices skipped"""
+def _yahoo_bars(symbol, start):
+    """daily bars of one Yahoo symbol: {day: (open, high, low, close)}; missing or inconsistent bars skipped; {} if
+    the symbol has no data"""
     p1 = int(dt.datetime.fromisoformat(start).replace(tzinfo=dt.timezone.utc).timestamp())
     url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(symbol)}"
            f"?period1={p1}&period2={int(time.time())}&interval=1d")
     r = subprocess.run(["curl", "-s", "-m", "60", "-A", "Mozilla/5.0", url], capture_output=True, text=True).stdout
-    d = json.loads(r)["chart"]["result"][0]
-    q = d["indicators"]["quote"][0]
+    try:
+        d = json.loads(r)["chart"]["result"][0]
+        q = d["indicators"]["quote"][0]
+    except (ValueError, KeyError, TypeError, IndexError):
+        return {}
     out = {}
-    for t, o, h, l, c in zip(d["timestamp"], q["open"], q["high"], q["low"], q["close"]):
+    for t, o, h, l, c in zip(d.get("timestamp") or [], q["open"], q["high"], q["low"], q["close"]):
         if None in (o, h, l, c) or not (l <= min(o, c) and max(o, c) <= h):
             continue
         day = (dt.datetime.fromtimestamp(t, dt.timezone.utc) - dt.timedelta(hours=4) + dt.timedelta(hours=6)).date()
         out[day.isoformat()] = (o, h, l, c)
+    return out
+
+
+def yahoo(name, start):
+    """Yahoo's front-month series (SB=F / KC=F) as ONE continuous price series. The front month is a different contract
+    after each expiry, so the raw series jumps on roll days (sugar's October -> March roll on 1 Oct 2026 was 4%). Here
+    the contract behind each day is found by matching the day's close to the delivery-month contracts (SBH27.NYB ...),
+    and on a change of contract all earlier rows are scaled by the two contracts' close ratio on the day before
+    (ratio back-adjustment): % moves across the roll are then real, only the far-back level shifts"""
+    root, months = YAHOO[name]
+    front = _yahoo_bars(f"{root}=F", start)
+    if not front:
+        return {}
+    y0 = int(start[:4])
+    cons = {}
+    for y in (y0, y0 + 1, y0 + 2):
+        for m in months:
+            sym = f"{root}{m}{y % 100:02d}.NYB"
+            b = _yahoo_bars(sym, start)
+            if b:
+                cons[sym] = b
+    days = sorted(front)
+    which = {}
+    for d in days:
+        c = front[d][3]
+        m = [s for s, b in cons.items() if d in b and abs(b[d][3] / c - 1) < 1e-4]
+        which[d] = m[0] if m else None
+    out, adj = {}, 1.0
+    for i in range(len(days) - 1, -1, -1):                   # newest day first, rolls compound going back
+        d = days[i]
+        out[d] = tuple(v * adj for v in front[d])
+        if i:
+            prev, a, b = days[i - 1], which.get(days[i - 1]), which.get(d)
+            # the day before the roll the front series WAS the old contract (which Yahoo no longer serves once it
+            # has expired), so the ratio is the new contract's close over the front close on that day
+            if b and a != b and prev in cons[b]:
+                adj *= cons[b][prev][3] / front[prev][3]
+                print(f"{name:4s} {root}=F rolled {a or 'expired contract'} -> {b} on {d}, earlier rows x{adj:.4f}")
     return out
 
 
@@ -147,9 +190,9 @@ def refresh_prices():
         if name in YAHOO and not any(d > last for d in new):
             try:
                 start = (dt.date.fromisoformat(last) - dt.timedelta(days=21)).isoformat()
-                new, src = yahoo(YAHOO[name], start), ("yahoo", YAHOO[name])
+                new, src = yahoo(name, start), ("yahoo", YAHOO[name][0] + "=F")
             except Exception as e:
-                print(f"{name:4s} {YAHOO[name]:11s} backup FAILED {e} (stored history only)")
+                print(f"{name:4s} {YAHOO[name][0] + '=F':11s} backup FAILED {e} (stored history only)")
         ratio = 1.0
         ov = [(arch.set_index("day").close[d], new[d][3]) for d in sorted(new) if d in set(arch.day)]
         if src and src[0] == "yahoo":

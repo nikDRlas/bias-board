@@ -129,8 +129,10 @@ def load_cot(k):
     cf = pd.DataFrame({"comm": f.comm_positions_long_all - f.comm_positions_short_all,
                        "fund": f.noncomm_positions_long_all - f.noncomm_positions_short_all})
     j = cf.join(lse, how="inner", rsuffix="_l").tail(8)       # both sources must agree where both are current
-    assert (j.comm == j.comm_l).all() and (j.fund == j.fund_l).all(), k
-    x = pd.concat([cf, lse[lse.index > cf.index.max()]]) if k in CFTC_ONLY \
+    agree = bool((j.comm == j.comm_l).all() and (j.fund == j.fund_l).all())
+    if not agree:                                              # a revised or shifted LSE row must not stop the build
+        print(f"{k}: LSE and CFTC COT differ on recent reports, CFTC series used alone")
+    x = pd.concat([cf, lse[lse.index > cf.index.max()]]) if (k in CFTC_ONLY or not agree) \
         else pd.concat([cf[cf.index < lse.index.min()], lse])
     x = pd.concat([x, cf[cf.index > x.index.max()]])          # the CFTC's newest reports, if LSE does not have them yet
     x["retail"] = -(x.comm + x.fund)                          # longs == shorts across the three groups

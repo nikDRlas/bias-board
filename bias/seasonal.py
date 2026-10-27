@@ -58,6 +58,12 @@ class Calendar:
         for y in np.unique(yrs):
             idx = np.nonzero(yrs == y)[0]
             self.first[int(y)] = (int(idx[0]), len(idx))
+        # a first year whose data starts after the first days of January is incomplete: its "s-th trading day" would
+        # be the wrong date (a window would be measured on the wrong weeks), so it is not one of the past years.
+        # Only DX 2004 and gold/silver 2006 were affected; no 2019-26 test trade changes (checked 2026-10-27)
+        y0 = int(yrs[0])
+        if self.dates[self.first[y0][0]].dayofyear > 10:
+            del self.first[y0]
         self.n = len(p)
 
     # ---------------------------------------------------------------- trading-day arithmetic

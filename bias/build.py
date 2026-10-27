@@ -451,11 +451,11 @@ def tested_for(k, basis, groups, tested):
         return None
     rec = lambda o, label: dict(o, label=label) if o else None
     if basis == "COT + calendar":
-        return rec(tested["cot_by_seasonal"].get("agree"), "COT reads while the calendar agreed won {win}%, held while lit + 1 week")
+        return rec(tested["cot_by_seasonal"].get("agree"), "COT reads while the calendar agreed won {win}% (earlier test: held while lit + 1 week, before the 8-week hold and the gates)")
     if basis == "COT only":
         sec = {"FX": "currency", "Indices": "index", "Agriculture": "agricultural"}.get(sector2(k), "metal and energy")
         return rec(tested["cot"].get(f"{sector2(k)}|{groups}"),
-                   f"{sec} COT reads with {'retail and funds' if groups == 2 else 'one group'} against the commercials won {{win}}%, held while lit + 1 week")
+                   f"{sec} COT reads with {'retail and funds' if groups == 2 else 'one group'} against the commercials won {{win}}% (earlier test: held while lit + 1 week, before the 8-week hold and the gates)")
     if basis == "Calendar only":
         return rec(tested["seas_by_cot"].get("neutral"), "seasonal windows with no COT side won {win}% to the window end")
     rel = tested.get("relevance") or {}
