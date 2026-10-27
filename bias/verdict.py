@@ -98,6 +98,11 @@ def horizon(basis):
 
 US_DRIVEN = ("ES", "NQ", "YM", "GC", "SI")
 COT_DONE_AT = 1.5          # COT setup done at 150% of its usual winning move (research/cot_done_yardstick_test.py)
+# research switch (2026-10-27): COT_DONE_WK=k -> done when the move since entry is >= k NORMAL WEEKS of the market
+# (daily vol over the year before entry x sqrt 5) instead of the market's own winning record (cot_done_general_test.py)
+# TESTED 2026-10-27 walk-forward 2019-26: 2 wks 528 verdicts +1.72% (19-22 +1.47, 23-26 +2.00); 3 wks +1.67%; 4 wks
+# +1.64%; board (1.5x own winners) 538 +1.66% (+1.43 / +1.93). All within noise of each other; kept off for now
+COT_DONE_WK = float(__import__("os").environ.get("COT_DONE_WK", "0"))
 
 
 DONE_YARD = __import__("os").environ.get("SEAS_DONE", "end")
@@ -130,6 +135,12 @@ def final_read(k, v, basis, t, p, cal, ws, rd, lit, macro_sign=None):
             j = C.lit_start(lit, i)
             a = p.index.searchsorted(rd.dates[j] + pd.Timedelta(days=3))
             c = p.index.searchsorted(t, "right") - 1
+            if COT_DONE_WK and c > a and a >= 253:
+                lc = np.log(p.to_numpy(float))
+                wk = np.diff(lc[a - 252:a]).std() * np.sqrt(5)
+                if sg * (lc[c] - lc[a]) >= COT_DONE_WK * wk:
+                    return "STAND ASIDE", "Move done"
+                return v, basis
             cs, _ = C.cot_cases(k)
             wins = [x["end"] for x in cs if x["side"] == v and x["exit"] <= t and x["end"] > 0]
             if wins and c > a:
