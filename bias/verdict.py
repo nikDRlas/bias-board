@@ -27,6 +27,29 @@ def solo_allowed(k):
     return not SOLO_SECTORS or __import__("core").M[k][3] in SOLO_SECTORS
 
 
+# research switch (2026-10-27): a window below SOLO_MIN_MOVE may still carry an agricultural bias alone when the same
+# window (same trading days, same side) was already a 12-of-15 window in each of the last PROVEN_YEARS years
+# (each year judged on its own 15 years before; no hindsight). 0 = off. TESTED 2026-10-27, REJECTED: the verdicts it adds
+# are a coin flip and fail 2023-26 at every setting: 3 yrs +202 verdicts 51.5% +0.12% (2023-26 48.4%); 5 yrs +105 50.5%
+# +0.55% (2023-26 45.7% +0.08%); 7 yrs +44 50.0% +0.29% (2023-26 46.2% -0.13%)
+PROVEN_YEARS = int(__import__("os").environ.get("PROVEN_YEARS", "0"))
+
+
+def proven(cal, Y, w, years=None):
+    import seasonal as SS
+    years = years or PROVEN_YEARS
+    ny, gate = SS.LOOKBACKS[0]
+    for y in range(Y - years + 1, Y + 1):
+        if any(x not in cal.first for x in range(y - ny, y)):
+            return False
+        try:
+            if cal.stats(y, w["s"], w["len"], w["side"], ny)["wins"] < gate:
+                return False
+        except (IndexError, KeyError, ValueError):
+            return False
+    return True
+
+
 def board_read(cot, cal, t, reader):
     """the board's verdict on day t from the COT side (slow signals already removed) and the seasonal calendar.
     A window that agrees with COT counts at any size ("COT + calendar"). A window may carry the bias alone (calendar
@@ -40,6 +63,8 @@ def board_read(cot, cal, t, reader):
         v, basis = decide(cot, None)                     # outside agriculture the calendar may not stand alone
         return v, basis, every
     solo = cal.windows(t, min_move=SS.SOLO_MIN_MOVE) if SS.SOLO_MIN_MOVE > 0 else every
+    if PROVEN_YEARS and solo[1] != "driver" and every[1] == "driver" and proven(cal, t.year, every[0][0]):
+        solo = every                                     # research switch: a small window proven year after year
     seas = _side(*solo)
     if cot in SIDES and seas == cot:
         return cot, "COT + calendar", solo
