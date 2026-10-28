@@ -11,6 +11,11 @@ Chandelier trail 1.0 wk-ATR KILLS every variant (-0.1 to +0.2R): do not trail, h
 +0.11), energy +0.20 (< verdict +0.36). 4h zones (10 mkts): stop 0.12 wk-ATR, 4.6 attempts, 17% won, +2.25R/verdict
 (both halves, +1.54 at 0.02 cost) vs +0.15 verdict; in % +0.95 vs +0.29 but 19-22 only +0.19% - huge R from tiny stops,
 execution-sensitive. Entry-bar stop check (limit fill then same bar through the zone) IS applied.
+V4 INDICATOR (user's shipping Pine, otc_zones_v4 port, 2026-10-28): same mechanics (live leg-out+2, wick through
+distal = broken, first touch of body proximal, stop beyond distal) = WORSE than canon: daily +0.308R/verdict (t 1.9;
+19-22 +0.19, 23-26 +0.45) vs +0.790; 1.07 attempts in 69% of verdicts (canon 1.93 / 92%), stop 0.24 wk-ATR, 22% won;
+sectors: only metals better (+1.85 vs +0.72), energy -0.20 and FX -0.02 negative, agri +0.13, indices +0.40. 4h: V4
++1.72 vs +2.25, 19-22 % negative. Per-verdict corr with canon only +0.45 (different zones). Keep canon.
 Several tight-stop attempts per board verdict (2026-10-27). The user enters only with TA (a daily / 4h demand or
 supply zone, or a close beyond the previous day's extreme), never at the verdict itself, and re-enters after a stop.
 Per verdict (current walk-forward verdict.json, entry day to exit day), in the verdict's direction, while flat:
@@ -31,6 +36,7 @@ Board direction (yen, franc, CAD inverted)."""
 import sys, json, numpy as np, pandas as pd
 sys.path.insert(0, "/Users/Niklas/supply_demand_dynamic"); sys.path.insert(0, "/Users/Niklas/bias-board/bias")
 from backtest.sd_fx_legout_atr import canon_meta
+from backtest.sd_otc_challenger import otc_zones_v4
 import core as C
 BB = "/Users/Niklas/bias-board"
 H4 = "/Users/Niklas/supply_demand_intraday/data_cache/lse_4h"
@@ -58,6 +64,27 @@ def zone_events(bars, live_lag, dead, O, H, L, idx):
                 break
             if (L[i] <= prox) if sg > 0 else (H[i] >= prox):
                 out.append((i, sg, min(O[i], prox) if sg > 0 else max(O[i], prox), dist))
+                break
+    return sorted(out)
+
+
+def v4_events(bars, dead, O, H, L, idx):
+    """OTC V4 (user's shipping Pine, 2026-08-02): zone live from leg-out bar + 2 (skipN = 1), broken by a WICK through
+    the distal on any later bar (then no trade), first touch of the body proximal = limit fill, stop beyond the distal."""
+    out = []
+    bo, bh, bl, bc = (bars[c].to_numpy(float) for c in ("open", "high", "low", "close"))
+    for (cb, top, bot, isSup) in otc_zones_v4(bo, bh, bl, bc):
+        sg = -1 if isSup else 1
+        t0 = bars.index[cb]; t1 = t0 + dead
+        prox, dist = (top, bot) if sg > 0 else (bot, top)
+        for i in range(idx.searchsorted(t0, "right") + 1, len(idx)):
+            if idx[i] > t1:
+                break
+            touched = (L[i] <= prox) if sg > 0 else (H[i] >= prox)
+            if touched:
+                out.append((i, sg, min(O[i], prox) if sg > 0 else max(O[i], prox), dist))
+                break
+            if (L[i] < dist) if sg > 0 else (H[i] > dist):       # wick through the distal before any touch: broken
                 break
     return sorted(out)
 
@@ -105,6 +132,7 @@ for k, meta in C.M.items():
     O, H, L, Cc, idx = d.open.to_numpy(), d.high.to_numpy(), d.low.to_numpy(), d.close.to_numpy(), d.index
     wa_d = watr.reindex(idx, method="ffill").shift(1).bfill().to_numpy()     # last completed week
     dz = zone_events(d, pd.Timedelta(days=1), pd.Timedelta(weeks=52), O, H, L, idx)
+    v4 = v4_events(d, pd.Timedelta(weeks=52), O, H, L, idx)
     pdh = [(i, 1, Cc[i], L[i]) for i in range(1, len(idx)) if Cc[i] > H[i - 1]] + \
           [(i, -1, Cc[i], H[i]) for i in range(1, len(idx)) if Cc[i] < L[i - 1]]
     pdh.sort()
@@ -121,6 +149,7 @@ for k, meta in C.M.items():
         hO, hH, hL, hC, hidx = h.open.to_numpy(), h.high.to_numpy(), h.low.to_numpy(), h.close.to_numpy(), h.index
         wa_h = hwatr.reindex(hidx, method="ffill").shift(1).bfill().to_numpy()
         hz = zone_events(h, pd.Timedelta(hours=4), pd.Timedelta(weeks=13), hO, hH, hL, hidx)
+        hv4 = v4_events(h, pd.Timedelta(weeks=13), hO, hH, hL, hidx)
         # daily PDH closes mapped onto the 4h bars: the last 4h bar of that date, stop level from the daily bar
         hdates = hidx.normalize()
         last_bar = pd.Series(np.arange(len(hidx)), index=hdates).groupby(level=0).max()
@@ -130,7 +159,7 @@ for k, meta in C.M.items():
             if dd in last_bar.index:
                 j = int(last_bar[dd]); hpdh.append((j, s, hC[j], st * (hC[j] / Cc[i])))   # scale the daily stop to the 4h feed
         hpdh.sort()
-        h4 = (hO, hH, hL, hC, hidx, wa_h, hz, hpdh)
+        h4 = (hO, hH, hL, hC, hidx, wa_h, hz, hpdh, hv4)
 
     for r in V[V.m == k].itertuples():
         a, b = idx.searchsorted(r.entry), idx.searchsorted(r.exit)
@@ -142,6 +171,8 @@ for k, meta in C.M.items():
         sets = {"D zone": [(i, f, s, "z") for i, s_, f, s in dz if s_ == sg],
                 "PDH": [(i, f, s, "c") for i, s_, f, s in pdh if s_ == sg]}
         sets["D|PDH"] = sorted(sets["D zone"] + sets["PDH"])
+        sets["V4 zone"] = [(i, f, s, "z") for i, s_, f, s in v4 if s_ == sg]
+        sets["V4|PDH"] = sorted(sets["V4 zone"] + sets["PDH"])
         sets["D zone +0.1wk"] = [(i, f, s - sg * 0.10 * wa_d[i], "z") for i, s_, f, s in dz if s_ == sg]
         sets["D zone 0.5wk"] = [(i, f, f - sg * 0.50 * wa_d[i], "z") for i, s_, f, s in dz if s_ == sg]
         for nm, ev in sets.items():
@@ -155,7 +186,7 @@ for k, meta in C.M.items():
             rows.append({"k": k, "sector": meta[3], "t": r.t, "vid": r.Index, "set": "verdict", "cap": 1, "trail": 0,
                          "r": att[0], "pct": att[1], "stop_wk": 0.75, "took": True, "tf": "D"})
         if h4 is not None:
-            hO, hH, hL, hC, hidx, wa_h, hz, hpdh = h4
+            hO, hH, hL, hC, hidx, wa_h, hz, hpdh, hv4 = h4
             ha, hb = hidx.searchsorted(r.entry), hidx.searchsorted(r.exit + pd.Timedelta(days=1)) - 1
             if hb >= len(hidx) or hb <= ha or hidx[hb] < r.entry:
                 continue
@@ -163,6 +194,7 @@ for k, meta in C.M.items():
             hs = {"H4 zone": [(i, f, s, "z") for i, s_, f, s in hz if s_ == sg],
                   "PDH on 4h": [(i, f, s, "c") for i, s_, f, s in hpdh if s_ == sg]}
             hs["H4|PDH"] = sorted(hs["H4 zone"] + hs["PDH on 4h"])
+            hs["H4 V4 zone"] = [(i, f, s, "z") for i, s_, f, s in hv4 if s_ == sg]
             hbase = run([(ha, hC[ha], hC[ha] - sg * 0.75 * wa_h[ha], "c")], ha, hb, sg, hO, hH, hL, hC, wh, 1, 0)
             for nm, ev in hs.items():
                 for cap in (0, 3):
@@ -198,7 +230,7 @@ def show(G, title):
               f"{e.r.mean():+6.3f} {l.r.mean():+6.3f} {pv.pct.mean():+6.2f} {e.pct.mean():+6.2f} {l.pct.mean():+6.2f} | {pv.rc.mean():+6.3f} ({100*(tk.rc>0).mean():.0f}%)")
 
 
-order = ["verdict", "D zone", "D zone +0.1wk", "D zone 0.5wk", "PDH", "D|PDH", "verdict (4h feed)", "H4 zone", "PDH on 4h", "H4|PDH"]
+order = ["verdict", "D zone", "V4 zone", "D zone +0.1wk", "D zone 0.5wk", "PDH", "D|PDH", "V4|PDH", "verdict (4h feed)", "H4 zone", "H4 V4 zone", "PDH on 4h", "H4|PDH"]
 T["set"] = pd.Categorical(T["set"], order)
 T = T.sort_values(["set", "cap", "trail"])
 show(T[T.tf == "D"], "DAILY feed, 21 markets")
@@ -227,4 +259,9 @@ for lo, hi in ((0, 0.2), (0.2, 0.4), (0.4, 9)):
     q = tk[(sw > lo) & (sw <= hi)]
     print(f"    stop {lo:.1f}-{hi:.1f} wkATR: n {len(q)}  won {100*(q.r>0).mean():.0f}%  avg {q.r.mean():+.3f}R  avg move {q.pct.mean():+.2f}%")
 for sec, g in T[T.tf == "D"].groupby("sector"):
-    show(g[(g.cap == 0) & (g.trail == 0) | (g["set"] == "verdict")], f"DAILY {sec}: hold, all attempts")
+    show(g[((g.cap == 0) & (g.trail == 0) & g["set"].isin(["D zone", "V4 zone", "PDH"])) | (g["set"] == "verdict")], f"DAILY {sec}: hold, all attempts")
+print("\n=== V4 vs canon, daily zone, hold, all attempts: per verdict ===")
+pv = {nm: T[(T["set"] == nm) & (T.cap == 0) & (T.trail == 0)].groupby("vid").agg(r=("r", "sum"), n=("took", "sum")) for nm in ("D zone", "V4 zone")}
+j = pv["D zone"].join(pv["V4 zone"], lsuffix="_c", rsuffix="_v")
+print(f"  attempts: canon {j.n_c.sum():.0f}, V4 {j.n_v.sum():.0f}; verdicts with an entry: canon {(j.n_c>0).mean()*100:.0f}%, V4 {(j.n_v>0).mean()*100:.0f}%; "
+      f"corr of per-verdict R {j.r_c.corr(j.r_v):+.2f}; V4 better in {100*(j.r_v>j.r_c).mean():.0f}% of verdicts, equal {100*(j.r_v==j.r_c).mean():.0f}%")
