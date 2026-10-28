@@ -16,6 +16,12 @@ distal = broken, first touch of body proximal, stop beyond distal) = WORSE than 
 19-22 +0.19, 23-26 +0.45) vs +0.790; 1.07 attempts in 69% of verdicts (canon 1.93 / 92%), stop 0.24 wk-ATR, 22% won;
 sectors: only metals better (+1.85 vs +0.72), energy -0.20 and FX -0.02 negative, agri +0.13, indices +0.40. 4h: V4
 +1.72 vs +2.25, 19-22 % negative. Per-verdict corr with canon only +0.45 (different zones). Keep canon.
+THREE-TIER INDICATOR (Run #161/#163, honestbt detect_zones_pine port, futures mode, 2026-10-28): loose B zones are the
+best PER ATTEMPT of all detectors (+0.533R, 30% won, stop 0.27 wk-ATR) but fire rarely (0.60 attempts/verdict) -> per
+verdict +0.322 (t 2.4; both halves +0.31/+0.33) vs canon +0.790. The tiers SUBTRACT inside a verdict: A (EMA-100)
++0.317/attempt, 0.26 attempts, +0.082/verdict; A+ (sweep + futures gate) 6 trades in 505 verdicts, -0.34R. Union canon|3T B
++0.759 = no gain (same pullbacks). 4h: 3T B +1.36/verdict vs canon +2.25, 19-22 % negative; A +0.46; A+ 0.09 attempts.
+Consistent with the honestbt finding that the ladder adds nothing: use the board for direction, not the EMA/sweep.
 Several tight-stop attempts per board verdict (2026-10-27). The user enters only with TA (a daily / 4h demand or
 supply zone, or a close beyond the previous day's extreme), never at the verdict itself, and re-enters after a stop.
 Per verdict (current walk-forward verdict.json, entry day to exit day), in the verdict's direction, while flat:
@@ -37,6 +43,8 @@ import sys, json, numpy as np, pandas as pd
 sys.path.insert(0, "/Users/Niklas/supply_demand_dynamic"); sys.path.insert(0, "/Users/Niklas/bias-board/bias")
 from backtest.sd_fx_legout_atr import canon_meta
 from backtest.sd_otc_challenger import otc_zones_v4
+sys.path.insert(0, "/Users/Niklas/honestbt")
+from honestbt.strategies.three_tier_sd import detect_zones_pine, pivot_levels, _first_sweep_lookup, ema
 import core as C
 BB = "/Users/Niklas/bias-board"
 H4 = "/Users/Niklas/supply_demand_intraday/data_cache/lse_4h"
@@ -89,6 +97,43 @@ def v4_events(bars, dead, O, H, L, idx):
     return sorted(out)
 
 
+def tier_events(bars, dead, O, H, L, Cc, idx):
+    """Three-tier indicator (Run #161/#163, futures mode): loose zones live from the leg-out bar + 1, mitigated by the
+    first bar overlapping the zone = limit fill at the proximal, stop beyond the distal. Tier judged on the last CLOSED
+    bar before the fill: A = EMA(100) aligned, A+ = A and a same-side N=5 pivot formed after the zone was swept, and the
+    futures gate (body >= 70% 1-bar / >= 55% each 2-bar, leg-out mult >= 2.0). Returns {tier: events}."""
+    bo, bh, bl, bc = (bars[c].to_numpy(float) for c in ("open", "high", "low", "close"))
+    zs = detect_zones_pine(bo, bh, bl, bc)
+    e100 = ema(bc)
+    lo_piv, hi_piv = pivot_levels(bh, bl, 5)
+    lo_pb, lo_suf = _first_sweep_lookup(lo_piv, len(bc)); hi_pb, hi_suf = _first_sweep_lookup(hi_piv, len(bc))
+
+    def swept_by(side, creation, bar):
+        pb, suf = (lo_pb, lo_suf) if side > 0 else (hi_pb, hi_suf)
+        k = int(np.searchsorted(pb, creation, "right"))
+        return suf[k] <= bar
+    out = {"B": [], "A": [], "A+": []}
+    for z in zs:
+        sg, cb = z["side"], z["creation_bar"]
+        t0 = bars.index[cb]; t1 = t0 + dead
+        prox, dist = (z["top"], z["bottom"]) if sg > 0 else (z["bottom"], z["top"])
+        for i in range(idx.searchsorted(t0, "right"), len(idx)):
+            if idx[i] > t1:
+                break
+            if (L[i] <= z["top"] and H[i] >= z["bottom"]):
+                ev = (i, sg, min(O[i], prox) if sg > 0 else max(O[i], prox), dist)
+                out["B"].append(ev)
+                j = i - 1                                      # last closed bar
+                if j >= 0 and ((bc[j] > e100[j]) if sg > 0 else (bc[j] < e100[j])):
+                    out["A"].append(ev)
+                    gate = (z["body0_pct"] >= 70 if z["legout_span"] == 1 else
+                            (z["body0_pct"] >= 55 and z["body1_pct"] >= 55)) and z["legout_mult"] >= 2.0
+                    if gate and swept_by(sg, cb, j):
+                        out["A+"].append(ev)
+                break
+    return {k: sorted(v) for k, v in out.items()}
+
+
 def run(events, a, b, sg, O, H, L, Cc, watr_at, cap, trail):
     """Walk the verdict [a, b]: take events (i, fill, stop) in order while flat; hold to b or trail. Returns attempts."""
     res, i0, n = [], a, 0
@@ -133,6 +178,7 @@ for k, meta in C.M.items():
     wa_d = watr.reindex(idx, method="ffill").shift(1).bfill().to_numpy()     # last completed week
     dz = zone_events(d, pd.Timedelta(days=1), pd.Timedelta(weeks=52), O, H, L, idx)
     v4 = v4_events(d, pd.Timedelta(weeks=52), O, H, L, idx)
+    t3 = tier_events(d, pd.Timedelta(weeks=52), O, H, L, Cc, idx)
     pdh = [(i, 1, Cc[i], L[i]) for i in range(1, len(idx)) if Cc[i] > H[i - 1]] + \
           [(i, -1, Cc[i], H[i]) for i in range(1, len(idx)) if Cc[i] < L[i - 1]]
     pdh.sort()
@@ -150,6 +196,7 @@ for k, meta in C.M.items():
         wa_h = hwatr.reindex(hidx, method="ffill").shift(1).bfill().to_numpy()
         hz = zone_events(h, pd.Timedelta(hours=4), pd.Timedelta(weeks=13), hO, hH, hL, hidx)
         hv4 = v4_events(h, pd.Timedelta(weeks=13), hO, hH, hL, hidx)
+        ht3 = tier_events(h, pd.Timedelta(weeks=13), hO, hH, hL, hC, hidx)
         # daily PDH closes mapped onto the 4h bars: the last 4h bar of that date, stop level from the daily bar
         hdates = hidx.normalize()
         last_bar = pd.Series(np.arange(len(hidx)), index=hdates).groupby(level=0).max()
@@ -159,7 +206,7 @@ for k, meta in C.M.items():
             if dd in last_bar.index:
                 j = int(last_bar[dd]); hpdh.append((j, s, hC[j], st * (hC[j] / Cc[i])))   # scale the daily stop to the 4h feed
         hpdh.sort()
-        h4 = (hO, hH, hL, hC, hidx, wa_h, hz, hpdh, hv4)
+        h4 = (hO, hH, hL, hC, hidx, wa_h, hz, hpdh, hv4, ht3)
 
     for r in V[V.m == k].itertuples():
         a, b = idx.searchsorted(r.entry), idx.searchsorted(r.exit)
@@ -173,6 +220,9 @@ for k, meta in C.M.items():
         sets["D|PDH"] = sorted(sets["D zone"] + sets["PDH"])
         sets["V4 zone"] = [(i, f, s, "z") for i, s_, f, s in v4 if s_ == sg]
         sets["V4|PDH"] = sorted(sets["V4 zone"] + sets["PDH"])
+        for tier in ("B", "A", "A+"):
+            sets[f"3T {tier}"] = [(i, f, s, "z") for i, s_, f, s in t3[tier] if s_ == sg]
+        sets["D zone|3T B"] = sorted(sets["D zone"] + sets["3T B"])
         sets["D zone +0.1wk"] = [(i, f, s - sg * 0.10 * wa_d[i], "z") for i, s_, f, s in dz if s_ == sg]
         sets["D zone 0.5wk"] = [(i, f, f - sg * 0.50 * wa_d[i], "z") for i, s_, f, s in dz if s_ == sg]
         for nm, ev in sets.items():
@@ -186,7 +236,7 @@ for k, meta in C.M.items():
             rows.append({"k": k, "sector": meta[3], "t": r.t, "vid": r.Index, "set": "verdict", "cap": 1, "trail": 0,
                          "r": att[0], "pct": att[1], "stop_wk": 0.75, "took": True, "tf": "D"})
         if h4 is not None:
-            hO, hH, hL, hC, hidx, wa_h, hz, hpdh, hv4 = h4
+            hO, hH, hL, hC, hidx, wa_h, hz, hpdh, hv4, ht3 = h4
             ha, hb = hidx.searchsorted(r.entry), hidx.searchsorted(r.exit + pd.Timedelta(days=1)) - 1
             if hb >= len(hidx) or hb <= ha or hidx[hb] < r.entry:
                 continue
@@ -195,6 +245,8 @@ for k, meta in C.M.items():
                   "PDH on 4h": [(i, f, s, "c") for i, s_, f, s in hpdh if s_ == sg]}
             hs["H4|PDH"] = sorted(hs["H4 zone"] + hs["PDH on 4h"])
             hs["H4 V4 zone"] = [(i, f, s, "z") for i, s_, f, s in hv4 if s_ == sg]
+            for tier in ("B", "A", "A+"):
+                hs[f"H4 3T {tier}"] = [(i, f, s, "z") for i, s_, f, s in ht3[tier] if s_ == sg]
             hbase = run([(ha, hC[ha], hC[ha] - sg * 0.75 * wa_h[ha], "c")], ha, hb, sg, hO, hH, hL, hC, wh, 1, 0)
             for nm, ev in hs.items():
                 for cap in (0, 3):
@@ -230,7 +282,7 @@ def show(G, title):
               f"{e.r.mean():+6.3f} {l.r.mean():+6.3f} {pv.pct.mean():+6.2f} {e.pct.mean():+6.2f} {l.pct.mean():+6.2f} | {pv.rc.mean():+6.3f} ({100*(tk.rc>0).mean():.0f}%)")
 
 
-order = ["verdict", "D zone", "V4 zone", "D zone +0.1wk", "D zone 0.5wk", "PDH", "D|PDH", "V4|PDH", "verdict (4h feed)", "H4 zone", "H4 V4 zone", "PDH on 4h", "H4|PDH"]
+order = ["verdict", "D zone", "V4 zone", "3T B", "3T A", "3T A+", "D zone|3T B", "D zone +0.1wk", "D zone 0.5wk", "PDH", "D|PDH", "V4|PDH", "verdict (4h feed)", "H4 zone", "H4 V4 zone", "H4 3T B", "H4 3T A", "H4 3T A+", "PDH on 4h", "H4|PDH"]
 T["set"] = pd.Categorical(T["set"], order)
 T = T.sort_values(["set", "cap", "trail"])
 show(T[T.tf == "D"], "DAILY feed, 21 markets")
@@ -259,7 +311,7 @@ for lo, hi in ((0, 0.2), (0.2, 0.4), (0.4, 9)):
     q = tk[(sw > lo) & (sw <= hi)]
     print(f"    stop {lo:.1f}-{hi:.1f} wkATR: n {len(q)}  won {100*(q.r>0).mean():.0f}%  avg {q.r.mean():+.3f}R  avg move {q.pct.mean():+.2f}%")
 for sec, g in T[T.tf == "D"].groupby("sector"):
-    show(g[((g.cap == 0) & (g.trail == 0) & g["set"].isin(["D zone", "V4 zone", "PDH"])) | (g["set"] == "verdict")], f"DAILY {sec}: hold, all attempts")
+    show(g[((g.cap == 0) & (g.trail == 0) & g["set"].isin(["D zone", "V4 zone", "3T B", "3T A", "3T A+", "PDH"])) | (g["set"] == "verdict")], f"DAILY {sec}: hold, all attempts")
 print("\n=== V4 vs canon, daily zone, hold, all attempts: per verdict ===")
 pv = {nm: T[(T["set"] == nm) & (T.cap == 0) & (T.trail == 0)].groupby("vid").agg(r=("r", "sum"), n=("took", "sum")) for nm in ("D zone", "V4 zone")}
 j = pv["D zone"].join(pv["V4 zone"], lsuffix="_c", rsuffix="_v")
