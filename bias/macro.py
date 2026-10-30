@@ -137,7 +137,7 @@ def market_scores(cal, k, days):
     return g
 
 
-US_DRIVEN = ("ES", "NQ", "YM", "GC", "SI")    # where the US macro score tested useful (research/tools_macro_align.py)
+US_DRIVEN = ("ES", "NQ", "YM", "GC", "SI")    # where the US macro score is shown (context only since 2026-10-30)
 LABEL = {"GDP": "GDP", "Retail": "Retail sales", "MfgPMI": "Manufacturing PMI", "SvcPMI": "Services PMI",
          "ConsConf": "Consumer confidence", "CPI": "CPI", "PPI": "PPI", "PCE": "PCE prices", "NFP": "Payrolls",
          "ADP": "ADP employment", "Claims": "Jobless claims", "JOLTS": "JOLTS openings", "Unemp": "Unemployment rate"}

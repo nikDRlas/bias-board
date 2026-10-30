@@ -997,11 +997,8 @@ if __name__ == "__main__":
     fx_pairs = PR.current(res)
     chp = os.path.join(ROOT, "data", "research", "cot_hold.json")
     cot_hold = json.load(open(chp)) if os.path.exists(chp) else None
-    mtp = os.path.join(ROOT, "data", "research", "tools_macro_align.json")
-    macro_test = None
-    if os.path.exists(mtp):
-        mt = json.load(open(mtp))
-        macro_test = {t: mt[t]["US indices + gold/silver"] for t in ("Board verdict", "COT", "Calendar") if t in mt}
+    mtp = os.path.join(ROOT, "data", "research", "macro_strength.json")     # board walk-forward without the macro gate
+    macro_test = json.load(open(mtp)) if os.path.exists(mtp) else None
     mdp = os.path.join(ROOT, "data", "research", "move_done.json")
     md_test = json.load(open(mdp)) if os.path.exists(mdp) else None
     json.dump({"asof": str(ASOF.date()), "today": str(TODAY.date()), "tested": tested, "verdict_test": vsum, "focus": focus,

@@ -16,7 +16,8 @@ Weekly directional bias for 24 futures markets (metals, energy, currencies, US s
 `data/research/verdict.json`): the COT read carries a bias on its own (held at least 8 weeks outside currencies);
 a seasonal window counts next to COT at any size, and alone only on agricultural markets with a usual move of at
 least 3 normal daily moves. Gates: slow COT signals skipped, a COT minimum record outside currencies, Bernd's evidence
-gate on currencies, US indices long-only, "macro against" on US indices, gold and silver, and "move done". Rerun with
+gate on currencies, US indices long-only, and "move done" (the US macro score is shown as context only since
+October 2026: as a gate it cancelled the better verdicts, `research/macro_strength_test.py`). Rerun with
 `SKIP_SLOW=1 python research/verdict_test.py`. Sugar and coffee prices continue on Yahoo Finance front-month futures
 (made continuous across rolls) since LSE stopped them in October 2026.
 

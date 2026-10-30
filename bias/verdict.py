@@ -97,6 +97,13 @@ def horizon(basis):
 
 
 US_DRIVEN = ("ES", "NQ", "YM", "GC", "SI")
+# MACRO GATE switched OFF 2026-10-30 (research/macro_strength_test.py): in the board's own walk-forward 2019-26 the
+# verdicts it cancelled were the BETTER ones (US indices + gold/silver, macro against: 64 verdicts 76.6% won +3.50%,
+# +2.61% above drift t 3.4; agreeing 38 verdicts 63.2% +2.31%; silver against 84% won). Without it the whole board:
+# 538 -> 571 verdicts, 58.9 -> 61.1% won, +1.66 -> +1.82% per verdict, 2019-22 +1.43 -> +1.66, 2023-26 +1.93 -> +2.00.
+# The earlier support (tools_macro_align.py) was a 4-week fixed hold every 4th Saturday 2016-26, not the board's rules.
+# MACRO_GATE=1 restores it for research
+MACRO_GATE = __import__("os").environ.get("MACRO_GATE") == "1"
 COT_DONE_AT = 1.5          # COT setup done at 150% of its usual winning move (research/cot_done_yardstick_test.py)
 # research switch (2026-10-27): COT_DONE_WK=k -> done when the move since entry is >= k NORMAL WEEKS of the market
 # (daily vol over the year before entry x sqrt 5) instead of the market's own winning record (cot_done_general_test.py)
@@ -110,14 +117,14 @@ DONE_YARD = __import__("os").environ.get("SEAS_DONE", "end")
 
 def final_read(k, v, basis, t, p, cal, ws, rd, lit, macro_sign=None):
     """the validated 'nothing left' situations turn a bias into no bias:
-      macro against   on US indices, gold and silver the US macro score points the other way (or is flat):
-                      such verdicts made about nothing above holding the market (research/tools_macro_align.py)
+      macro against   (only with MACRO_GATE=1, off since 2026-10-30) on US indices, gold and silver the US macro score
+                      points the other way (or is flat); failed the board's walk-forward (research/macro_strength_test.py)
       move done       the calendar window already made its usual move this year, or the COT setup already made 150%
                       of its usual winning move (research/move_done_test.py, research/cot_done_yardstick_test.py)"""
     if v not in SIDES:
         return v, basis
     sg = 1 if v == "BULLISH" else -1
-    if k in US_DRIVEN and macro_sign is not None and macro_sign != sg:
+    if MACRO_GATE and k in US_DRIVEN and macro_sign is not None and macro_sign != sg:
         return "STAND ASIDE", "Macro against"
     if horizon(basis) == "window":
         d = ws[0]
