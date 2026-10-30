@@ -6,6 +6,12 @@ liquidity filter keeps 12% of them and lowers R per attempt (+0.51 vs +0.64). BI
 -0.07, entry in 30% of verdicts, indices negative; 2R exit +0.01. Confluence: BB zones overlapping a canon 4h zone
 +1.41 R/attempt (+0.37/verdict) vs BB without +0.72 (+0.10) - the canon overlap carries it, 2019-22 still negative.
 Neither indicator adds to the canon zones inside a verdict.
+WIDER STOPS (same run, + V4 and three-tier B on 4h; R per verdict / R per yr / maxDD at 0.02 cost): wider stops lower
+the R for every indicator, keep the % per verdict about the same and cut the drawdown. canon 4h zone stop +2.94 (ratio
+0.73) -> >=0.25 wk +1.47 (0.74) -> >=0.5 wk +0.66 (0.52) -> fixed 0.75 wk +0.43 (0.47); V4 +2.41 -> +0.32; three-tier
+B +1.51 -> +0.28; Nested +0.52 -> +0.05 (2019-22 negative with every wider stop). BIG-BROTHER is the exception: it gets
+SAFER and turns positive in both halves - fixed 0.75 wk 60% won, +0.17/verdict (t 3.2, 19-22 +0.09 / 23-26 +0.26),
+maxDD -3.1R, ratio 1.51, top 5% = 29% of R - but only 30% of verdicts and +4.7 R/yr; on FX its own stop ratio 1.37.
 Two more S/D indicators as entries inside board verdicts (2026-10-30). Ported from the user's Pine (pasted today),
 run on the LSE 4h feed (10 markets with 4h history: 6E 6B 6J 6S 6A 6C GC SI ES NQ); daily bars = the 4h bars per date.
   NESTED (Daily->4h preset): daily canon zones (body40, mult OFF, base 1-6), registered the 4h bar after the day closes;
@@ -26,6 +32,9 @@ ARE canon 4h zones, so Nested = a filtered subset of canon 4h.)"""
 import sys, json, numpy as np, pandas as pd
 sys.path.insert(0, "/Users/Niklas/supply_demand_dynamic"); sys.path.insert(0, "/Users/Niklas/bias-board/bias")
 from backtest.sd_fx_legout_atr import canon_meta
+from backtest.sd_otc_challenger import otc_zones_v4
+sys.path.insert(0, "/Users/Niklas/honestbt")
+from honestbt.strategies.three_tier_sd import detect_zones_pine
 import core as C
 BB = "/Users/Niklas/bias-board"
 H4 = "/Users/Niklas/supply_demand_intraday/data_cache/lse_4h"
@@ -217,6 +226,38 @@ def canon_entries(hb, O, H, L):
     return sorted(out)
 
 
+def v4_entries(hb, O, H, L):
+    """OTC V4: live from leg-out + 2, wick through the distal before a touch = broken, first touch of the proximal."""
+    out = []
+    for (cb, top, bot, isSup) in otc_zones_v4(*(hb[c].to_numpy(float) for c in ("open", "high", "low", "close"))):
+        sg = -1 if isSup else 1
+        prox, dist = (top, bot) if sg > 0 else (bot, top)
+        for i in range(cb + 2, min(len(O), cb + 2 + 6 * 13 * 5)):
+            if (L[i] <= prox) if sg > 0 else (H[i] >= prox):
+                f = min(O[i], prox) if sg > 0 else max(O[i], prox)
+                out.append((i, sg, f, dist, top, bot)); break
+            if (L[i] < dist) if sg > 0 else (H[i] > dist):
+                break
+    return sorted(out)
+
+
+def tier_b_entries(hb, O, H, L):
+    """three-tier B (every loose zone): live from leg-out + 1, first bar overlapping the zone = limit at the proximal."""
+    out = []
+    for z in detect_zones_pine(*(hb[c].to_numpy(float) for c in ("open", "high", "low", "close"))):
+        sg, cb, top, bot = z["side"], z["creation_bar"], z["top"], z["bottom"]
+        prox, dist = (top, bot) if sg > 0 else (bot, top)
+        m = (L[cb + 1:] <= top) & (H[cb + 1:] >= bot)
+        if not m.any():
+            continue
+        i = cb + 1 + int(np.argmax(m))
+        if i - cb > 6 * 13 * 5:
+            continue
+        f = min(O[i], prox) if sg > 0 else max(O[i], prox)
+        out.append((i, sg, f, dist, top, bot))
+    return sorted(out)
+
+
 def run(events, a, b, sg, O, H, L, Cc, wa, target=None):
     """events (i, fill, stop): take while flat inside [a, b), stop first (limit fill can stop on its own bar),
     hold to b or to the target (in R)."""
@@ -258,46 +299,34 @@ for k in MK:
     wtr = np.maximum(wk.high - wk.low, np.maximum(abs(wk.high - wk.close.shift()), abs(wk.low - wk.close.shift())))
     wa = wtr.ewm(alpha=1 / 14, adjust=False).mean().reindex(idx, method="ffill").shift(1).bfill().to_numpy()
     atr = wilder(H, L, Cc)
-    E = {"Nested": nested_entries(hb, db, reg_of_day, O, H, L, Cc, atr),
-         "Big-Brother": bigbrother_entries(hb, db, reg_of_day, O, H, L, atr),
-         "canon 4h": canon_entries(hb, O, H, L)}
-    cz = [(i, sg, top, bot) for (i, sg, f, s, top, bot) in E["canon 4h"]]
+    E = {"canon 4h": canon_entries(hb, O, H, L),
+         "V4 4h": v4_entries(hb, O, H, L),
+         "three-tier B 4h": tier_b_entries(hb, O, H, L),
+         "Nested (D->4h)": nested_entries(hb, db, reg_of_day, O, H, L, Cc, atr),
+         "Big-Brother 4h": bigbrother_entries(hb, db, reg_of_day, O, H, L, atr)}
     stats.append({"k": k, **{nm: len(v) for nm, v in E.items()}})
     for r in V[V.m == k].itertuples():
         a, b = idx.searchsorted(r.entry), idx.searchsorted(r.exit + pd.Timedelta(days=1)) - 1
         if b >= len(idx) or b <= a or idx[a] < r.entry:
             continue
         sg = r.sg
-        base = run([(a, Cc[a], Cc[a] - sg * 0.75 * wa[a])], a, b, sg, O, H, L, Cc, wa)
-        out = {"verdict entry (0.75 wk-ATR)": base}
+        out = {("verdict entry", "0.75 wk"): run([(a, Cc[a], Cc[a] - sg * 0.75 * wa[a])], a, b, sg, O, H, L, Cc, wa)}
         for nm, ev in E.items():
             ev = [e for e in ev if e[1] == sg]
-            zone_stop = [(i, f, d) for (i, s_, f, st, top, bot) in ev for d in [bot if sg > 0 else top]]
-            atr_stop = [(i, f, f - sg * 0.75 * atr[i - 1]) for (i, s_, f, st, top, bot) in ev]
-            if nm == "Nested":
-                own = [(i, f, st) for (i, s_, f, st, top, bot) in ev]
-                out["Nested, own stop, hold"] = run(own, a, b, sg, O, H, L, Cc, wa)
-                out["Nested, own stop, 2R (indicator)"] = run(own, a, b, sg, O, H, L, Cc, wa, target=2.0)
-                out["Nested, stop beyond zone, hold"] = run(zone_stop, a, b, sg, O, H, L, Cc, wa)
-            elif nm == "Big-Brother":
-                out["Big-Brother, stop beyond zone, hold"] = run(zone_stop, a, b, sg, O, H, L, Cc, wa)
-                out["Big-Brother, 0.75 ATR4h, hold"] = run(atr_stop, a, b, sg, O, H, L, Cc, wa)
-                out["Big-Brother, stop beyond zone, 2R"] = run(zone_stop, a, b, sg, O, H, L, Cc, wa, target=2.0)
-                # confluence: BB zone overlapping a fresh canon 4h zone of the same side (canon zone filled no earlier)
-                conf = []
-                for (i, s_, f, st, top, bot) in ev:
-                    c_ok = any(cs == sg and max(bot, cb_) <= min(top, ct) for (ci, cs, ct, cb_) in cz if abs(ci - i) <= 6)
-                    conf.append(c_ok)
-                ev_c = [z for z, c_ in zip(zone_stop, conf) if c_]; ev_n = [z for z, c_ in zip(zone_stop, conf) if not c_]
-                out["  BB with a canon 4h zone"] = run(ev_c, a, b, sg, O, H, L, Cc, wa)
-                out["  BB without"] = run(ev_n, a, b, sg, O, H, L, Cc, wa)
-            else:
-                out["canon 4h, stop beyond zone, hold"] = run(zone_stop, a, b, sg, O, H, L, Cc, wa)
-                out["canon 4h, 0.75 ATR4h, hold"] = run(atr_stop, a, b, sg, O, H, L, Cc, wa)
-        for nm, res in out.items():
+            # own stop: the zone's far edge, Nested its 0.75 x ATR14(4h) (set at validation)
+            own = [(i, f, st) for (i, s_, f, st, top, bot) in ev]
+            for lab, kk, fixed in (("own/zone", 0, False), ("zone, >=0.25 wk", 0.25, False), ("zone, >=0.5 wk", 0.5, False),
+                                   ("fixed 0.75 wk", 0.75, True)):
+                if fixed:
+                    evs = [(i, f, f - sg * kk * wa[i]) for (i, f, st) in own]
+                else:
+                    evs = [(i, f, st if sg * (f - st) >= kk * wa[i] else f - sg * kk * wa[i]) for (i, f, st) in own]
+                out[(nm, lab)] = run(evs, a, b, sg, O, H, L, Cc, wa)
+        for (nm, lab), res in out.items():
             for x in (res or [None]):
-                rows.append({"k": k, "sector": meta[3], "t": r.t, "vid": r.Index, "set": nm, "took": x is not None,
-                             "r": x[0] if x else 0.0, "pct": x[1] if x else 0.0, "stop_wk": x[2] if x else np.nan})
+                rows.append({"k": k, "sector": meta[3], "t": r.t, "vid": r.Index, "set": nm, "stop": lab, "took": x is not None,
+                             "r": x[0] if x else 0.0, "pct": x[1] if x else 0.0, "stop_wk": x[2] if x else np.nan,
+                             "d": idx[x[3]] if x else pd.NaT})
     print(k, stats[-1], flush=True)
 T = pd.DataFrame(rows)
 T.to_csv(f"{BB}/data/research/nested_bigbrother.csv", index=False)
@@ -307,20 +336,25 @@ def tstat(x):
     return x.mean() / x.std(ddof=1) * np.sqrt(len(x)) if len(x) > 2 else np.nan
 
 
-def show(G, title):
-    nv = G.vid.nunique()
-    print(f"\n=== {title}: {nv} verdicts ===")
-    print(f"{'entry':38s} {'att/v':>5s} {'w/entry':>7s} {'stop':>5s} {'won':>5s} {'R/att':>6s} | {'R/verdict':>9s} {'t':>5s} {'19-22':>6s} {'23-26':>6s} | "
-          f"{'%/verd':>6s} {'19-22':>6s} {'23-26':>6s} | {'cost.02 R/v':>11s}")
-    for nm, g in G.groupby("set", sort=False):
+YRS = 7.8
+
+
+def show(G, title, equity=True):
+    print(f"\n=== {title}: {G.vid.nunique()} verdicts ===")
+    print(f"{'entry':18s} {'stop':16s} {'att/v':>5s} {'w/ent':>5s} {'stop':>5s} {'won':>4s} {'R/att':>6s} | {'R/verd':>6s} {'t':>5s} {'19-22':>6s} {'23-26':>6s} | "
+          f"{'%/verd':>6s} | cost .02: {'R/verd':>6s} {'R/yr':>6s} {'maxDD':>6s} {'ratio':>5s} {'top5%':>5s}")
+    for (nm, lab), g in G.groupby(["set", "stop"], sort=False):
         g = g.assign(rc=g.r - np.where(g.took, 0.02 / g.stop_wk.clip(lower=0.1), 0.0))
         pv = g.groupby("vid").agg(r=("r", "sum"), pct=("pct", "sum"), n=("took", "sum"), t=("t", "first"), rc=("rc", "sum"))
-        tk = g[g.took]; e, l = pv[pv.t < "2023"], pv[pv.t >= "2023"]
-        print(f"{nm:38s} {pv.n.mean():5.2f} {100*(pv.n>0).mean():6.0f}% {tk.stop_wk.median():5.2f} {100*(tk.r>0).mean():5.1f} {tk.r.mean():+6.3f} | "
-              f"{pv.r.mean():+9.3f} {tstat(pv.r):+5.1f} {e.r.mean():+6.3f} {l.r.mean():+6.3f} | {pv.pct.mean():+6.2f} {e.pct.mean():+6.2f} {l.pct.mean():+6.2f} | {pv.rc.mean():+11.3f}")
+        tk = g[g.took].sort_values("d"); e, l = pv[pv.t < "2023"], pv[pv.t >= "2023"]
+        eq = tk.rc.groupby(tk.d).sum().cumsum(); dd = (eq - eq.cummax()).min() if len(eq) else np.nan
+        top = tk.rc.sort_values(ascending=False); sh = top.head(max(1, len(top) // 20)).sum() / top.sum() if top.sum() > 0 else np.nan
+        print(f"{nm:18s} {lab:16s} {pv.n.mean():5.2f} {100*(pv.n>0).mean():4.0f}% {tk.stop_wk.median():5.2f} {100*(tk.r>0).mean():4.0f} {tk.r.mean():+6.3f} | "
+              f"{pv.r.mean():+6.3f} {tstat(pv.r):+5.1f} {e.r.mean():+6.3f} {l.r.mean():+6.3f} | {pv.pct.mean():+6.2f} | "
+              f"{pv.rc.mean():+16.3f} {tk.rc.sum()/YRS:+6.1f} {dd:+6.1f} {tk.rc.sum()/YRS/abs(dd) if dd else np.nan:5.2f} {100*sh:4.0f}%")
 
 
 show(T, "10 markets, 4h feed")
 for sec, g in T.groupby("sector"):
-    show(g, sec)
+    show(g[g.stop.isin(["own/zone", "zone, >=0.5 wk", "0.75 wk", "fixed 0.75 wk"])], sec)
 print("\nentries generated (whole history, both sides):", pd.DataFrame(stats).set_index("k").sum().to_dict())
