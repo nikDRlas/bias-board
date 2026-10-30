@@ -103,61 +103,62 @@ def run(events, a, b, sg, O, H, L, Cc, wa):
 
 
 STOPS = (("own/zone", 0, False), ("zone, >=0.25 wk", 0.25, False), ("zone, >=0.5 wk", 0.5, False), ("fixed 0.75 wk", 0.75, True))
-rows = []
-for k, meta in C.M.items():
-    if k in ("DX", "KC", "LE"):
-        continue
-    d = pd.read_csv(f"{BB}/data/live/{k}.csv", parse_dates=["ts"]).set_index("ts")[["open", "high", "low", "close"]]
-    d = d[(d.index.dayofweek < 5) & (d.high > d.low) & (d.index >= "2012-01-01")]
-    if meta[2]:
-        d = pd.DataFrame({"open": 1 / d.open, "high": 1 / d.low, "low": 1 / d.high, "close": 1 / d.close}, index=d.index)
-    w = d.resample("W-FRI").agg(AGG).dropna()
-    tr = np.maximum(w.high - w.low, np.maximum(abs(w.high - w.close.shift()), abs(w.low - w.close.shift())))
-    O, H, L, Cc, idx = d.open.to_numpy(), d.high.to_numpy(), d.low.to_numpy(), d.close.to_numpy(), d.index
-    wa = tr.ewm(alpha=1 / 14, adjust=False).mean().reindex(idx, method="ffill").shift(1).bfill().to_numpy()
-    E = entries(d, w, O, H, L, Cc, idx)
-    for r in V[V.m == k].itertuples():
-        a, b = idx.searchsorted(r.entry), idx.searchsorted(r.exit)
-        if b >= len(idx) or b <= a or idx[a] != r.entry:
+if __name__ == "__main__":
+    rows = []
+    for k, meta in C.M.items():
+        if k in ("DX", "KC", "LE"):
             continue
-        sg = r.sg
-        out = {("verdict", "fixed 0.75 wk"): run([(a, Cc[a], Cc[a] - sg * 0.75 * wa[a], "c")], a, b, sg, O, H, L, Cc, wa)}
-        for nm, ev in E.items():
-            own = [(i, f, st, kd) for (i, s_, f, st, kd) in ev if s_ == sg]
-            for lab, kk, fixed in STOPS:
-                if fixed:
-                    evs = [(i, f, f - sg * kk * wa[i], kd) for (i, f, st, kd) in own]
-                else:
-                    evs = [(i, f, st if sg * (f - st) >= kk * wa[i] else f - sg * kk * wa[i], kd) for (i, f, st, kd) in own]
-                out[(nm, lab)] = run(evs, a, b, sg, O, H, L, Cc, wa)
-        for (nm, lab), res in out.items():
-            for x in (res or [None]):
-                rows.append({"k": k, "sector": meta[3], "t": r.t, "vid": r.Index, "set": nm, "stop": lab, "took": x is not None,
-                             "r": x[0] if x else 0.0, "pct": x[1] if x else 0.0, "stop_wk": x[2] if x else np.nan,
-                             "d": idx[x[3]] if x else pd.NaT})
-    print(k, end=" ", flush=True)
-print()
-T = pd.DataFrame(rows)
-T.to_csv(f"{BB}/data/research/daily_stop_grid.csv.gz", index=False)
+        d = pd.read_csv(f"{BB}/data/live/{k}.csv", parse_dates=["ts"]).set_index("ts")[["open", "high", "low", "close"]]
+        d = d[(d.index.dayofweek < 5) & (d.high > d.low) & (d.index >= "2012-01-01")]
+        if meta[2]:
+            d = pd.DataFrame({"open": 1 / d.open, "high": 1 / d.low, "low": 1 / d.high, "close": 1 / d.close}, index=d.index)
+        w = d.resample("W-FRI").agg(AGG).dropna()
+        tr = np.maximum(w.high - w.low, np.maximum(abs(w.high - w.close.shift()), abs(w.low - w.close.shift())))
+        O, H, L, Cc, idx = d.open.to_numpy(), d.high.to_numpy(), d.low.to_numpy(), d.close.to_numpy(), d.index
+        wa = tr.ewm(alpha=1 / 14, adjust=False).mean().reindex(idx, method="ffill").shift(1).bfill().to_numpy()
+        E = entries(d, w, O, H, L, Cc, idx)
+        for r in V[V.m == k].itertuples():
+            a, b = idx.searchsorted(r.entry), idx.searchsorted(r.exit)
+            if b >= len(idx) or b <= a or idx[a] != r.entry:
+                continue
+            sg = r.sg
+            out = {("verdict", "fixed 0.75 wk"): run([(a, Cc[a], Cc[a] - sg * 0.75 * wa[a], "c")], a, b, sg, O, H, L, Cc, wa)}
+            for nm, ev in E.items():
+                own = [(i, f, st, kd) for (i, s_, f, st, kd) in ev if s_ == sg]
+                for lab, kk, fixed in STOPS:
+                    if fixed:
+                        evs = [(i, f, f - sg * kk * wa[i], kd) for (i, f, st, kd) in own]
+                    else:
+                        evs = [(i, f, st if sg * (f - st) >= kk * wa[i] else f - sg * kk * wa[i], kd) for (i, f, st, kd) in own]
+                    out[(nm, lab)] = run(evs, a, b, sg, O, H, L, Cc, wa)
+            for (nm, lab), res in out.items():
+                for x in (res or [None]):
+                    rows.append({"k": k, "sector": meta[3], "t": r.t, "vid": r.Index, "set": nm, "stop": lab, "took": x is not None,
+                                 "r": x[0] if x else 0.0, "pct": x[1] if x else 0.0, "stop_wk": x[2] if x else np.nan,
+                                 "d": idx[x[3]] if x else pd.NaT})
+        print(k, end=" ", flush=True)
+    print()
+    T = pd.DataFrame(rows)
+    T.to_csv(f"{BB}/data/research/daily_stop_grid.csv.gz", index=False)
 
 
-def tstat(x):
-    return x.mean() / x.std(ddof=1) * np.sqrt(len(x)) if len(x) > 2 else np.nan
+    def tstat(x):
+        return x.mean() / x.std(ddof=1) * np.sqrt(len(x)) if len(x) > 2 else np.nan
 
 
-def show(G, title):
-    print(f"\n=== {title}: {G.vid.nunique()} verdicts ===")
-    print(f"{'entry':10s} {'stop':16s} {'w/ent':>5s} {'stop':>5s} {'won':>4s} {'R/att':>6s} | {'R/verd':>6s} {'t':>5s} {'19-22':>6s} {'23-26':>6s} | "
-          f"{'%/verd':>6s} | cost .02: {'R/yr':>6s} {'maxDD':>6s} {'ratio':>5s}")
-    for (nm, lab), g in G.groupby(["set", "stop"], sort=False):
-        g = g.assign(rc=g.r - np.where(g.took, 0.02 / g.stop_wk.clip(lower=0.1), 0.0))
-        pv = g.groupby("vid").agg(r=("r", "sum"), pct=("pct", "sum"), n=("took", "sum"), t=("t", "first"), rc=("rc", "sum"))
-        tk = g[g.took].sort_values("d"); e, l = pv[pv.t < "2023"], pv[pv.t >= "2023"]
-        eq = tk.rc.groupby(tk.d).sum().cumsum(); dd = (eq - eq.cummax()).min()
-        print(f"{nm:10s} {lab:16s} {100*(pv.n>0).mean():4.0f}% {tk.stop_wk.median():5.2f} {100*(tk.r>0).mean():4.0f} {tk.r.mean():+6.3f} | "
-              f"{pv.r.mean():+6.3f} {tstat(pv.r):+5.1f} {e.r.mean():+6.3f} {l.r.mean():+6.3f} | {pv.pct.mean():+6.2f} | "
-              f"{tk.rc.sum()/YRS:+15.1f} {dd:+6.1f} {tk.rc.sum()/YRS/abs(dd):5.2f}")
+    def show(G, title):
+        print(f"\n=== {title}: {G.vid.nunique()} verdicts ===")
+        print(f"{'entry':10s} {'stop':16s} {'w/ent':>5s} {'stop':>5s} {'won':>4s} {'R/att':>6s} | {'R/verd':>6s} {'t':>5s} {'19-22':>6s} {'23-26':>6s} | "
+              f"{'%/verd':>6s} | cost .02: {'R/yr':>6s} {'maxDD':>6s} {'ratio':>5s}")
+        for (nm, lab), g in G.groupby(["set", "stop"], sort=False):
+            g = g.assign(rc=g.r - np.where(g.took, 0.02 / g.stop_wk.clip(lower=0.1), 0.0))
+            pv = g.groupby("vid").agg(r=("r", "sum"), pct=("pct", "sum"), n=("took", "sum"), t=("t", "first"), rc=("rc", "sum"))
+            tk = g[g.took].sort_values("d"); e, l = pv[pv.t < "2023"], pv[pv.t >= "2023"]
+            eq = tk.rc.groupby(tk.d).sum().cumsum(); dd = (eq - eq.cummax()).min()
+            print(f"{nm:10s} {lab:16s} {100*(pv.n>0).mean():4.0f}% {tk.stop_wk.median():5.2f} {100*(tk.r>0).mean():4.0f} {tk.r.mean():+6.3f} | "
+                  f"{pv.r.mean():+6.3f} {tstat(pv.r):+5.1f} {e.r.mean():+6.3f} {l.r.mean():+6.3f} | {pv.pct.mean():+6.2f} | "
+                  f"{tk.rc.sum()/YRS:+15.1f} {dd:+6.1f} {tk.rc.sum()/YRS/abs(dd):5.2f}")
 
 
-show(T, "DAILY / WEEKLY, 21 markets")
-show(T[T.k.isin(TEN)], "DAILY / WEEKLY, the 10 markets with 4h data")
+    show(T, "DAILY / WEEKLY, 21 markets")
+    show(T[T.k.isin(TEN)], "DAILY / WEEKLY, the 10 markets with 4h data")

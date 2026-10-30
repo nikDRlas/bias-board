@@ -285,76 +285,77 @@ def run(events, a, b, sg, O, H, L, Cc, wa, target=None):
     return res
 
 
-rows, stats = [], []
-for k in MK:
-    meta = C.M[k]
-    hb = pd.read_csv(f"{H4}/{k}.csv", parse_dates=["ts"]).set_index("ts")[["open", "high", "low", "close"]].astype(float)
-    hb = hb[~hb.index.duplicated()].sort_index(); hb = hb[(hb.high > hb.low) & (hb.index >= "2016-01-01") & (hb.index.dayofweek < 5)]
-    if meta[2]:
-        hb = inv(hb)
-    db = hb.groupby(hb.index.normalize()).agg(AGG)
-    O, H, L, Cc, idx = hb.open.to_numpy(), hb.high.to_numpy(), hb.low.to_numpy(), hb.close.to_numpy(), hb.index
-    reg_of_day = idx.searchsorted(db.index + pd.Timedelta(days=1))     # first 4h bar of the next date
-    wk = hb.resample("W-FRI").agg(AGG).dropna()
-    wtr = np.maximum(wk.high - wk.low, np.maximum(abs(wk.high - wk.close.shift()), abs(wk.low - wk.close.shift())))
-    wa = wtr.ewm(alpha=1 / 14, adjust=False).mean().reindex(idx, method="ffill").shift(1).bfill().to_numpy()
-    atr = wilder(H, L, Cc)
-    E = {"canon 4h": canon_entries(hb, O, H, L),
-         "V4 4h": v4_entries(hb, O, H, L),
-         "three-tier B 4h": tier_b_entries(hb, O, H, L),
-         "Nested (D->4h)": nested_entries(hb, db, reg_of_day, O, H, L, Cc, atr),
-         "Big-Brother 4h": bigbrother_entries(hb, db, reg_of_day, O, H, L, atr)}
-    stats.append({"k": k, **{nm: len(v) for nm, v in E.items()}})
-    for r in V[V.m == k].itertuples():
-        a, b = idx.searchsorted(r.entry), idx.searchsorted(r.exit + pd.Timedelta(days=1)) - 1
-        if b >= len(idx) or b <= a or idx[a] < r.entry:
-            continue
-        sg = r.sg
-        out = {("verdict entry", "0.75 wk"): run([(a, Cc[a], Cc[a] - sg * 0.75 * wa[a])], a, b, sg, O, H, L, Cc, wa)}
-        for nm, ev in E.items():
-            ev = [e for e in ev if e[1] == sg]
-            # own stop: the zone's far edge, Nested its 0.75 x ATR14(4h) (set at validation)
-            own = [(i, f, st) for (i, s_, f, st, top, bot) in ev]
-            for lab, kk, fixed in (("own/zone", 0, False), ("zone, >=0.25 wk", 0.25, False), ("zone, >=0.5 wk", 0.5, False),
-                                   ("fixed 0.75 wk", 0.75, True)):
-                if fixed:
-                    evs = [(i, f, f - sg * kk * wa[i]) for (i, f, st) in own]
-                else:
-                    evs = [(i, f, st if sg * (f - st) >= kk * wa[i] else f - sg * kk * wa[i]) for (i, f, st) in own]
-                out[(nm, lab)] = run(evs, a, b, sg, O, H, L, Cc, wa)
-        for (nm, lab), res in out.items():
-            for x in (res or [None]):
-                rows.append({"k": k, "sector": meta[3], "t": r.t, "vid": r.Index, "set": nm, "stop": lab, "took": x is not None,
-                             "r": x[0] if x else 0.0, "pct": x[1] if x else 0.0, "stop_wk": x[2] if x else np.nan,
-                             "d": idx[x[3]] if x else pd.NaT})
-    print(k, stats[-1], flush=True)
-T = pd.DataFrame(rows)
-T.to_csv(f"{BB}/data/research/nested_bigbrother.csv", index=False)
+if __name__ == "__main__":
+    rows, stats = [], []
+    for k in MK:
+        meta = C.M[k]
+        hb = pd.read_csv(f"{H4}/{k}.csv", parse_dates=["ts"]).set_index("ts")[["open", "high", "low", "close"]].astype(float)
+        hb = hb[~hb.index.duplicated()].sort_index(); hb = hb[(hb.high > hb.low) & (hb.index >= "2016-01-01") & (hb.index.dayofweek < 5)]
+        if meta[2]:
+            hb = inv(hb)
+        db = hb.groupby(hb.index.normalize()).agg(AGG)
+        O, H, L, Cc, idx = hb.open.to_numpy(), hb.high.to_numpy(), hb.low.to_numpy(), hb.close.to_numpy(), hb.index
+        reg_of_day = idx.searchsorted(db.index + pd.Timedelta(days=1))     # first 4h bar of the next date
+        wk = hb.resample("W-FRI").agg(AGG).dropna()
+        wtr = np.maximum(wk.high - wk.low, np.maximum(abs(wk.high - wk.close.shift()), abs(wk.low - wk.close.shift())))
+        wa = wtr.ewm(alpha=1 / 14, adjust=False).mean().reindex(idx, method="ffill").shift(1).bfill().to_numpy()
+        atr = wilder(H, L, Cc)
+        E = {"canon 4h": canon_entries(hb, O, H, L),
+             "V4 4h": v4_entries(hb, O, H, L),
+             "three-tier B 4h": tier_b_entries(hb, O, H, L),
+             "Nested (D->4h)": nested_entries(hb, db, reg_of_day, O, H, L, Cc, atr),
+             "Big-Brother 4h": bigbrother_entries(hb, db, reg_of_day, O, H, L, atr)}
+        stats.append({"k": k, **{nm: len(v) for nm, v in E.items()}})
+        for r in V[V.m == k].itertuples():
+            a, b = idx.searchsorted(r.entry), idx.searchsorted(r.exit + pd.Timedelta(days=1)) - 1
+            if b >= len(idx) or b <= a or idx[a] < r.entry:
+                continue
+            sg = r.sg
+            out = {("verdict entry", "0.75 wk"): run([(a, Cc[a], Cc[a] - sg * 0.75 * wa[a])], a, b, sg, O, H, L, Cc, wa)}
+            for nm, ev in E.items():
+                ev = [e for e in ev if e[1] == sg]
+                # own stop: the zone's far edge, Nested its 0.75 x ATR14(4h) (set at validation)
+                own = [(i, f, st) for (i, s_, f, st, top, bot) in ev]
+                for lab, kk, fixed in (("own/zone", 0, False), ("zone, >=0.25 wk", 0.25, False), ("zone, >=0.5 wk", 0.5, False),
+                                       ("fixed 0.75 wk", 0.75, True)):
+                    if fixed:
+                        evs = [(i, f, f - sg * kk * wa[i]) for (i, f, st) in own]
+                    else:
+                        evs = [(i, f, st if sg * (f - st) >= kk * wa[i] else f - sg * kk * wa[i]) for (i, f, st) in own]
+                    out[(nm, lab)] = run(evs, a, b, sg, O, H, L, Cc, wa)
+            for (nm, lab), res in out.items():
+                for x in (res or [None]):
+                    rows.append({"k": k, "sector": meta[3], "t": r.t, "vid": r.Index, "set": nm, "stop": lab, "took": x is not None,
+                                 "r": x[0] if x else 0.0, "pct": x[1] if x else 0.0, "stop_wk": x[2] if x else np.nan,
+                                 "d": idx[x[3]] if x else pd.NaT})
+        print(k, stats[-1], flush=True)
+    T = pd.DataFrame(rows)
+    T.to_csv(f"{BB}/data/research/nested_bigbrother.csv", index=False)
 
 
-def tstat(x):
-    return x.mean() / x.std(ddof=1) * np.sqrt(len(x)) if len(x) > 2 else np.nan
+    def tstat(x):
+        return x.mean() / x.std(ddof=1) * np.sqrt(len(x)) if len(x) > 2 else np.nan
 
 
-YRS = 7.8
+    YRS = 7.8
 
 
-def show(G, title, equity=True):
-    print(f"\n=== {title}: {G.vid.nunique()} verdicts ===")
-    print(f"{'entry':18s} {'stop':16s} {'att/v':>5s} {'w/ent':>5s} {'stop':>5s} {'won':>4s} {'R/att':>6s} | {'R/verd':>6s} {'t':>5s} {'19-22':>6s} {'23-26':>6s} | "
-          f"{'%/verd':>6s} | cost .02: {'R/verd':>6s} {'R/yr':>6s} {'maxDD':>6s} {'ratio':>5s} {'top5%':>5s}")
-    for (nm, lab), g in G.groupby(["set", "stop"], sort=False):
-        g = g.assign(rc=g.r - np.where(g.took, 0.02 / g.stop_wk.clip(lower=0.1), 0.0))
-        pv = g.groupby("vid").agg(r=("r", "sum"), pct=("pct", "sum"), n=("took", "sum"), t=("t", "first"), rc=("rc", "sum"))
-        tk = g[g.took].sort_values("d"); e, l = pv[pv.t < "2023"], pv[pv.t >= "2023"]
-        eq = tk.rc.groupby(tk.d).sum().cumsum(); dd = (eq - eq.cummax()).min() if len(eq) else np.nan
-        top = tk.rc.sort_values(ascending=False); sh = top.head(max(1, len(top) // 20)).sum() / top.sum() if top.sum() > 0 else np.nan
-        print(f"{nm:18s} {lab:16s} {pv.n.mean():5.2f} {100*(pv.n>0).mean():4.0f}% {tk.stop_wk.median():5.2f} {100*(tk.r>0).mean():4.0f} {tk.r.mean():+6.3f} | "
-              f"{pv.r.mean():+6.3f} {tstat(pv.r):+5.1f} {e.r.mean():+6.3f} {l.r.mean():+6.3f} | {pv.pct.mean():+6.2f} | "
-              f"{pv.rc.mean():+16.3f} {tk.rc.sum()/YRS:+6.1f} {dd:+6.1f} {tk.rc.sum()/YRS/abs(dd) if dd else np.nan:5.2f} {100*sh:4.0f}%")
+    def show(G, title, equity=True):
+        print(f"\n=== {title}: {G.vid.nunique()} verdicts ===")
+        print(f"{'entry':18s} {'stop':16s} {'att/v':>5s} {'w/ent':>5s} {'stop':>5s} {'won':>4s} {'R/att':>6s} | {'R/verd':>6s} {'t':>5s} {'19-22':>6s} {'23-26':>6s} | "
+              f"{'%/verd':>6s} | cost .02: {'R/verd':>6s} {'R/yr':>6s} {'maxDD':>6s} {'ratio':>5s} {'top5%':>5s}")
+        for (nm, lab), g in G.groupby(["set", "stop"], sort=False):
+            g = g.assign(rc=g.r - np.where(g.took, 0.02 / g.stop_wk.clip(lower=0.1), 0.0))
+            pv = g.groupby("vid").agg(r=("r", "sum"), pct=("pct", "sum"), n=("took", "sum"), t=("t", "first"), rc=("rc", "sum"))
+            tk = g[g.took].sort_values("d"); e, l = pv[pv.t < "2023"], pv[pv.t >= "2023"]
+            eq = tk.rc.groupby(tk.d).sum().cumsum(); dd = (eq - eq.cummax()).min() if len(eq) else np.nan
+            top = tk.rc.sort_values(ascending=False); sh = top.head(max(1, len(top) // 20)).sum() / top.sum() if top.sum() > 0 else np.nan
+            print(f"{nm:18s} {lab:16s} {pv.n.mean():5.2f} {100*(pv.n>0).mean():4.0f}% {tk.stop_wk.median():5.2f} {100*(tk.r>0).mean():4.0f} {tk.r.mean():+6.3f} | "
+                  f"{pv.r.mean():+6.3f} {tstat(pv.r):+5.1f} {e.r.mean():+6.3f} {l.r.mean():+6.3f} | {pv.pct.mean():+6.2f} | "
+                  f"{pv.rc.mean():+16.3f} {tk.rc.sum()/YRS:+6.1f} {dd:+6.1f} {tk.rc.sum()/YRS/abs(dd) if dd else np.nan:5.2f} {100*sh:4.0f}%")
 
 
-show(T, "10 markets, 4h feed")
-for sec, g in T.groupby("sector"):
-    show(g[g.stop.isin(["own/zone", "zone, >=0.5 wk", "0.75 wk", "fixed 0.75 wk"])], sec)
-print("\nentries generated (whole history, both sides):", pd.DataFrame(stats).set_index("k").sum().to_dict())
+    show(T, "10 markets, 4h feed")
+    for sec, g in T.groupby("sector"):
+        show(g[g.stop.isin(["own/zone", "zone, >=0.5 wk", "0.75 wk", "fixed 0.75 wk"])], sec)
+    print("\nentries generated (whole history, both sides):", pd.DataFrame(stats).set_index("k").sum().to_dict())
