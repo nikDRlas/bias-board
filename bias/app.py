@@ -91,6 +91,9 @@ h2.sec{font:700 12px/1 var(--body);letter-spacing:.12em;text-transform:uppercase
 .wmute{color:var(--mute);font-size:13px}
 .tagt{font:600 11px var(--body);padding:2px 8px;border-radius:8px;margin-left:8px;vertical-align:1px}
 .tagt.top{background:var(--sun-soft);color:var(--ink)} .tagt.pair{background:var(--flat-soft);color:var(--mute)}
+.wcopy{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 18px;border-top:1px solid var(--line)}
+.wcopy .chip:disabled{opacity:.5;cursor:default}
+.wcopy .tvlist{font:12px var(--mono,monospace);width:min(100%,520px);padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
 details.rest{border:0;border-top:1px solid var(--line);border-radius:0;margin:0;padding:2px 18px}
 details.rest summary{font:600 13px var(--body);color:var(--mute)}
 .restg{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0 10px}
@@ -407,6 +410,21 @@ function whyShort(m) {
   const lv = m.cot.record && m.cot.record.live;
   return m.basis + (cotLed(m) && lv && lv.held ? " (held)" : "");
 }
+// TradingView symbols: continuous front-month futures for every market, OANDA spot for the currency crosses
+const TV = {GC: "COMEX:GC1!", SI: "COMEX:SI1!", PL: "NYMEX:PL1!", PA: "NYMEX:PA1!", HG: "COMEX:HG1!", CL: "NYMEX:CL1!",
+  NG: "NYMEX:NG1!", "6E": "CME:6E1!", DX: "ICEUS:DX1!", "6B": "CME:6B1!", "6J": "CME:6J1!", "6S": "CME:6S1!", "6A": "CME:6A1!",
+  "6C": "CME:6C1!", "6N": "CME:6N1!", ES: "CME_MINI:ES1!", NQ: "CME_MINI:NQ1!", YM: "CBOT_MINI:YM1!", ZC: "CBOT:ZC1!",
+  ZW: "CBOT:ZW1!", ZS: "CBOT:ZS1!", SB: "ICEUS:SB1!", KC: "ICEUS:KC1!", LE: "CME:LE1!"};
+function tvTickers(on) {
+  const out = on.map(k => TV[k]).filter(Boolean).concat((D.fx_pairs || []).map(p => "OANDA:" + p.pair.replace("/", "")));
+  return [...new Set(out)];
+}
+async function copyText(txt) {
+  try { await navigator.clipboard.writeText(txt); return true; } catch (e) {
+    const ta = document.createElement("textarea"); ta.value = txt; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand("copy"); } catch (e2) {} ta.remove(); return ok;
+  }
+}
 function weekList() {
   const rank = m => m.basis === "COT + calendar" ? (m.sector === "FX" ? 1 : 0) : cotLed(m) ? 2 : 3;
   const on = KEYS.filter(k => M[k].verdict !== "STAND ASIDE").sort((a, b) => rank(M[a]) - rank(M[b]));
@@ -417,8 +435,16 @@ function weekList() {
   $("#week").innerHTML = `<div class="whead"><span>This week</span><span>Bias</span><span>Why</span><span>Until</span></div>`
     + on.map(k => row(k, M[k].name, top(M[k]), M[k].verdict, whyShort(M[k]), untilTxt(M[k]))).join("") + pairs.join("")
     + (on.length ? "" : `<p class="wmute" style="padding:12px 18px;margin:0;border-top:1px solid var(--line)">No bias this week.</p>`)
+    + `<div class="wcopy"><button class="chip" id="copytv" type="button"${tvTickers(on).length ? "" : " disabled"} title="${esc(tvTickers(on).join(", "))}">Copy ${tvTickers(on).length} tickers for TradingView</button><span class="wmute" id="copytv-msg" aria-live="polite">futures 1!, crosses on OANDA · paste into the watchlist's add-symbol box</span></div>`
     + `<details class="rest"><summary>${off.length} markets without a bias</summary><div class="restg">${off.map(k => `<button class="rchip" data-k="${k}">${esc(M[k].name)} <span class="wmute">· ${esc(whyShort(M[k]))}</span></button>`).join("")}</div></details>`;
   document.querySelectorAll("#week [data-k]").forEach(b => b.addEventListener("click", () => select(b.dataset.k, true)));
+  const cb = $("#copytv");
+  if (cb) cb.addEventListener("click", async () => {
+    const ok = await copyText(tvTickers(on).join(","));
+    const msg = $("#copytv-msg");
+    if (ok) msg.textContent = `Copied: ${tvTickers(on).join(", ")}`;
+    else { msg.innerHTML = `Copy blocked by the browser, copy it by hand: <input class="tvlist" readonly value="${esc(tvTickers(on).join(","))}" aria-label="TradingView tickers">`; msg.querySelector("input").select(); }
+  });
 }
 function checklist(m) {
   const c = m.cot, s = m.seas, d = s.driver, lv = c.record && c.record.live, rows = [];
