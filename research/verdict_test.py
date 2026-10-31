@@ -29,6 +29,18 @@ KEEP_SLOW_IN = set(os.environ.get("KEEP_SLOW_IN", "").split(",")) - {""}   # sec
 OUT = os.environ.get("OUT", "verdict.json")
 GATES = os.environ.get("GATES", "macro,done")
 FX_COT = os.environ.get("FX_COT", "bernd")              # currency COT rule: min (board) / none / bernd (his evidence gate)          # the final 'nothing left' rules (bias/verdict.py final_read)
+# research switches (2026-10-31, Bernd's commodity outlook): NONFX_COT = min (board: COT minimum record) / bernd (his
+# evidence gate instead) / both (minimum AND his gate) outside currencies; RETAIL_SAME=drop = no side when retail sits
+# at an extreme on the commercials' own side (his natural-gas case: crowd faded against commercials followed)
+# TESTED 2026-10-31, all REJECTED (walk-forward 2019-26, data/research/bernd31_*.json; % per verdict, total %):
+#   board          572 verdicts 61.2% +1.84% total +1052 (19-22 +510, 23-26 +542); metals & energy +3.20% total +426
+#   bernd          648 59.0% +1.05% +679 (+291 / +388), metals & energy +0.62% (19-22 negative)
+#   both           522 61.3% +1.62% +845 (+373 / +472), metals & energy +2.54% total +259
+#   retail drop    543 61.3% +1.74% +945 (+431 / +514)
+# and his "seasonal against COT -> stand aside" outside agriculture would drop 132 COT-only verdicts: 19-22 -0.86%
+# (-53) but 23-26 +2.77% (+194) -> fails a half, the board keeps COT over a contrary calendar outside agriculture
+NONFX_COT = os.environ.get("NONFX_COT", "min")
+RETAIL_SAME = os.environ.get("RETAIL_SAME", "keep")
 speed_series, speed_of = C.speed_series, C.speed_of
 LONG_LENS = np.arange(31, 64)
 
@@ -39,7 +51,7 @@ if __name__ == "__main__":
     BERND = {}
     if FX_COT == "bernd":
         from qualify_test import Market
-        BERND = {k: Market(k) for k in C.M if C.M[k][3] == "FX"}
+        BERND = {k: Market(k) for k in C.M if C.M[k][3] == "FX" or NONFX_COT != "min"}
     if "macro" in GATES:
         import macro as MC
         _cal = MC.load_calendar()
@@ -68,8 +80,13 @@ if __name__ == "__main__":
                 if hs:
                     cot = hs
             fx = C.M[k][3] == "FX"
+            if cot in VD.SIDES and RETAIL_SAME == "drop" and 0 <= i_rep and rd.side("retail", i_rep) == ("hi" if cot == "BULLISH" else "lo"):
+                cot = "NEUTRAL"
             if cot in VD.SIDES and fx and FX_COT == "bernd":
                 if BERND[k].read(t, "gated") != cot:
+                    cot = "NEUTRAL"
+            elif cot in VD.SIDES and not fx and NONFX_COT != "min":
+                if BERND[k].read(t, "gated") != cot or (NONFX_COT == "both" and not C.cot_big_enough(k, cot, t)):
                     cot = "NEUTRAL"
             elif cot in VD.SIDES and not (fx and FX_COT == "none") and not C.cot_big_enough(k, cot, t):
                 cot = "NEUTRAL"
@@ -114,7 +131,8 @@ if __name__ == "__main__":
            "by_cell": summary([dict(r, c=r["basis"] + " | " + r["sector"]) for r in rows], "c"),
            "by_sector": summary(rows, "sector"),
            "by_basis_speed": summary([dict(r, bs=r["basis"] + " | " + r["speed"]) for r in rows if r["speed"]], "bs"),
-           "config": {"seas_lb": os.environ.get("SEAS_LB", "15"), "skip_slow": SKIP_SLOW, "solo_min_move": SS.SOLO_MIN_MOVE, "gates": GATES, "fx_cot": FX_COT}}
+           "config": {"seas_lb": os.environ.get("SEAS_LB", "15"), "skip_slow": SKIP_SLOW, "solo_min_move": SS.SOLO_MIN_MOVE, "gates": GATES, "fx_cot": FX_COT,
+                      "nonfx_cot": NONFX_COT, "retail_same": RETAIL_SAME}}
     os.makedirs(os.path.join(HERE, "..", "data", "research"), exist_ok=True)
     json.dump({**out, "trades": rows}, open(os.path.join(HERE, "..", "data", "research", OUT), "w"), indent=1)
     for key in ("first", "last", "all", "by_basis", "by_sector"):
