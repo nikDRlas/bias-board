@@ -108,5 +108,38 @@
   "report": "2026-10-20",
   "entry_from": "2026-10-25",
   "window_end": null
+ },
+ {
+  "week": "2026-10-31",
+  "m": "SI",
+  "name": "Silver",
+  "verdict": "BULLISH",
+  "basis": "COT only",
+  "macro": "against",
+  "report": "2026-10-27",
+  "entry_from": "2026-11-01",
+  "window_end": null
+ },
+ {
+  "week": "2026-10-31",
+  "m": "HG",
+  "name": "Copper",
+  "verdict": "BULLISH",
+  "basis": "COT only",
+  "macro": null,
+  "report": "2026-10-27",
+  "entry_from": "2026-11-01",
+  "window_end": null
+ },
+ {
+  "week": "2026-10-31",
+  "m": "CL",
+  "name": "WTI Crude Oil",
+  "verdict": "BULLISH",
+  "basis": "COT only",
+  "macro": null,
+  "report": "2026-10-27",
+  "entry_from": "2026-11-01",
+  "window_end": null
  }
 ]
