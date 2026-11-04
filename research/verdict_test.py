@@ -112,6 +112,18 @@ if __name__ == "__main__":
                 x = ret(p, t + pd.Timedelta(days=1), ex, v, C.COT_REF_DAYS)
             if not x or pd.Timestamp(x["exit"]) > end:
                 continue
+            run_cut = False
+            if VD.RUN_DONE_AT and "done" in GATES:
+                # run done (bias/verdict.py): checked every 5 trading days while held, out at the first check that meets it
+                a_, b_ = p.index.searchsorted(pd.Timestamp(x["entry"])), p.index.searchsorted(pd.Timestamp(x["exit"]))
+                for j in range(a_ + 5, b_, 5):
+                    rs = VD.run_state(k, v, p, a_, j, p.index[j])
+                    if rs and rs["done"]:
+                        x = ret(p, pd.Timestamp(x["entry"]), p.index[j], v, None if VD.horizon(basis) == "window" else C.COT_REF_DAYS)
+                        run_cut = True
+                        break
+                if not x:
+                    continue
             opp = {}
             if basis == "COT only":
                 # calendar windows pointing against COT that the rule ignored: up to 30 days but too small to stand alone,
@@ -121,7 +133,7 @@ if __name__ == "__main__":
                     opp[nm] = bool(st2 == "driver" and ("BULLISH" if w2[0]["side"] == "BUY" else "BEARISH") != v)
                     if opp[nm]:
                         opp[nm + "_move"] = round(abs(w2[0]["avg"]) / 100 / cal.day_vol(t), 2)
-            rows.append({"m": k, "t": str(t.date()), "v": v, "basis": basis, "sector": SECTOR(k),
+            rows.append({"m": k, "t": str(t.date()), "v": v, "basis": basis, "sector": SECTOR(k), "run_cut": run_cut,
                          "speed": spd if basis.startswith("COT") or basis == "Calendar over COT" else None, **opp, **x})
             busy = pd.Timestamp(x["exit"])
         print(k, sum(r["m"] == k for r in rows), flush=True)
@@ -132,7 +144,7 @@ if __name__ == "__main__":
            "by_sector": summary(rows, "sector"),
            "by_basis_speed": summary([dict(r, bs=r["basis"] + " | " + r["speed"]) for r in rows if r["speed"]], "bs"),
            "config": {"seas_lb": os.environ.get("SEAS_LB", "15"), "skip_slow": SKIP_SLOW, "solo_min_move": SS.SOLO_MIN_MOVE, "gates": GATES, "fx_cot": FX_COT,
-                      "nonfx_cot": NONFX_COT, "retail_same": RETAIL_SAME}}
+                      "nonfx_cot": NONFX_COT, "retail_same": RETAIL_SAME, "run_done_at": VD.RUN_DONE_AT}}
     os.makedirs(os.path.join(HERE, "..", "data", "research"), exist_ok=True)
     json.dump({**out, "trades": rows}, open(os.path.join(HERE, "..", "data", "research", OUT), "w"), indent=1)
     for key in ("first", "last", "all", "by_basis", "by_sector"):

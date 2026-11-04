@@ -1007,7 +1007,12 @@ if __name__ == "__main__":
         if mcal is not None and k in VD.US_DRIVEN:
             mt = MC.market_scores(mcal, k, pd.date_range(TODAY - pd.Timedelta(days=400), TODAY))["total"]
             msign = int(np.sign(mt.iloc[-1]))
-        v, why = VD.final_read(k, v, why, TODAY, p, cal0, used[0], reader, R.lit_sides(reader, R.speed_series(k)), msign)
+        lit_k = R.lit_sides(reader, R.speed_series(k))
+        v, why = VD.final_read(k, v, why, TODAY, p, cal0, used[0], reader, lit_k, msign)
+        run = None                                       # the run of the verdict before the final rules (run done)
+        if pre_v in VD.SIDES:
+            a0 = VD.entry_close(pre_v, pre_why, TODAY, p, cal0, used[0], reader, lit_k, k)
+            run = VD.run_state(k, pre_v, p, a0, len(p) - 1, TODAY) if a0 is not None else None
         small_only = False
         if used[1] != "driver":                          # nothing big enough to stand alone: still show the windows
             every = cal0.windows(TODAY, min_move=0)
@@ -1046,7 +1051,7 @@ if __name__ == "__main__":
                   "confidence": None, "setup": setup_record(k, why),
                   "profile": setup_profile(k, p, cal_obj, reader, s, why, v),
                   "cycle": presidential_cycle(p) if k in ("ES", "NQ", "YM") else None,
-                  "done": move_done(c, s, why),
+                  "done": {**move_done(c, s, why), "run": run},
                   "macro": MC.board_macro(mcal, k, TODAY, pre_v if pre_v in VD.SIDES else None) if mcal is not None else None,
                   "pre": {"verdict": pre_v, "basis": pre_why} if why in ("Macro against", "Move done") else None,
                   "tested": tested_for(k, why, groups, tested)}

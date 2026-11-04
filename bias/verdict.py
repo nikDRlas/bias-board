@@ -113,6 +113,47 @@ COT_DONE_WK = float(__import__("os").environ.get("COT_DONE_WK", "0"))
 
 
 DONE_YARD = __import__("os").environ.get("SEAS_DONE", "end")
+# RUN DONE (2026-11-04, research/runup_done_test.py): a verdict whose best close since its entry reached RUN_DONE_AT x
+# the usual BEST move of the market's winning COT setups on that side (>= 5 finished by then), and that still holds at
+# least half of that run, has nothing left: rest to exit -0.02 normal weeks (2019-22 -0.05, 2023-26 +0.01). On the
+# walk-forward (exit at the first weekly check that meets it): +1036% -> +1078%, both halves better, max drawdown
+# -150 -> -131, 9% fewer days in the market; at 0.75 worse, at 1.25 also better. A run given back (net <= half the
+# best) is NOT done: those verdicts made more than average afterwards, and the setup counts again. 0 = off
+RUN_DONE_AT = float(__import__("os").environ.get("RUN_DONE_AT", "1.0"))
+
+
+def run_state(k, side, p, a, c, t):
+    """the run of a running verdict from close a to close c: best and current move (%), the market's usual best move
+    of its winning COT setups on that side known by t, and whether it counts as done"""
+    import core as C
+    if c <= a:
+        return None
+    cs, _ = C.cot_cases(k)
+    w = [x["mfe"] for x in cs if x["side"] == side and x["exit"] <= t and x["end"] > 0]
+    sg = 1 if side == "BULLISH" else -1
+    seg = sg * (p.iloc[a:c + 1].to_numpy(float) / float(p.iloc[a]) - 1) * 100
+    best, net = float(seg.max()), float(seg[-1])
+    usual = float(np.mean(w)) if len(w) >= 5 else None
+    done = bool(RUN_DONE_AT and usual and usual > 0 and best >= RUN_DONE_AT * usual and net > best / 2)
+    return {"best": round(best, 2), "net": round(net, 2), "usual_best": round(usual, 2) if usual else None,
+            "share": round(100 * best / usual) if usual and usual > 0 else None, "done": done}
+
+
+def entry_close(v, basis, t, p, cal, ws, rd, lit, k):
+    """index of the running verdict's first close: the window start (calendar-led) or the COT signal's entry"""
+    import core as C
+    if horizon(basis) == "window":
+        d = ws[0] if ws else None
+        if not d or pd.Timestamp(d["start"]) > t:
+            return None
+        return p.index.searchsorted(pd.Timestamp(d["start"]))
+    i = rd.dates.searchsorted(t - pd.Timedelta(days=3), "right") - 1
+    if 0 <= i < len(lit) and lit[i] != v:
+        hs, q = C.held_side(rd.dates, lit, i, t, k)
+        i = q if hs == v else -1
+    if 0 <= i < len(lit) and lit[i] == v:
+        return p.index.searchsorted(rd.dates[C.lit_start(lit, i)] + pd.Timedelta(days=3))
+    return None
 
 
 def final_read(k, v, basis, t, p, cal, ws, rd, lit, macro_sign=None):
@@ -126,6 +167,11 @@ def final_read(k, v, basis, t, p, cal, ws, rd, lit, macro_sign=None):
     sg = 1 if v == "BULLISH" else -1
     if MACRO_GATE and k in US_DRIVEN and macro_sign is not None and macro_sign != sg:
         return "STAND ASIDE", "Macro against"
+    a0 = entry_close(v, basis, t, p, cal, ws, rd, lit, k) if RUN_DONE_AT else None
+    if a0 is not None:
+        rs = run_state(k, v, p, a0, p.index.searchsorted(t, "right") - 1, t)
+        if rs and rs["done"]:
+            return "STAND ASIDE", "Move done"
     if horizon(basis) == "window":
         d = ws[0]
         r = cal.remaining(t, d)

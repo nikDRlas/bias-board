@@ -500,7 +500,7 @@ function checklist(m) {
   const x = m.macro;
   if (x) li(x.rel === "agrees" ? "y" : x.rel === "against" ? "n" : "o", `<b>US macro</b>: ${x.rel === "agrees" ? "agrees" : x.rel === "against" ? "against (context only, it does not change the bias)" : x.rel === "flat" ? "neutral" : "score " + (x.total > 0 ? "+" : "") + x.total} (score ${x.total > 0 ? "+" : ""}${x.total})`);
   const dn = m.done && (m.done.cot || m.done.seas);
-  if (m.basis === "Move done") li("n", `<b>Move</b>: the usual move is already made, so the bias is off`);
+  if (m.basis === "Move done") li("n", m.done && m.done.run && m.done.run.done ? `<b>Move</b>: the run reached the usual best of its winners (${m.done.run.share}%) and still holds, so the bias is off until price gives back half of it` : `<b>Move</b>: the usual move is already made, so the bias is off`);
   return `<ul class="check">${rows.join("")}</ul>`;
 }
 function infoize(root) {
@@ -581,6 +581,10 @@ function why(m) {
   if (pre && m.basis === "Macro against") {
     const x = m.macro || {};
     return `No bias. The board would read ${pre.verdict.toLowerCase()} (${esc(pre.basis.toLowerCase())}), but the US macro score (${x.total > 0 ? "+" : ""}${x.total}) points the other way. On US indices, gold and silver such verdicts made about nothing above simply holding the market (2016–26), while those with macro agreeing won about 78%. So there is no edge to take this week.`;
+  }
+  if (pre && m.basis === "Move done" && m.done && m.done.run && m.done.run.done) {
+    const r = m.done.run;
+    return `No bias. The board would read ${pre.verdict.toLowerCase()} (${esc(pre.basis.toLowerCase())}), but this setup already ran ${pcx(r.best)} at its best, ${r.share}% of the usual best run of ${esc(m.name)}'s winning setups (${pcx(r.usual_best)}), and still holds most of it (${pcx(r.net)} now). In the 2019–26 test, verdicts in this spot made about nothing more; if price gives back half of the run, the setup counts again.`;
   }
   if (pre && m.basis === "Move done") {
     const d = m.done || {}, x = d.cot && d.cot.state === "done" ? d.cot : d.seas;
@@ -733,7 +737,7 @@ function runNote(lv, rc) {
   const sh = runShare(lv, rc); if (sh == null || sh < 50) return "";
   const gave = lv.move <= lv.best / 2;
   if (gave) return `<p class="note keep runnote">This setup already ran ${pcx(lv.best)} and gave at least half of it back. That alone is no reason to drop it: in the 2019–26 test, verdicts that had run and then given half of it back made <b>more</b> afterwards than an average week of a verdict (both halves), so the pullback is the better entry if the zone holds.</p>`;
-  if (sh >= 100) return `<p class="note keep runnote">This setup has already reached the usual best run of its winners and is still near that point. In the 2019–26 test, verdicts in this spot made about nothing more until their exit (both halves), so most of the move is likely made; a new entry here has little left to catch.</p>`;
+  if (sh >= 100) return `<p class="note keep runnote">This setup has already reached the usual best run of its winners and still holds it, so the board counts the move as done (2019–26 test: about nothing more until the exit, both halves).</p>`;
   return "";
 }
 function cotStats(m) {
@@ -977,7 +981,7 @@ function chartTag(m, which) {
   if (m.pair) return which === "seas" ? off("the cross's own · context only") : drive;
   if (b.startsWith("Conflict")) return '<span class="tag conflict">in conflict · no bias</span>';
   if (b === "Macro against") return off(which === "macro" ? "cancels the bias" : "bias cancelled by US macro");
-  if (b === "Move done") return off("usual move already made");
+  if (b === "Move done") return off(m.done && m.done.run && m.done.run.done ? "run already made" : "usual move already made");
   if (b === "COT + calendar") return drive;
   if (which === "seas" && benched(m)) return off("needs COT outside agriculture");
   if (which === "seas" && m.seas.small_only) return off("too small to carry a bias alone");
