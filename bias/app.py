@@ -90,7 +90,7 @@ h2.sec{font:700 12px/1 var(--body);letter-spacing:.12em;text-transform:uppercase
 .dir{font-weight:700;font-size:14px} .dir.up{color:var(--bull)} .dir.dn{color:var(--bear)}
 .wmute{color:var(--mute);font-size:13px}
 .tagt{font:600 11px var(--body);padding:2px 8px;border-radius:8px;margin-left:8px;vertical-align:1px}
-.tagt.top{background:var(--sun-soft);color:var(--ink)} .tagt.pair{background:var(--flat-soft);color:var(--mute)}
+.tagt.top{background:var(--sun-soft);color:var(--ink)} .tagt.quant{background:var(--q-soft);color:var(--q-deep)} .tagt.against{background:var(--bear-soft);color:var(--bear)} .tagt.pair{background:var(--flat-soft);color:var(--mute)}
 .wcopy{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 18px;border-top:1px solid var(--line)}
 .wcopy .chip:disabled{opacity:.5;cursor:default}
 .wcopy .tvlist{font:12px var(--mono,monospace);width:min(100%,520px);padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
@@ -217,7 +217,7 @@ body.quant .top{background:color-mix(in srgb,var(--q-bg) 88%,transparent);border
 .dots i.on{background:var(--ink)}
 .sbadge{font:600 11px/1 var(--mono);padding:4px 6px;border-radius:999px;border:1px solid var(--line);color:var(--mute)}
 .dbadge{font:600 11px/1 var(--body);padding:4px 7px;border-radius:999px;background:var(--q-soft);color:var(--q-deep);border:1px solid var(--q-line)}
-.upnext b.up{color:var(--bull)} .upnext b.dn{color:var(--bear)}
+.upnext b.up{color:var(--bull)} .upnext b.dn{color:var(--bear)} .tbl td.up{color:var(--bull)} .tbl td.dn{color:var(--bear)}
 .wstats div.done{background:var(--q-soft)} .wstats div.done b{color:var(--q-deep)}
 .sbadge.new{font-family:var(--body)}
 .dots em{font:600 11px/1 var(--mono);font-style:normal;color:var(--mute);margin-left:4px}
@@ -415,8 +415,12 @@ const TV = {GC: "COMEX:GC1!", SI: "COMEX:SI1!", PL: "NYMEX:PL1!", PA: "NYMEX:PA1
   NG: "NYMEX:NG1!", "6E": "CME:6E1!", DX: "ICEUS:DX1!", "6B": "CME:6B1!", "6J": "CME:6J1!", "6S": "CME:6S1!", "6A": "CME:6A1!",
   "6C": "CME:6C1!", "6N": "CME:6N1!", ES: "CME_MINI:ES1!", NQ: "CME_MINI:NQ1!", YM: "CBOT_MINI:YM1!", ZC: "CBOT:ZC1!",
   ZW: "CBOT:ZW1!", ZS: "CBOT:ZS1!", SB: "ICEUS:SB1!", KC: "ICEUS:KC1!", LE: "CME:LE1!"};
+// quant plays on the board: running now, or starting within QSOON trading days (time to position)
+const QSOON = 5;
+const boardQuant = () => (D.quant || []).filter(q => q.active || (q.entry && q.days_to >= 0 && q.days_to <= QSOON))
+  .sort((a, b) => (b.active - a.active) || (a.days_to - b.days_to));
 function tvTickers(on) {
-  const out = on.map(k => TV[k]).filter(Boolean).concat((D.fx_pairs || []).map(p => "OANDA:" + p.pair.replace("/", "")));
+  const out = on.map(k => TV[k]).concat(boardQuant().map(q => TV[q.market])).filter(Boolean).concat((D.fx_pairs || []).map(p => "OANDA:" + p.pair.replace("/", "")));
   return [...new Set(out)];
 }
 async function copyText(txt) {
@@ -429,15 +433,23 @@ function weekList() {
   const rank = m => m.basis === "COT + calendar" ? (m.sector === "FX" ? 1 : 0) : cotLed(m) ? 2 : 3;
   const on = KEYS.filter(k => M[k].verdict !== "STAND ASIDE").sort((a, b) => rank(M[a]) - rank(M[b]));
   const off = KEYS.filter(k => M[k].verdict === "STAND ASIDE");
-  const row = (k, name, tag, v, why, until) => `<button class="wrow" data-k="${k}" aria-current="false"><span class="nm">${esc(name)}${tag}</span><span class="dir ${v === "BULLISH" ? "up" : "dn"}">${v === "BULLISH" ? "▲ Long" : "▼ Short"}</span><span class="wmute">${esc(why)}</span><span class="wmute">${esc(until)}</span></button>`;
+  const row = (k, name, tag, v, why, until, attr) => `<button class="wrow" ${attr || `data-k="${k}"`} aria-current="false"><span class="nm">${esc(name)}${tag}</span><span class="dir ${v === "BULLISH" ? "up" : "dn"}">${v === "BULLISH" ? "▲ Long" : "▼ Short"}</span><span class="wmute">${esc(why)}</span><span class="wmute">${esc(until)}</span></button>`;
   const top = m => m.basis === "COT + calendar" && m.sector !== "FX" ? `<span class="tagt top" title="COT and calendar agree outside currencies: the strongest tested verdict type">top setup</span>` : "";
-  const pairs = (D.fx_pairs || []).map(p => row(p.bull.k, p.pair, `<span class="tagt pair" title="one currency bullish, the other bearish: both verdicts in one cross">pair</span>`, p.side === "Long" ? "BULLISH" : "BEARISH", `${p.bull.cur} up, ${p.bear.cur} down`, "while both last"));
+  const qtag = q => {
+    const bv = M[q.market] && M[q.market].verdict, against = (bv === "BULLISH" || bv === "BEARISH") && bv !== sideV(q.side);
+    return `<span class="tagt quant" title="quant strategy: a fixed calendar rule, validated on its own">quant</span>${against ? `<span class="tagt against" title="the board's own verdict on ${esc(M[q.market].name)} points the other way">against board</span>` : ""}`;
+  };
+  const quant = boardQuant().map(q => row(null, `${q.market_name} · ${q.name}`, qtag(q), sideV(q.side),
+    q.active ? (q.days_left ? `active · ${q.days_left} td left` : "active · exit at today's close") : q.days_to === 0 ? "enter at today's close" : `starts in ${q.days_to} td · enter ${fmtD(q.entry)}`, fmtD(q.exit), `data-q="${q.id}"`));
+  const pairs = (D.fx_pairs || []).map(p => row(null, p.pair, `<span class="tagt pair" title="one currency bullish, the other bearish: both verdicts in one cross">pair</span>`, p.side === "Long" ? "BULLISH" : "BEARISH", `${p.bull.cur} up, ${p.bear.cur} down`, "while both last", `data-pair="${p.key}"`));
   $("#week").innerHTML = `<div class="whead"><span>This week</span><span>Bias</span><span>Why</span><span>Until</span></div>`
-    + on.map(k => row(k, M[k].name, top(M[k]), M[k].verdict, whyShort(M[k]), untilTxt(M[k]))).join("") + pairs.join("")
-    + (on.length ? "" : `<p class="wmute" style="padding:12px 18px;margin:0;border-top:1px solid var(--line)">No bias this week.</p>`)
+    + on.map(k => row(k, M[k].name, top(M[k]), M[k].verdict, whyShort(M[k]), untilTxt(M[k]))).join("") + quant.join("") + pairs.join("")
+    + (on.length || quant.length ? "" : `<p class="wmute" style="padding:12px 18px;margin:0;border-top:1px solid var(--line)">No bias this week.</p>`)
     + `<div class="wcopy"><button class="chip" id="copytv" type="button"${tvTickers(on).length ? "" : " disabled"} title="${esc(tvTickers(on).join(", "))}">Copy ${tvTickers(on).length} tickers for TradingView</button><span class="wmute" id="copytv-msg" aria-live="polite">futures 1!, crosses on OANDA · paste into the watchlist's add-symbol box</span></div>`
     + `<details class="rest"><summary>${off.length} markets without a bias</summary><div class="restg">${off.map(k => `<button class="rchip" data-k="${k}">${esc(M[k].name)} <span class="wmute">· ${esc(whyShort(M[k]))}</span></button>`).join("")}</div></details>`;
   document.querySelectorAll("#week [data-k]").forEach(b => b.addEventListener("click", () => select(b.dataset.k, true)));
+  document.querySelectorAll("#week [data-q]").forEach(b => b.addEventListener("click", () => selectQuant(b.dataset.q, true)));
+  document.querySelectorAll("#week [data-pair]").forEach(b => b.addEventListener("click", () => selectPair(b.dataset.pair, true)));
   const cb = $("#copytv");
   if (cb) cb.addEventListener("click", async () => {
     const ok = await copyText(tvTickers(on).join(","));
@@ -522,7 +534,7 @@ function dial(m) {
       <path d="M95 92 L95 26" stroke="var(--ink)" stroke-width="4" stroke-linecap="round"/></g>
     <circle cx="95" cy="92" r="8" fill="var(--ink)"/><circle cx="95" cy="92" r="3" fill="var(--card)"/></svg>`;
 }
-const benched = m => !m.seas.solo_ok && m.basis !== "COT + calendar";   // outside agriculture the calendar needs COT
+const benched = m => !!m.pair || (!m.seas.solo_ok && m.basis !== "COT + calendar");   // outside agriculture the calendar needs COT
 const NEEDS_COT = "outside agriculture a seasonal window only counts when COT agrees (tested: calendar-alone verdicts made money only on agricultural markets)";
 const HOLD_FX = "held while the signal stays lit, out one week after it goes dark";
 const HOLD_OTHER = "held at least 8 weeks after the signal (longer while it stays lit, out one week after it goes dark), unless COT flips to the other side";
@@ -861,7 +873,7 @@ function windowsTbl(m) {
   if (!rows.length) return `<p class="note keep">No seasonal window with 12 of 15 years or better in the coming months.</p>`;
   const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
   const role = w => s.driver && w.start === s.driver.start && w.side === s.driver.side && !s.small_only && !benched(m) ? ` <span class="st live">driver</span>`
-    : w.small ? ` <span class="st">small</span>` : !s.solo_ok ? ` <span class="st">needs COT</span>` : "";
+    : w.small ? ` <span class="st">small</span>` : !s.solo_ok && !m.pair ? ` <span class="st">needs COT</span>` : "";
   const when = w => (w.days_to <= 0 ? `<span class="st live">running</span>` : `in ${w.days_to} td`) + role(w);
   const tip = w => `${w.len} trading days · median ${w.median != null ? pc(w.median) : "–"} · best/worst year ${w.best != null ? bestPx(w.best, w.worst, w.side).map(pc).join(" / ") : "–"} · trend removed ${w.wins_true != null ? w.wins_true + " of 15" : "–"} · last 4 years ${w.rec != null ? w.rec + "/4" : "–"} · usual move ${w.move_days} normal days`;
   return `<div class="tbl"><table><thead><tr><th>Trade</th><th>Window</th><th>When</th><th>Won</th><th>Avg</th><th>Usually against</th></tr></thead><tbody>` +
@@ -927,6 +939,7 @@ function pastYears(m) {
 }
 function chartTag(m, which) {
   const b = m.basis, drive = '<span class="tag">drives the bias</span>', off = t => `<span class="tag ctx">${t}</span>`;
+  if (m.pair) return which === "seas" ? off("the cross's own · context only") : drive;
   if (b.startsWith("Conflict")) return '<span class="tag conflict">in conflict · no bias</span>';
   if (b === "Macro against") return off(which === "macro" ? "cancels the bias" : "bias cancelled by US macro");
   if (b === "Move done") return off("usual move already made");
@@ -970,7 +983,8 @@ function seasonCard(m, ess) {
   return `<div class="card"><h3>Seasonality ${chartTag(m, "seas")} ${pill(s.read === "BULLISH" || s.read === "BEARISH" ? s.read : "flat", title(s.read))}${s.strength ? ` <span class="st">${title(s.strength)} · ${s.kind}</span>` : ""}</h3>
     <p class="note">In price: ${TODAY.getFullYear()} so far, and the average path of the last 5, 10 and 15 years lined up to pass through today's price, with the usual path from today to the end of the current seasonal window (dashed). The numbers under the chart are measured over the same trading days in each of the last 15 years. Shape match ${s.shape >= 0 ? "+" : ""}${s.shape.toFixed(2)}, ${s.shape_read}.</p>
     <div class="ctl" role="group" aria-label="Seasonal scale"><button class="chip" data-fit="1" aria-pressed="${seasonFit}">Stretched to the price's swing</button><button class="chip" data-fit="0" aria-pressed="${!seasonFit}">Real size</button></div>
-    ${benched(m) && s.driver && !s.small_only ? `<p class="note smallonly">Outside agriculture a seasonal window only counts when COT points the same way. Here it does not, so this window is shown for information and is not part of this week's verdict. (Tested 2019–26: letting the calendar stand alone only on agricultural markets raised the board from +0.80% to +1.22% per verdict, better in both halves.)</p>` : ""}
+    ${m.pair ? `<p class="note smallonly">The seasonal windows of ${esc(m.name)} itself. The pair comes from the two currency verdicts only; the cross's own calendar was not part of the tested pair rule, so read it as context.</p>` : ""}
+    ${benched(m) && !m.pair && s.driver && !s.small_only ? `<p class="note smallonly">Outside agriculture a seasonal window only counts when COT points the same way. Here it does not, so this window is shown for information and is not part of this week's verdict. (Tested 2019–26: letting the calendar stand alone only on agricultural markets raised the board from +0.80% to +1.22% per verdict, better in both halves.)</p>` : ""}
     ${s.small_only && s.driver ? `<p class="note smallonly">This window's usual move is ${s.driver.move_days} normal days of ${esc(m.name)} (${sgn(s.driver.avg)}%); a window needs at least 3 to carry a bias alone. It can only back a COT signal pointing the same way, so it is shown for information and is not part of this week's verdict.</p>` : ""}
     <div id="seaschart">${seasonChart(m)}</div>${pastYears(m)}</div>`;
 }
@@ -1046,7 +1060,7 @@ function refreshCot(m, card) {
 function select(k, user) {
   if (!M[k]) k = KEYS[0];
   state.k = k; Object.assign(state, defaultCot(M[k]));
-  document.querySelectorAll("#week .wrow").forEach(t => t.setAttribute("aria-current", t.dataset.k === k));
+  markRow("data-k", k);
   render(k);
   if (user) { try { history.replaceState(null, "", "#" + k); } catch (e) {} if ($("#panel").getBoundingClientRect().top > innerHeight * .6) $("#panel").scrollIntoView({behavior: "smooth", block: "start"}); }
 }
@@ -1085,8 +1099,8 @@ function qchart(q) {
     <div class="legend"><span><i style="background:var(--bull)"></i>trade won</span><span><i style="background:var(--bear)"></i>lost</span><span><i style="background:var(--q-deep)"></i>running total (own scale)</span></div>`;
 }
 let qstate = null;
-function qrender(id) {
-  const q = QBY[id], P = $("#qpanel");
+function qrender(id, target) {
+  const q = QBY[id], P = $(target || "#qpanel");
   const when = q.active ? `<b>Active now.</b> Entered ${fmtD(q.entry)}, exit at the close on ${fmtD(q.exit)} (${q.days_left} trading days left).`
     : q.entry ? `<b>Next: ${q.side === "BUY" ? "buy" : "sell"} at the close on ${fmtD(q.entry)}, exit at the close on ${fmtD(q.exit)}.</b> Starts in ${q.days_to} trading days.` : "No upcoming date.";
   P.style.animation = "none"; void P.offsetWidth; P.style.animation = "";
@@ -1096,7 +1110,73 @@ function qrender(id) {
     <div class="qbig"><div><b>${q.win}%</b><span>won, last 15 years</span></div><div><b>${q.pf == null ? "∞" : q.pf.toFixed(2)}</b><span>profit factor</span></div><div><b>${sgn(q.avg)}%</b><span>average per trade</span></div><div><b>${sgn(q.median)}%</b><span>median</span></div><div><b>${q.n}</b><span>trades</span></div><div><b>${q.t == null ? "–" : q.t.toFixed(1)}</b><span>t-stat</span></div></div>
     <div class="qrule"><b>Rule.</b> ${esc(q.rule)}</div>
     <div class="charts"><div class="card"><h3>Every trade, last 15 years</h3><p class="note">One bar per trade, in the trade's direction. Hover a bar for its date.</p>${qchart(q)}</div></div>
-    <p class="note" style="margin-top:14px"><b>Validation.</b> ${esc(q.test.charAt(0).toUpperCase() + q.test.slice(1))}.</p>`;
+    <p class="note" style="margin-top:14px"><b>Validation.</b> ${esc(q.test.charAt(0).toUpperCase() + q.test.slice(1))}.</p>
+    ${target === "#panel" && M[q.market] ? (bv => `<p class="note"><b>The board's own verdict on ${esc(M[q.market].name)}:</b> ${bv === "STAND ASIDE" ? "no bias" : bv === "BULLISH" ? "long" : "short"} (<a href="#${q.market}" data-mk="${q.market}">open</a>). The quant play stands on its own rule; in the 2019–26 walk-forward a board verdict running at the same time did not change what the quant plays earned beyond the market's drift (research/quant_board_overlap_test.py).</p>`)(M[q.market].verdict) : ""}`;
+  P.querySelectorAll("[data-mk]").forEach(a => a.addEventListener("click", e => { e.preventDefault(); select(a.dataset.mk, true); }));
+}
+/* ---------- a cross pair: the same panel, built from the cross's own data ---------- */
+const PAIRS = Object.fromEntries((D.fx_pairs || []).map(p => [p.key, p]));
+let pairLeg = null;
+function renderPair(fp) {
+  const P = $("#panel"), side = fp.side === "Long" ? "BULLISH" : "BEARISH", lv = fp.live, rec = fp.record, sw = fp.swing, PT = D.pair_test;
+  const pm = {name: fp.pair, pair: true, sector: "FX", basis: "Pair", verdict: side, seas: fp.seas, done: null};
+  const legs = [[fp.bull, "up"], [fp.bear, "down"]];
+  pairLeg = pairLeg && (pairLeg === fp.bull.k || pairLeg === fp.bear.k) ? pairLeg : fp.bull.k;
+  const cell = (lab, big, sm) => `<div class="mc"><span>${lab}</span><b>${big}${sm ? `<small>${sm}</small>` : ""}</b></div>`;
+  const room = !lv || lv.share == null ? "" : lv.share >= 100 ? cell("Room left", "none", "usual winning move already made")
+    : lv.share < 0 ? cell("Room left", "all", "price is against the pair so far") : cell("Room left", `${100 - lv.share}%`, `of the usual winning move (${lv.share}% made)`);
+  const scopeTxt = sw ? (sw.scope === "cross" ? `${sw.n} winning ${esc(fp.pair)} trades` : `${sw.n} winning pair trades, all crosses (too few on ${esc(fp.pair)} alone)`) : "";
+  const metricsP = `<div class="mcs">${rec ? cell("This cross won", `${Math.round(100 * rec.w / rec.n)}%`, `${rec.w} of ${rec.n} pair trades`) : cell("This cross won", "–", "no past pair trade")}${room}${sw ? cell("Winners' swing", pcx(raw(sw.med, side)), `bottom → top · 3 of 4 at least ${pcx(raw(sw.p25, side))}`) : ""}</div>`;
+  const check = `<ul class="check">${legs.map(([l, dir]) => `<li><span class="ck y">✓</span><span><b>${esc(l.cur)}</b> ${dir === "up" ? "bullish" : "bearish"}: ${esc(l.basis)} (<a href="#${l.k}" data-mk="${l.k}">${esc(M[l.k].name)}</a>)</span></li>`).join("")}
+    <li><span class="ck ${rec && rec.avg > 0 ? "y" : "o"}">${rec && rec.avg > 0 ? "✓" : "–"}</span><span><b>This cross</b>: ${rec ? `${rec.w} of ${rec.n} past pair trades won, ${sgn(rec.avg)}% on average` : "no past pair trade in the 2019–26 replay"}${rec && rec.n < 10 ? " (few cases)" : ""}</span></li></ul>`;
+  const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+  const statsP = `<div class="wstats">${lv ? `<div><b>${pc(lv.move)}</b><span>price so far, since ${fmtD(lv.entry)} (${lv.weeks.toFixed(1)} weeks; the later of the two currency verdicts)</span></div>` : ""}
+    ${sw ? `<div><b>${pcx(raw(sw.med, side))}</b><span>winners' swing from the bottom to the top (median; 3 of 4 at least ${pcx(raw(sw.p25, side))}) · ${scopeTxt}, 2019–26 · the bottom usually came ${pcx(raw(sw.dip, side))} from the entry</span></div>` : ""}
+    <div><b>±${fp.week_pct}%</b><span>normal weekly swing of ${esc(fp.pair)} (past year); size the position for this</span></div></div>`;
+  const tr = rec ? `<div class="tbl"><table><thead><tr><th>Entry</th><th>Exit</th><th>Trade</th><th>Result</th></tr></thead><tbody>${rec.trades.slice().reverse().map(t => `<tr><td>${t.entry}</td><td>${t.exit}</td><td>${pill(t.side === "Long" ? "BULLISH" : "BEARISH", t.side)}</td><td class="n ${t.r > 0 ? "up" : "dn"}">${pc(t.r)}</td></tr>`).join("")}</tbody></table></div>
+    <p class="note">${esc(fp.pair)} in the 2019–26 replay: ${rec.n} pair trades, ${rec.win}% won, ${sgn(rec.avg)}% on average (2019–22 ${rec["2019-22"] == null ? "–" : sgn(rec["2019-22"]) + "%"}, 2023–26 ${rec["2023-26"] == null ? "–" : sgn(rec["2023-26"]) + "%"}). Entered when the second currency verdict started, held while both lasted.</p>` : `<p class="note keep">${esc(fp.pair)} has not been a pair in the 2019–26 replay.</p>`;
+  const pooled = PT && PT.pairs ? `<p class="note">All crosses together, ${PT.first}–${PT.last}: ${PT.pairs.n} pair trades, ${PT.pairs.win}% won, ${sgn(PT.pairs.avg)}% on average, t ${PT.pairs.t} (2019–22 ${sgn(PT.pairs["2019-22"])}%, 2023–26 ${sgn(PT.pairs["2023-26"])}%). That pooled test is what the pair rule rests on; one cross alone has too few trades to judge.</p>` : "";
+  const tabs = [["cot", "COT"], ["seas", "Seasonality"], ["bg", "Background"]];
+  const legChips = `<div class="ctl" role="group" aria-label="Currency">${legs.map(([l, dir]) => `<button class="chip" data-leg="${l.k}" aria-pressed="${l.k === pairLeg}">${esc(l.cur)} · ${dir === "up" ? "bullish" : "bearish"}</button>`).join("")}</div>`;
+  const body = {
+    cot: `<p class="note" style="margin:0">COT exists per currency, so the cross shows both legs' positioning.</p>${legChips}<div id="legcot"></div>`,
+    seas: seasonCard(pm, true) + `<h4 class="note" style="margin:0;font-weight:600;color:var(--ink)">Seasonal windows of ${esc(fp.pair)}</h4>` + windowsTbl(pm) + (fp.seas.neigh ? `<h4 class="note" style="margin:0">Same window shifted</h4>${nbrs(pm)}` : ""),
+    bg: `<div><h4 class="note" style="margin:0 0 6px;font-weight:600;color:var(--ink)">${esc(fp.pair)} now</h4>${statsP}</div><div><h4 class="note" style="margin:0 0 6px;font-weight:600;color:var(--ink)">${esc(fp.pair)} in the walk-forward test</h4>${tr}${pooled}</div>`,
+  };
+  P.style.animation = "none"; void P.offsetWidth; P.style.animation = "";
+  P.innerHTML = `<div class="phead"><h1>${esc(fp.pair)}</h1>${pill(side, fp.side)}</div>
+    <p class="psent">${esc(fp.side)} · ${esc(fp.bull.cur)} up, ${esc(fp.bear.cur)} down · while both last</p>${metricsP}${check}
+    <div class="ptabs" role="tablist">${tabs.map(([id, lab]) => `<button class="ptab" role="tab" data-tab="${id}" aria-selected="${id === "cot"}">${lab}</button>`).join("")}</div>
+    ${tabs.map(([id]) => `<div class="tabc" data-tabc="${id}" ${id === "cot" ? "" : "hidden"}>${body[id]}</div>`).join("")}`;
+  P.querySelectorAll(".ptab").forEach(b => b.addEventListener("click", () => {
+    P.querySelectorAll(".ptab").forEach(x => x.setAttribute("aria-selected", x === b));
+    P.querySelectorAll(".tabc").forEach(c => c.hidden = c.dataset.tabc !== b.dataset.tab);
+  }));
+  const showLeg = k => {
+    pairLeg = k; Object.assign(state, defaultCot(M[k]));
+    P.querySelectorAll("[data-leg]").forEach(x => x.setAttribute("aria-pressed", x.dataset.leg === k));
+    $("#legcot").innerHTML = cotCard(M[k], true); hookTips(P, M[k]); hookCot(M[k]); infoize($("#legcot"));
+  };
+  P.querySelectorAll("[data-leg]").forEach(b => b.addEventListener("click", () => showLeg(b.dataset.leg)));
+  P.querySelectorAll("[data-mk]").forEach(a => a.addEventListener("click", e => { e.preventDefault(); select(a.dataset.mk, true); }));
+  showLeg(pairLeg);
+  hookTips(P, pm); hookFit(pm); infoize(P);
+}
+function selectPair(key, user) {
+  const fp = PAIRS[key]; if (!fp) return select(KEYS[0], user);
+  markRow("data-pair", key);
+  renderPair(fp);
+  if (user) { try { history.replaceState(null, "", "#x-" + key); } catch (e) {} if ($("#panel").getBoundingClientRect().top > innerHeight * .6) $("#panel").scrollIntoView({behavior: "smooth", block: "start"}); }
+}
+function markRow(attr, val) {
+  document.querySelectorAll("#week .wrow").forEach(t => t.setAttribute("aria-current", t.getAttribute(attr) === val));
+}
+function selectQuant(id, user) {
+  // a quant play on the board: its page opens in the board's own panel
+  if (!QBY[id]) return select(KEYS[0], user);
+  markRow("data-q", id);
+  qrender(id, "#panel");
+  if (user) { try { history.replaceState(null, "", "#bq-" + id); } catch (e) {} if ($("#panel").getBoundingClientRect().top > innerHeight * .6) $("#panel").scrollIntoView({behavior: "smooth", block: "start"}); }
 }
 function qselect(id, user) {
   if (!QBY[id]) id = (Q.find(q => q.active) || Q[0] || {}).id; if (!id) return;
@@ -1141,8 +1221,12 @@ weekList(); liveRecord(); qboards();
 let start = (location.hash || "").slice(1);
 if (start.startsWith("q-")) { qselect(start.slice(2), false); setView("quant", false); start = ""; }
 if (start === "how") { setView("how", false); start = ""; }
+if (start.startsWith("bq-") && QBY[start.slice(3)]) selectQuant(start.slice(3), false);
+else if (start.startsWith("x-") && PAIRS[start.slice(2)]) selectPair(start.slice(2), false);
+else {
 if (!M[start]) { const r = $("#week .wrow"); start = r ? r.dataset.k : KEYS[0]; }
 select(start, false);
+}
 </script>
 """
 

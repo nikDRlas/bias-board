@@ -42,6 +42,15 @@ def _agg(g):
             "2019-22": round(float(g[g.t < "2023"].r.mean()), 2), "2023-26": round(float(g[g.t >= "2023"].r.mean()), 2)}
 
 
+def by_pair(g):
+    """one cross's own record in the replay: its pair trades (either side), won, average, halves"""
+    r = g.r.to_numpy(float)
+    half = lambda x: round(float(x.r.mean()), 2) if len(x) else None
+    return {"n": len(r), "w": int((r > 0).sum()), "win": round(100 * float((r > 0).mean()), 1), "avg": round(float(r.mean()), 2),
+            "2019-22": half(g[g.t < "2023"]), "2023-26": half(g[g.t >= "2023"]),
+            "trades": [{"entry": x.entry, "exit": x.exit, "side": x.side, "r": round(float(x.r), 2)} for x in g.itertuples()]}
+
+
 def test(verdict_file):
     v = pd.DataFrame(json.load(open(verdict_file))["trades"])
     v = v[v.m.isin(list(CUR) + ["DX"])].copy()
@@ -63,10 +72,14 @@ def test(verdict_file):
             if j >= len(px) or j <= i:
                 continue
             x = (px[r.m] / px[k]).to_numpy()
-            rows.append({"t": r.entry, "r": 100 * r.sg * (x[j] / x[i] - 1)})
-    pairs = pd.DataFrame(rows)
+            nm, side = name(r.m if r.sg > 0 else k, k if r.sg > 0 else r.m)
+            rows.append({"t": r.entry, "r": 100 * r.sg * (x[j] / x[i] - 1), "pair": nm, "side": side,
+                         "entry": str(px.index[i].date()), "exit": str(px.index[j].date())})
+    # both verdicts starting on the same day would find each other as the partner: one pair trade, counted once
+    pairs = pd.DataFrame(rows).drop_duplicates(["pair", "entry"]).sort_values("t").reset_index(drop=True)
     own = v.rename(columns={"entry": "t0"}).assign(t=lambda d: d.t0)[["t", "r"]]
-    out = {"pairs": _agg(pairs), "vs_usd": _agg(own), "first": str(v.t.min())[:4], "last": str(v.exit.max())[:4]}
+    out = {"pairs": _agg(pairs), "vs_usd": _agg(own), "first": str(v.t.min())[:4], "last": str(v.exit.max())[:4],
+           "by_pair": {nm: by_pair(g) for nm, g in pairs.groupby("pair")}}
     json.dump(out, open(OUT, "w"), indent=1)
     return out
 

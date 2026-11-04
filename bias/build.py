@@ -150,6 +150,34 @@ def paths(p):
             "now": float(by[TODAY.year][-1])}
 
 
+def season_table(cal0, s, vol0):
+    """every window to show, running now or coming, however far ahead (display only): the windows in play of any
+    size, plus the next ones after them"""
+    now0 = cal0.td(TODAY)
+    pool = [dict(w) for w in cal0.windows(TODAY, min_move=0)[0]] + [dict(u) for u in s.get("upcoming") or []]
+    drv = s.get("driver")
+    is_drv = lambda w: bool(drv) and w["start"] == drv["start"] and w["side"] == drv["side"]
+
+    def clash(a, b):
+        ov = min(a["s"] + a["len"], b["s"] + b["len"]) - max(a["s"], b["s"])
+        return ov > 0 and (a["side"] == b["side"] or ov > 0.5 * min(a["len"], b["len"]))
+    # one rule for the whole list: the current driver first, then the strongest windows (most years, then most
+    # consistent), skipping any that overlap a chosen one in the same direction (or by more than half)
+    shown = [w for w in pool if is_drv(w)][:1]
+    for w in sorted(pool, key=lambda w: (-w["wins"], -w.get("t", 0))):
+        if is_drv(w):
+            continue
+        # the driver never hides a stronger window over the same days
+        if not any(clash(w, q) for q in shown if not (is_drv(q) and w["wins"] > q["wins"])):
+            shown.append(w)
+    for w in shown:
+        w["move_days"] = round(abs(w["avg"]) / 100 / vol0, 1) if vol0 else None
+        w["small"] = bool(w["move_days"] is not None and w["move_days"] < SS.SOLO_MIN_MOVE)
+        w["days_to"] = int(w["s"] - now0)
+        w.pop("years", None)
+    return sorted(shown, key=lambda w: w["s"])
+
+
 def season_block(p, cal, used):
     wins, status = used
     out = {"windows": wins, **paths(p), "_cal": cal, "upcoming": cal.upcoming(TODAY)}
@@ -229,6 +257,79 @@ def _up_swing(x):
     lo = np.minimum.accumulate(x)
     j = int(np.argmax(x / lo - 1))
     return float(x[j] / lo[j] - 1), int(np.argmin(x[:j + 1]))
+
+
+def _leg_start(r):
+    """the first close of a currency verdict that is running now: the COT signal's entry, or the window's start"""
+    if r["basis"] in ("Calendar only", "Calendar over COT") and r["seas"].get("driver"):
+        return pd.Timestamp(r["seas"]["driver"]["start"])
+    lv = (r["cot"].get("record") or {}).get("live")
+    return pd.Timestamp(lv["entry"]) if lv else None
+
+
+def pair_block(fp, res, pair_test, min_n=5):
+    """everything the board shows for a cross, from the cross's own price (base / quote, both legs in futures
+    direction): the price since the pair started, its seasonal windows (context only, not part of the pair rule), and
+    this cross's own pair trades in the replay (bias/pairs.py); winners' swing and room left from its winners, the
+    pooled pairs when it has fewer than min_n"""
+    base, quote = fp["pair"].split("/")
+    key = {c: k for k, c in PR.CUR.items()}
+    x = (R.load_px(key[base]) / R.load_px(key[quote])).dropna()
+    x = x[x.index <= TODAY]
+    sg = 1 if fp["side"] == "Long" else -1
+    cal = SS.Calendar(x)
+    s = season_block(x, cal, cal.windows(TODAY, min_move=0))
+    s.pop("_cal", None)
+    s.update(small_only=False, solo_ok=False, past=None)
+    vol0 = cal.day_vol(TODAY)
+    if s.get("driver"):
+        s["driver"]["move_days"] = round(abs(s["driver"]["avg"]) / 100 / vol0, 1) if vol0 else None
+    s["table"] = season_table(cal, s, vol0)
+    # this cross's own record, and the pooled pairs for the swing and the usual move when it has too few winners
+    bp = (pair_test or {}).get("by_pair", {}).get(fp["pair"])
+    def swings(trades):
+        out = []
+        for t in trades:
+            a, b = x.index.searchsorted(pd.Timestamp(t["entry"])), min(x.index.searchsorted(pd.Timestamp(t["exit"])), len(x) - 1)
+            if t["r"] <= 0 or b - a < 3:
+                continue
+            seg = x.to_numpy(float)[a:b + 1]
+            seg = seg if t["side"] == "Long" else 1 / seg
+            sw, i0 = _up_swing(seg)
+            out.append((100 * sw, 100 * float(seg[i0] / seg[0] - 1), t["r"]))
+        return out
+    own = swings(bp["trades"]) if bp else []
+    scope = "cross"
+    if len(own) < min_n:
+        own, scope = [], "pairs"
+        for nm, g in (pair_test or {}).get("by_pair", {}).items():
+            b2, q2 = nm.split("/")
+            y = (R.load_px(key[b2]) / R.load_px(key[q2])).dropna()
+            for t in g["trades"]:
+                a, b = y.index.searchsorted(pd.Timestamp(t["entry"])), min(y.index.searchsorted(pd.Timestamp(t["exit"])), len(y) - 1)
+                if t["r"] <= 0 or b - a < 3:
+                    continue
+                seg = y.to_numpy(float)[a:b + 1]
+                seg = seg if t["side"] == "Long" else 1 / seg
+                sw, i0 = _up_swing(seg)
+                own.append((100 * sw, 100 * float(seg[i0] / seg[0] - 1), t["r"]))
+    sw = np.array(own) if own else None
+    swing = {"n": len(own), "med": round(float(np.median(sw[:, 0])), 2), "p25": round(float(np.quantile(sw[:, 0], .25)), 2),
+             "dip": round(float(np.median(sw[:, 1])), 2), "scope": scope} if own else None
+    # the pair is on since the later of its two legs started
+    starts = [t for t in (_leg_start(res[fp["bull"]["k"]]), _leg_start(res[fp["bear"]["k"]])) if t is not None]
+    live = None
+    if starts:
+        a = x.index.searchsorted(max(starts))
+        if a < len(x):
+            move = round(100 * sg * float(x.iloc[-1] / x.iloc[a] - 1), 2)
+            usual = float(np.mean(sw[:, 2])) if own else None          # the usual winning pair trade, same scope
+            live = {"entry": str(x.index[a].date()), "move": move, "weeks": round(float((x.index[-1] - x.index[a]).days) / 7, 1),
+                    "usual": round(usual, 2) if usual else None,
+                    "share": int(round(100 * move / usual)) if usual else None}
+    return {"key": fp["pair"].replace("/", ""), "base": base, "quote": quote, "seas": s, "record": bp, "swing": swing, "live": live,
+            "week_pct": round(float(np.std(np.diff(np.log(x.to_numpy(float)[-253:]))) * 100 * np.sqrt(5)), 2),
+            "last": round(float(x.iloc[-1]), 5)}
 
 
 def board_swings(min_n=5):
@@ -914,30 +1015,7 @@ if __name__ == "__main__":
         vol0 = cal0.day_vol(TODAY)
         if s.get("driver"):
             s["driver"]["move_days"] = round(abs(s["driver"]["avg"]) / 100 / vol0, 1) if vol0 else None
-        # every window to show, running now or coming, however far ahead (display only): the windows in play of any
-        # size, plus the next ones after them
-        now0 = cal0.td(TODAY)
-        pool = [dict(w) for w in cal0.windows(TODAY, min_move=0)[0]] + [dict(u) for u in s.get("upcoming") or []]
-        drv = s.get("driver")
-        is_drv = lambda w: bool(drv) and w["start"] == drv["start"] and w["side"] == drv["side"]
-        def clash(a, b):
-            ov = min(a["s"] + a["len"], b["s"] + b["len"]) - max(a["s"], b["s"])
-            return ov > 0 and (a["side"] == b["side"] or ov > 0.5 * min(a["len"], b["len"]))
-        # one rule for the whole list: the current driver first, then the strongest windows (most years, then most
-        # consistent), skipping any that overlap a chosen one in the same direction (or by more than half)
-        shown = [w for w in pool if is_drv(w)][:1]
-        for w in sorted(pool, key=lambda w: (-w["wins"], -w.get("t", 0))):
-            if is_drv(w):
-                continue
-            # the driver never hides a stronger window over the same days
-            if not any(clash(w, q) for q in shown if not (is_drv(q) and w["wins"] > q["wins"])):
-                shown.append(w)
-        for w in shown:
-            w["move_days"] = round(abs(w["avg"]) / 100 / vol0, 1) if vol0 else None
-            w["small"] = bool(w["move_days"] is not None and w["move_days"] < SS.SOLO_MIN_MOVE)
-            w["days_to"] = int(w["s"] - now0)
-            w.pop("years", None)
-        s["table"] = sorted(shown, key=lambda w: w["s"])
+        s["table"] = season_table(cal0, s, vol0)
         s["past"] = past_years(k, s, reader, p)
         cr = reader.read(TODAY)
         c["index_short_skipped"] = reader.skipped_short     # bearish index COT, not used (research/cot_indices_test.py)
@@ -995,6 +1073,8 @@ if __name__ == "__main__":
     # currency pairs: one currency bullish, another bearish = that cross (bias/pairs.py, tested on the replay)
     pair_test = PR.test(VERDICT) if os.path.exists(VERDICT) else None
     fx_pairs = PR.current(res)
+    for fp in fx_pairs:
+        fp.update(pair_block(fp, res, pair_test))
     chp = os.path.join(ROOT, "data", "research", "cot_hold.json")
     cot_hold = json.load(open(chp)) if os.path.exists(chp) else None
     mtp = os.path.join(ROOT, "data", "research", "macro_strength.json")     # board walk-forward without the macro gate
