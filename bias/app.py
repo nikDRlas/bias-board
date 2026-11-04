@@ -96,6 +96,10 @@ h2.sec{font:700 12px/1 var(--body);letter-spacing:.12em;text-transform:uppercase
 .wcopy .tvlist{font:12px var(--mono,monospace);width:min(100%,520px);padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
 details.rest{border:0;border-top:1px solid var(--line);border-radius:0;margin:0;padding:2px 18px}
 details.rest summary{font:600 13px var(--body);color:var(--mute)}
+details.qgroup{border:0;border-top:1px solid var(--line);border-radius:0;margin:0;padding:0;background:color-mix(in srgb,var(--q-soft) 35%,transparent)}
+details.qgroup>summary{font:600 13px var(--body);color:var(--q-deep);padding:12px 18px;cursor:pointer}
+details.qgroup>summary .wmute{font-weight:400}
+details.qgroup[open]{padding-bottom:0} details.qgroup>summary{justify-content:flex-start;gap:6px} details.qgroup>summary::after{margin-left:auto}
 .restg{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0 10px}
 .rchip{font:inherit;font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:5px 11px;cursor:pointer}
 .phead{display:flex;align-items:center;gap:14px;flex-wrap:wrap} .phead h1{font:800 clamp(28px,4.5vw,42px)/1 var(--display);letter-spacing:-.03em;margin:0}
@@ -414,6 +418,8 @@ function uponTxt(start) {
   return d < 0 ? ["now", true] : d === 0 ? ["today", true] : [`in ${d} day${d === 1 ? "" : "s"}`, false];
 }
 const marketStart = m => calLedM(m) && m.seas.driver ? m.seas.driver.start : null;
+// the quant group stays as the viewer left it (closed the first time)
+const qOpen = () => { try { return localStorage.getItem("qgroup-open") === "1"; } catch (e) { return false; } };
 function whyShort(m) {
   if (m.verdict === "STAND ASIDE") return {"Macro against": "macro against", "Move done": "move done"}[m.basis] || (m.basis.startsWith("Conflict") ? "COT and calendar disagree" : "no signal");
   const lv = m.cot.record && m.cot.record.live;
@@ -453,13 +459,16 @@ function weekList() {
     q.active ? (q.days_left ? `quant rule · ${q.days_left} td left` : "quant rule · exit at today's close") : `quant rule · enter at the close`, fmtD(q.exit), `data-q="${q.id}"`, q.active ? null : q.entry));
   const pairs = (D.fx_pairs || []).map(p => row(null, p.pair, `<span class="tagt pair" title="one currency bullish, the other bearish: both verdicts in one cross">pair</span>`, p.side === "Long" ? "BULLISH" : "BEARISH", `${p.bull.cur} up, ${p.bear.cur} down`, "while both last", `data-pair="${p.key}"`));
   $("#week").innerHTML = `<div class="whead"><span>This week</span><span>Bias</span><span>Why</span><span>Upon</span><span>Until</span></div>`
-    + on.map(k => row(k, M[k].name, top(M[k]), M[k].verdict, whyShort(M[k]), untilTxt(M[k]), null, marketStart(M[k]))).join("") + quant.join("") + pairs.join("")
+    + on.map(k => row(k, M[k].name, top(M[k]), M[k].verdict, whyShort(M[k]), untilTxt(M[k]), null, marketStart(M[k]))).join("") + pairs.join("")
+    + (quant.length ? (n => `<details class="qgroup" id="qgroup"${qOpen() ? " open" : ""}><summary>Quant plays · ${quant.length} <span class="wmute">· ${n ? `${n} running now` : "none running yet"}${quant.length > n ? `, ${quant.length - n} starting soon` : ""}</span></summary>${quant.join("")}</details>`)(boardQuant().filter(q => q.active).length) : "")
     + (on.length || quant.length ? "" : `<p class="wmute" style="padding:12px 18px;margin:0;border-top:1px solid var(--line)">No bias this week.</p>`)
     + `<div class="wcopy"><button class="chip" id="copytv" type="button"${tvTickers(on).length ? "" : " disabled"} title="${esc(tvTickers(on).join(", "))}">Copy ${tvTickers(on).length} tickers for TradingView</button><span class="wmute" id="copytv-msg" aria-live="polite">futures 1!, crosses on OANDA · paste into the watchlist's add-symbol box</span></div>`
     + `<details class="rest"><summary>${off.length} markets without a bias</summary><div class="restg">${off.map(k => `<button class="rchip" data-k="${k}">${esc(M[k].name)} <span class="wmute">· ${esc(whyShort(M[k]))}</span></button>`).join("")}</div></details>`;
   document.querySelectorAll("#week [data-k]").forEach(b => b.addEventListener("click", () => select(b.dataset.k, true)));
   document.querySelectorAll("#week [data-q]").forEach(b => b.addEventListener("click", () => selectQuant(b.dataset.q, true)));
   document.querySelectorAll("#week [data-pair]").forEach(b => b.addEventListener("click", () => selectPair(b.dataset.pair, true)));
+  const qg = $("#qgroup");
+  if (qg) qg.addEventListener("toggle", () => { try { localStorage.setItem("qgroup-open", qg.open ? "1" : "0"); } catch (e) {} });
   const cb = $("#copytv");
   if (cb) cb.addEventListener("click", async () => {
     const ok = await copyText(tvTickers(on).join(","));
