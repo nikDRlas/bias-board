@@ -733,11 +733,11 @@ function bestCell(lv, rc, cell, pc) {
   return cell(pc(lv.best), `best point so far, ${fmtD(lv.best_d)}${sh != null ? ` · ${sh}% of the usual best run of its winners (${pc(rc.win_mfe)})` : ""}`);
 }
 function runNote(lv, rc) {
-  // tested 2019-26 on the replay, rest of the verdict in normal weeks (any weekly check: +0.34)
+  // research/runup_done_test.py on the 2019-26 replay; rest of the verdict until its exit, in normal weeks
   const sh = runShare(lv, rc); if (sh == null || sh < 50) return "";
   const gave = lv.move <= lv.best / 2;
-  if (gave) return `<p class="note keep runnote">This setup already ran ${pcx(lv.best)} and gave at least half of it back. That alone is no reason to drop it: in the 2019–26 test over all markets together, verdicts that had run and then given half of it back made more afterwards than an average week of a verdict (both halves). By sector this held in both halves only for metals &amp; energy (23 cases); currencies, indices and agriculture were mixed on too few cases, and no single market has enough cases to judge on its own. Read the pullback as a possible entry if the zone holds, not as a guarantee.</p>`;
-  if (sh >= 100) return `<p class="note keep runnote">This setup has already reached the usual best run of its winners and still holds it, so the board counts the move as done (2019–26 test: about nothing more until the exit, both halves).</p>`;
+  if (gave) return `<p class="note keep runnote">This setup already ran ${pcx(lv.best)} and gave at least half of it back. That alone is no reason to drop it: in the 2019–26 test over all markets, verdicts that had run at least half of their winners' usual best and then given half of it back still made +0.56 normal weeks on average until their exit (94 cases, positive in both halves), about the same as from any week of a verdict (+0.34; the difference is not significant). By sector the cases are few (15–30 each) and currencies were negative in 2019–22. Read the pullback as a possible entry if the zone holds, not as a guarantee.</p>`;
+  if (sh >= 100) return `<p class="note keep runnote">This setup has already reached the usual best run of its winners and still holds most of it. In the 2019–26 test, verdicts in this spot made about nothing more until their exit (−0.02 normal weeks, 102 cases, both halves about zero), so a new entry here has little left to catch on average. Tested as a rule to drop the setup it did not hold up in 2019–22, so the board keeps the bias.</p>`;
   return "";
 }
 function cotStats(m) {
@@ -1150,7 +1150,7 @@ function qrender(id, target) {
     <div class="qrule"><b>Rule.</b> ${esc(q.rule)}</div>
     <div class="charts"><div class="card"><h3>Every trade, last 15 years</h3><p class="note">One bar per trade, in the trade's direction. Hover a bar for its date.</p>${qchart(q)}</div></div>
     <p class="note" style="margin-top:14px"><b>Validation.</b> ${esc(q.test.charAt(0).toUpperCase() + q.test.slice(1))}.</p>
-    ${target === "#panel" && M[q.market] ? (bv => `<p class="note"><b>The board's own verdict on ${esc(M[q.market].name)}:</b> ${bv === "STAND ASIDE" ? "no bias" : bv === "BULLISH" ? "long" : "short"} (<a href="#${q.market}" data-mk="${q.market}">open</a>). The quant play stands on its own rule; in the 2019–26 walk-forward a board verdict running at the same time did not change what the quant plays earned beyond the market's drift (research/quant_board_overlap_test.py).</p>`)(M[q.market].verdict) : ""}`;
+    ${target === "#panel" && M[q.market] ? (bv => `<p class="note"><b>The board's own verdict on ${esc(M[q.market].name)}:</b> ${bv === "STAND ASIDE" ? "no bias" : bv === "BULLISH" ? "long" : "short"} (<a href="#${q.market}" data-mk="${q.market}">open</a>). The quant play stands on its own rule. In the 2019–26 walk-forward, a board verdict running at the same time made no difference beyond the market's drift overall; the one exception was turn of the month, which beat the drift only while the board was long on that index (+0.52% per play, both halves) and not without it (research/quant_board_overlap_test.py).</p>`)(M[q.market].verdict) : ""}`;
   P.querySelectorAll("[data-mk]").forEach(a => a.addEventListener("click", e => { e.preventDefault(); select(a.dataset.mk, true); }));
 }
 /* ---------- a cross pair: the same panel, built from the cross's own data ---------- */

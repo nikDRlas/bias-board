@@ -113,13 +113,19 @@ COT_DONE_WK = float(__import__("os").environ.get("COT_DONE_WK", "0"))
 
 
 DONE_YARD = __import__("os").environ.get("SEAS_DONE", "end")
-# RUN DONE (2026-11-04, research/runup_done_test.py): a verdict whose best close since its entry reached RUN_DONE_AT x
-# the usual BEST move of the market's winning COT setups on that side (>= 5 finished by then), and that still holds at
-# least half of that run, has nothing left: rest to exit -0.02 normal weeks (2019-22 -0.05, 2023-26 +0.01). On the
-# walk-forward (exit at the first weekly check that meets it): +1036% -> +1078%, both halves better, max drawdown
-# -150 -> -131, 9% fewer days in the market; at 0.75 worse, at 1.25 also better. A run given back (net <= half the
-# best) is NOT done: those verdicts made more than average afterwards, and the setup counts again. 0 = off
-RUN_DONE_AT = float(__import__("os").environ.get("RUN_DONE_AT", "1.0"))
+# RUN DONE (2026-11-04, research/runup_done_test.py), TESTED and switched OFF: a verdict whose best close since its
+# first close reached RUN_DONE_AT x the usual BEST move of the market's winning COT setups on that side (>= 5 finished by
+# then) and still holds at least half of that run. Event study: rest to exit -0.02 normal weeks (both halves ~0). But on
+# the board's walk-forward, measured from the same first close as the live board and checked every 5 trading days while
+# held: rule off +1052% (2019-22 +510, 2023-26 +542, max DD -150); on and counting again after half is given back +1072%
+# (+507 / +565, DD -130); on and staying done until the signal ends +1079% (+485 / +594, DD -138) -> 2019-22 worse
+# either way. A first version measured each re-entry from its own start (not what the board does) and showed
+# +1088% (+537 / +551): that was the mismatch, not the rule. Re-entries after a done run that was given back: 34,
+# -0.53% each (2019-22 +2.16, 2023-26 -4.37). Board shows the run as information only. 0 = off
+RUN_DONE_AT = float(__import__("os").environ.get("RUN_DONE_AT", "0"))
+# RUN_STICKY=1: once a run counted as done (checked every 5 trading days from the verdict's first close), the setup stays
+# done until its signal ends; 0 = it counts again as soon as half of the run is given back
+RUN_STICKY = __import__("os").environ.get("RUN_STICKY", "1") == "1"
 
 
 def run_state(k, side, p, a, c, t):
@@ -134,7 +140,10 @@ def run_state(k, side, p, a, c, t):
     seg = sg * (p.iloc[a:c + 1].to_numpy(float) / float(p.iloc[a]) - 1) * 100
     best, net = float(seg.max()), float(seg[-1])
     usual = float(np.mean(w)) if len(w) >= 5 else None
-    done = bool(RUN_DONE_AT and usual and usual > 0 and best >= RUN_DONE_AT * usual and net > best / 2)
+    hit = lambda j: float(seg[:j + 1].max()) >= RUN_DONE_AT * usual and seg[j] > seg[:j + 1].max() / 2
+    ok = bool(RUN_DONE_AT and usual and usual > 0)
+    checks = list(range(5, c - a + 1, 5)) + [c - a]
+    done = bool(ok and (any(hit(j) for j in checks) if RUN_STICKY else hit(c - a)))
     return {"best": round(best, 2), "net": round(net, 2), "usual_best": round(usual, 2) if usual else None,
             "share": round(100 * best / usual) if usual and usual > 0 else None, "done": done}
 

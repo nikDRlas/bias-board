@@ -117,7 +117,9 @@ if __name__ == "__main__":
                 # run done (bias/verdict.py): checked every 5 trading days while held, out at the first check that meets it
                 a_, b_ = p.index.searchsorted(pd.Timestamp(x["entry"])), p.index.searchsorted(pd.Timestamp(x["exit"]))
                 for j in range(a_ + 5, b_, 5):
-                    rs = VD.run_state(k, v, p, a_, j, p.index[j])
+                    # measured from the same first close as the live board (bias/verdict.py entry_close)
+                    a0 = VD.entry_close(v, basis, p.index[j], p, cal, ws, rd, lit, k)
+                    rs = VD.run_state(k, v, p, a0 if a0 is not None else a_, j, p.index[j])
                     if rs and rs["done"]:
                         x = ret(p, pd.Timestamp(x["entry"]), p.index[j], v, None if VD.horizon(basis) == "window" else C.COT_REF_DAYS)
                         run_cut = True
