@@ -80,13 +80,13 @@ h2.sec{font:700 12px/1 var(--body);letter-spacing:.12em;text-transform:uppercase
 .eng .k{font:700 10.5px/1 var(--body);letter-spacing:.1em;text-transform:uppercase}
 .charts{display:flex;flex-direction:column;gap:22px;margin-top:22px}
 .week{margin-top:18px;background:var(--card);border:1.5px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}
-.whead,.wrow{display:grid;grid-template-columns:minmax(0,1.6fr) 96px minmax(0,1.3fr) minmax(0,1fr);gap:10px;align-items:center;padding:12px 18px}
+.whead,.wrow{display:grid;grid-template-columns:minmax(0,1.6fr) 96px minmax(0,1.3fr) minmax(0,.75fr) minmax(0,1fr);gap:10px;align-items:center;padding:12px 18px}
 .whead{font-size:12px;color:var(--mute);padding-top:14px;padding-bottom:8px}
 .whead span:first-child{font:700 15px var(--display);color:var(--ink)}
 .wrow{width:100%;background:none;border:0;border-top:1px solid var(--line);font:inherit;color:var(--ink);text-align:left;cursor:pointer;transition:background .15s}
 .wrow:hover{background:color-mix(in srgb,var(--ink) 4%,transparent)} .wrow[aria-current="true"]{background:color-mix(in srgb,var(--ink) 7%,transparent)}
 .wrow:focus-visible,.rchip:focus-visible{outline:3px solid var(--sun);outline-offset:-3px}
-.wrow .nm{font-weight:700;font-size:15px}
+.wrow .nm{font-weight:700;font-size:15px} .upon.now{color:var(--bull);font-weight:600}
 .dir{font-weight:700;font-size:14px} .dir.up{color:var(--bull)} .dir.dn{color:var(--bear)}
 .wmute{color:var(--mute);font-size:13px}
 .tagt{font:600 11px var(--body);padding:2px 8px;border-radius:8px;margin-left:8px;vertical-align:1px}
@@ -405,6 +405,15 @@ function untilTxt(m) {
   if (m.sector !== "FX" && D.cot_min_weeks && lv) { const t = new Date(lv.since + "T00:00:00"); t.setDate(t.getDate() + 3 + 7 * D.cot_min_weeks); return `at least ${t.toLocaleDateString("en-GB", {day: "2-digit", month: "short"})}`; }
   return "while COT is lit";
 }
+// when a setup is on: "now" once its entry has passed, else days until it (the viewer's own date, so it stays right
+// between the daily builds)
+function uponTxt(start) {
+  if (!start) return ["now", true];
+  const t = new Date(); t.setHours(0, 0, 0, 0);
+  const d = Math.round((new Date(start + "T00:00:00") - t) / 864e5);
+  return d < 0 ? ["now", true] : d === 0 ? ["today", true] : [`in ${d} day${d === 1 ? "" : "s"}`, false];
+}
+const marketStart = m => calLedM(m) && m.seas.driver ? m.seas.driver.start : null;
 function whyShort(m) {
   if (m.verdict === "STAND ASIDE") return {"Macro against": "macro against", "Move done": "move done"}[m.basis] || (m.basis.startsWith("Conflict") ? "COT and calendar disagree" : "no signal");
   const lv = m.cot.record && m.cot.record.live;
@@ -433,17 +442,18 @@ function weekList() {
   const rank = m => m.basis === "COT + calendar" ? (m.sector === "FX" ? 1 : 0) : cotLed(m) ? 2 : 3;
   const on = KEYS.filter(k => M[k].verdict !== "STAND ASIDE").sort((a, b) => rank(M[a]) - rank(M[b]));
   const off = KEYS.filter(k => M[k].verdict === "STAND ASIDE");
-  const row = (k, name, tag, v, why, until, attr) => `<button class="wrow" ${attr || `data-k="${k}"`} aria-current="false"><span class="nm">${esc(name)}${tag}</span><span class="dir ${v === "BULLISH" ? "up" : "dn"}">${v === "BULLISH" ? "▲ Long" : "▼ Short"}</span><span class="wmute">${esc(why)}</span><span class="wmute">${esc(until)}</span></button>`;
+  const row = (k, name, tag, v, why, until, attr, start) => { const [u, on] = uponTxt(start);
+    return `<button class="wrow" ${attr || `data-k="${k}"`} aria-current="false"><span class="nm">${esc(name)}${tag}</span><span class="dir ${v === "BULLISH" ? "up" : "dn"}">${v === "BULLISH" ? "▲ Long" : "▼ Short"}</span><span class="wmute">${esc(why)}</span><span class="wmute upon ${on ? "now" : ""}" title="${start ? "starts " + fmtD(start) : "running"}">${esc(u)}${start && !on ? ` · ${fmtD(start)}` : ""}</span><span class="wmute">${esc(until)}</span></button>`; };
   const top = m => m.basis === "COT + calendar" && m.sector !== "FX" ? `<span class="tagt top" title="COT and calendar agree outside currencies: the strongest tested verdict type">top setup</span>` : "";
   const qtag = q => {
     const bv = M[q.market] && M[q.market].verdict, against = (bv === "BULLISH" || bv === "BEARISH") && bv !== sideV(q.side);
     return `<span class="tagt quant" title="quant strategy: a fixed calendar rule, validated on its own">quant</span>${against ? `<span class="tagt against" title="the board's own verdict on ${esc(M[q.market].name)} points the other way">against board</span>` : ""}`;
   };
   const quant = boardQuant().map(q => row(null, `${q.market_name} · ${q.name}`, qtag(q), sideV(q.side),
-    q.active ? (q.days_left ? `active · ${q.days_left} td left` : "active · exit at today's close") : q.days_to === 0 ? "enter at today's close" : `starts in ${q.days_to} td · enter ${fmtD(q.entry)}`, fmtD(q.exit), `data-q="${q.id}"`));
+    q.active ? (q.days_left ? `quant rule · ${q.days_left} td left` : "quant rule · exit at today's close") : `quant rule · enter at the close`, fmtD(q.exit), `data-q="${q.id}"`, q.active ? null : q.entry));
   const pairs = (D.fx_pairs || []).map(p => row(null, p.pair, `<span class="tagt pair" title="one currency bullish, the other bearish: both verdicts in one cross">pair</span>`, p.side === "Long" ? "BULLISH" : "BEARISH", `${p.bull.cur} up, ${p.bear.cur} down`, "while both last", `data-pair="${p.key}"`));
-  $("#week").innerHTML = `<div class="whead"><span>This week</span><span>Bias</span><span>Why</span><span>Until</span></div>`
-    + on.map(k => row(k, M[k].name, top(M[k]), M[k].verdict, whyShort(M[k]), untilTxt(M[k]))).join("") + quant.join("") + pairs.join("")
+  $("#week").innerHTML = `<div class="whead"><span>This week</span><span>Bias</span><span>Why</span><span>Upon</span><span>Until</span></div>`
+    + on.map(k => row(k, M[k].name, top(M[k]), M[k].verdict, whyShort(M[k]), untilTxt(M[k]), null, marketStart(M[k]))).join("") + quant.join("") + pairs.join("")
     + (on.length || quant.length ? "" : `<p class="wmute" style="padding:12px 18px;margin:0;border-top:1px solid var(--line)">No bias this week.</p>`)
     + `<div class="wcopy"><button class="chip" id="copytv" type="button"${tvTickers(on).length ? "" : " disabled"} title="${esc(tvTickers(on).join(", "))}">Copy ${tvTickers(on).length} tickers for TradingView</button><span class="wmute" id="copytv-msg" aria-live="polite">futures 1!, crosses on OANDA · paste into the watchlist's add-symbol box</span></div>`
     + `<details class="rest"><summary>${off.length} markets without a bias</summary><div class="restg">${off.map(k => `<button class="rchip" data-k="${k}">${esc(M[k].name)} <span class="wmute">· ${esc(whyShort(M[k]))}</span></button>`).join("")}</div></details>`;
