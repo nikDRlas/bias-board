@@ -736,7 +736,7 @@ function runNote(lv, rc) {
   // tested 2019-26 on the replay, rest of the verdict in normal weeks (any weekly check: +0.34)
   const sh = runShare(lv, rc); if (sh == null || sh < 50) return "";
   const gave = lv.move <= lv.best / 2;
-  if (gave) return `<p class="note keep runnote">This setup already ran ${pcx(lv.best)} and gave at least half of it back. That alone is no reason to drop it: in the 2019–26 test, verdicts that had run and then given half of it back made <b>more</b> afterwards than an average week of a verdict (both halves), so the pullback is the better entry if the zone holds.</p>`;
+  if (gave) return `<p class="note keep runnote">This setup already ran ${pcx(lv.best)} and gave at least half of it back. That alone is no reason to drop it: in the 2019–26 test over all markets together, verdicts that had run and then given half of it back made more afterwards than an average week of a verdict (both halves). By sector this held in both halves only for metals &amp; energy (23 cases); currencies, indices and agriculture were mixed on too few cases, and no single market has enough cases to judge on its own. Read the pullback as a possible entry if the zone holds, not as a guarantee.</p>`;
   if (sh >= 100) return `<p class="note keep runnote">This setup has already reached the usual best run of its winners and still holds it, so the board counts the move as done (2019–26 test: about nothing more until the exit, both halves).</p>`;
   return "";
 }
