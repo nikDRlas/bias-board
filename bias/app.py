@@ -721,6 +721,21 @@ function swingCell(m, side, cell) {
   const where = sw.scope === "market" ? `${sw.n} winning ${esc(m.name)} verdicts` : `${sw.n} winning ${esc(sw.scope.toLowerCase())} verdicts (too few on ${esc(m.name)} alone)`;
   return cell(pcx(raw(sw.med, side)), `winners' swing from the bottom to the top (median; 3 of 4 at least ${pcx(raw(sw.p25, side))}) · ${where}, 2019–26 · the bottom usually came ${pcx(raw(sw.dip, side))} from the entry`);
 }
+// the best point of this setup so far, against how far its winners usually ran at best (research/runup_done_test.py)
+const runShare = (lv, rc) => lv && lv.best != null && rc.win_mfe ? Math.round(100 * lv.best / rc.win_mfe) : null;
+function bestCell(lv, rc, cell, pc) {
+  if (!lv || lv.best == null || lv.best <= 0) return "";
+  const sh = runShare(lv, rc);
+  return cell(pc(lv.best), `best point so far, ${fmtD(lv.best_d)}${sh != null ? ` · ${sh}% of the usual best run of its winners (${pc(rc.win_mfe)})` : ""}`);
+}
+function runNote(lv, rc) {
+  // tested 2019-26 on the replay, rest of the verdict in normal weeks (any weekly check: +0.34)
+  const sh = runShare(lv, rc); if (sh == null || sh < 50) return "";
+  const gave = lv.move <= lv.best / 2;
+  if (gave) return `<p class="note keep runnote">This setup already ran ${pcx(lv.best)} and gave at least half of it back. That alone is no reason to drop it: in the 2019–26 test, verdicts that had run and then given half of it back made <b>more</b> afterwards than an average week of a verdict (both halves), so the pullback is the better entry if the zone holds.</p>`;
+  if (sh >= 100) return `<p class="note keep runnote">This setup has already reached the usual best run of its winners and is still near that point. In the 2019–26 test, verdicts in this spot made about nothing more until their exit (both halves), so most of the move is likely made; a new entry here has little left to catch.</p>`;
+  return "";
+}
 function cotStats(m) {
   // three numbers for the live COT signal: where price is, how far winners usually run (and how much of it is made),
   // how far it usually goes against first
@@ -730,9 +745,10 @@ function cotStats(m) {
   const cell = (big, small) => `<div><b>${big}</b><span>${small}</span></div>`;
   return `<div class="wstats">
     ${cell(pc(raw(lv.move, sd)), `price so far, since ${fmtD(lv.entry)} (${lv.weeks.toFixed(1)} weeks${lv.held ? `; held until ${fmtD(lv.until)}` : ""})`)}
+    ${bestCell(lv, rc, cell, pc)}
     ${swingCell(m, sd, cell)}
     ${cell(pc(bw[1]), `usually goes against first (worst point along the way, all ${rc.n} setups)`)}
-  </div>${holdNote(m, rc)}`;
+  </div>${runNote(lv, rc)}${holdNote(m, rc)}`;
 }
 function upcomingNote(m) {
   const U = m.seas.upcoming || []; if (!U.length) return "";
@@ -1074,7 +1090,7 @@ function hookCot(m) {
 }
 function refreshCot(m, card) {
   const holder = document.createElement("div"); holder.innerHTML = cotCard(m, card.querySelector(".tag") !== null);
-  card.replaceWith(holder.firstElementChild); hookTips($("#panel"), m); hookCot(m); infoize($("#panel"));
+  const nc = holder.firstElementChild; card.replaceWith(nc); hookTips(nc, m); hookCot(m); infoize(nc);
 }
 function select(k, user) {
   if (!M[k]) k = KEYS[0];
@@ -1174,12 +1190,12 @@ function renderPair(fp) {
   const showLeg = k => {
     pairLeg = k; Object.assign(state, defaultCot(M[k]));
     P.querySelectorAll("[data-leg]").forEach(x => x.setAttribute("aria-pressed", x.dataset.leg === k));
-    $("#legcot").innerHTML = cotCard(M[k], true); hookTips(P, M[k]); hookCot(M[k]); infoize($("#legcot"));
+    $("#legcot").innerHTML = cotCard(M[k], true); hookTips($("#legcot"), M[k]); hookCot(M[k]); infoize($("#legcot"));
   };
   P.querySelectorAll("[data-leg]").forEach(b => b.addEventListener("click", () => showLeg(b.dataset.leg)));
   P.querySelectorAll("[data-mk]").forEach(a => a.addEventListener("click", e => { e.preventDefault(); select(a.dataset.mk, true); }));
   showLeg(pairLeg);
-  hookTips(P, pm); hookFit(pm); infoize(P);
+  hookTips(P.querySelector('[data-tabc="seas"]'), pm); hookFit(pm); infoize(P.querySelector('[data-tabc="seas"]')); infoize(P.querySelector('[data-tabc="bg"]'));
 }
 function selectPair(key, user) {
   const fp = PAIRS[key]; if (!fp) return select(KEYS[0], user);

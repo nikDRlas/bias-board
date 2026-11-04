@@ -621,6 +621,10 @@ def cot_record(reader, p, side, k):
             live = {"since": str(reader.dates[j].date()), "entry": str(p.index[a].date()),
                     "held": hs == side, "until": str(ex0.date()) if ex0 is not None else None,
                     "move": round(100 * sg * float(p.iloc[-1] / p.iloc[a] - 1), 2),
+                    # the best close in the setup's direction since the entry (research/runup_done_test.py: a run
+                    # given back is no reason to drop the setup; one that reached the winners' usual best and holds is)
+                    "best": round(100 * float((sg * (p.iloc[a:] / p.iloc[a] - 1)).max()), 2),
+                    "best_d": str((sg * (p.iloc[a:] / p.iloc[a] - 1)).idxmax().date()),
                     "weeks": round(float((p.index[-1] - p.index[a]).days) / 7, 1)}
     return {"n": len(r), "w": int((r > 0).sum()), "avg": round(float(r.mean()), 2), "median": round(float(np.median(r)), 2),
             "mfe": round(float(np.mean([c["mfe"] for c in cases])), 2), "mae": round(float(np.mean([c["mae"] for c in cases])), 2),
