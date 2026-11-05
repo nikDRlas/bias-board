@@ -25,7 +25,17 @@ and length from every start day of the period):
      currencies 81 new, excess +0.49 (19-22 +0.0 / 23-26 +0.49, mostly 6C); holdout 34 new +0.67 t2.4 -> fails 2019-22
   TFF asset mgrs vs lev funds           40 new, +22% (+9/+13); 3 index verdicts -> too thin
   control: index calendar windows allowed alone (legacy COT) 37 new, excess -0.99 -> the TFF read is not just a calendar
-  switch, but its index gain does not survive the holdout. VERDICT: no add-on either."""
+  switch, but its index gain does not survive the holdout. VERDICT: no add-on either.
+MORE COMMODITY GROUPINGS (COT_SRC_SCOPE=cmdty; fair base = legacy cut to 2006: 2019-26 +534% (+262/+272), holdout
+2012-18 -100% (-145/+45); board legacy +791 / holdout -66):
+                           replacement 2019-26     holdout 2012-18     add-on (new setups) 2019-26
+  producer vs MM (pm)      +264 (+112/+152)         -127               30 new  -88 (-81/-7)
+  prod+swap vs MM only     +590 (+267/+323)         -90 (-104/+14)     44 new  -10 (-47/+38)
+  producer vs MM+other     +238 (+93/+145)          -255               31 new  +18 (-39/+57)
+  swap dealers vs MM       +231 (+240/-10)          -87                47 new  -90 (-31/-58)
+Only prod+swap vs MM (= legacy commercials, funds = managed money instead of all non-commercials) edges the fair base
+(+56, 19-22 only +5; holdout -90 vs -100) - within noise, and it cannot use the pre-2006 history that is worth +257 on
+the board. No add-on positive in both halves. VERDICT: nothing for commodities."""
 import json, os, subprocess, sys, urllib.parse
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "bias"))

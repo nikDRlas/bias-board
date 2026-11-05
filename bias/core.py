@@ -125,11 +125,15 @@ def load_px(k):
 #   wide      commodities: producer/merchant + swap dealers vs managed money + other reportables
 #             currencies + indices: dealers + asset managers vs leveraged funds + other reportables
 #   am        currencies + indices: commercials = asset managers, funds = leveraged funds; commodities as pm
+#   pmsw_mm / pm_mmo / sw_mm   commodities only (COT_SRC_SCOPE=cmdty), groupings as named in _NEWG
 # retail = non-reportables in every variant. COT_SRC_SCOPE = all / cmdty / fin: which markets switch.
 COT_SRC = os.environ.get("COT_SRC", "legacy")
 COT_SRC_SCOPE = os.environ.get("COT_SRC_SCOPE", "all")
 _NEWG = {"dis": {"pm": (["prod_merc"], ["m_money"]), "wide": (["prod_merc", "swap"], ["m_money", "other_rept"]),
-                 "am": (["prod_merc"], ["m_money"])},
+                 "am": (["prod_merc"], ["m_money"]),
+                 "pmsw_mm": (["prod_merc", "swap"], ["m_money"]),      # legacy commercials vs managed money only
+                 "pm_mmo": (["prod_merc"], ["m_money", "other_rept"]),  # producers only vs all large specs
+                 "sw_mm": (["swap"], ["m_money"])},                    # swap dealers vs managed money
          "tff": {"pm": (["dealer"], ["lev_money"]), "wide": (["dealer", "asset_mgr"], ["lev_money", "other_rept"]),
                  "am": (["asset_mgr"], ["lev_money"])}}
 
