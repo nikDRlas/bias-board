@@ -15,7 +15,17 @@ TEST 2026-11-05 (research/verdict_test.py SKIP_SLOW=1 with bias/core.py COT_SRC 
   disaggregated "wide" (producer+swap vs managed money+other) = the legacy groups exactly (checked on GC), so the only
   new commodity grouping is producer vs managed money. VERDICT: legacy stays; no newer grouping beats it in either half.
   Side finding: cutting the legacy history to 2006 alone costs commodities +791 -> +534 (COT record minimum and the
-  calendar's COT-agree years lose their 2003-06 cases) -> those rules are sensitive to which old cases they see."""
+  calendar's COT-agree years lose their 2003-06 cases) -> those rules are sensitive to which old cases they see.
+AS AN ADD-ON (verdicts the newer report gives where legacy has none on that market; drift control = same market, side
+and length from every start day of the period):
+  producer vs managed money (all mkts)  71 new, -32% (19-22 -39 / 23-26 +7); legacy+new +1020 vs +1052 -> no
+  TFF dealers+asset mgrs vs lev+other   95 new, +90% (+33/+57); legacy+new +1142% (+543/+599) -- looked good, BUT
+     indices    14 new (13 COT+calendar, 14 different dates) excess over drift +1.33%/verdict t2.1, both halves; HOLDOUT
+                2012-18 (research/verdict_test.py WF_START=2012-01-07): 15 new, excess -0.10% -> no edge out of sample
+     currencies 81 new, excess +0.49 (19-22 +0.0 / 23-26 +0.49, mostly 6C); holdout 34 new +0.67 t2.4 -> fails 2019-22
+  TFF asset mgrs vs lev funds           40 new, +22% (+9/+13); 3 index verdicts -> too thin
+  control: index calendar windows allowed alone (legacy COT) 37 new, excess -0.99 -> the TFF read is not just a calendar
+  switch, but its index gain does not survive the holdout. VERDICT: no add-on either."""
 import json, os, subprocess, sys, urllib.parse
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "bias"))

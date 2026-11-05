@@ -66,7 +66,7 @@ if __name__ == "__main__":
         skip_k = SKIP_SLOW and C.M[k][3] not in KEEP_SLOW_IN
         lit = C.lit_sides(rd, sp, skip_slow=skip_k)
         busy = pd.Timestamp("1900-01-01")
-        for t in pd.date_range("2019-01-05", end, freq="W-SAT"):
+        for t in pd.date_range(os.environ.get("WF_START", "2019-01-05"), end, freq="W-SAT"):   # WF_START: holdout runs
             if t <= busy:
                 continue
             cot = rd.read(t)
