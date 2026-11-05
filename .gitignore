@@ -3,3 +3,4 @@ data/live/
 site/
 __pycache__/
 .DS_Store
+data/cftc_new/

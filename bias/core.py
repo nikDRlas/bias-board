@@ -118,7 +118,53 @@ def load_px(k):
     return 1.0 / p if k in M and M[k][2] else p
 
 
+# research switch (2026-11-05, research/cot_new_test.py): which CFTC report the COT groups come from. Default legacy.
+#   legacy06  legacy, cut to June 2006 (the newer reports' start), to separate the group definition from history length
+#   pm        commodities: commercials = producer/merchant, funds = managed money (disaggregated report)
+#             currencies + indices: commercials = dealers, funds = leveraged funds (TFF report)
+#   wide      commodities: producer/merchant + swap dealers vs managed money + other reportables
+#             currencies + indices: dealers + asset managers vs leveraged funds + other reportables
+#   am        currencies + indices: commercials = asset managers, funds = leveraged funds; commodities as pm
+# retail = non-reportables in every variant. COT_SRC_SCOPE = all / cmdty / fin: which markets switch.
+COT_SRC = os.environ.get("COT_SRC", "legacy")
+COT_SRC_SCOPE = os.environ.get("COT_SRC_SCOPE", "all")
+_NEWG = {"dis": {"pm": (["prod_merc"], ["m_money"]), "wide": (["prod_merc", "swap"], ["m_money", "other_rept"]),
+                 "am": (["prod_merc"], ["m_money"])},
+         "tff": {"pm": (["dealer"], ["lev_money"]), "wide": (["dealer", "asset_mgr"], ["lev_money", "other_rept"]),
+                 "am": (["asset_mgr"], ["lev_money"])}}
+
+
+def _net(f, g):
+    lo = next(c for c in f.columns if c.startswith(g + "_positions_long"))
+    sh = next(c for c in f.columns if c.startswith(g + "_positions_short") or c.startswith(g + "__positions_short"))
+    return f[lo] - f[sh]
+
+
+def _load_cot_new(k):
+    fin = M[k][3] in ("FX", "Indices") or k == "DX"
+    tag = "tff" if fin else "dis"
+    f = pd.DataFrame(json.load(open(os.path.join(ROOT, "data", "cftc_new", f"{k}_{tag}.json"))))
+    f["date"] = pd.to_datetime(f.report_date_as_yyyy_mm_dd)
+    f = f.drop(columns="report_date_as_yyyy_mm_dd").set_index("date").sort_index().astype(float)
+    f = f[~f.index.duplicated()]
+    cg, fg = _NEWG[tag][COT_SRC]
+    x = pd.DataFrame({"comm": sum(_net(f, g) for g in cg), "fund": sum(_net(f, g) for g in fg),
+                      "retail": _net(f, "nonrept")})
+    return x[x.index <= ASOF]
+
+
 def load_cot(k):
+    if COT_SRC != "legacy":
+        fin = M[k][3] in ("FX", "Indices") or k == "DX"
+        if COT_SRC_SCOPE == "all" or (COT_SRC_SCOPE == "fin") == fin:
+            if COT_SRC == "legacy06":
+                x = _load_cot_legacy(k)
+                return x[x.index >= "2006-06-13"]
+            return _load_cot_new(k)
+    return _load_cot_legacy(k)
+
+
+def _load_cot_legacy(k):
     c = _cot_raw()
     d = c[c.symbol == M[k][1]].drop_duplicates("date", keep="last").set_index("date").sort_index()
     lse = pd.DataFrame({"comm": d.comm_long - d.comm_short, "fund": d.noncomm_long - d.noncomm_short})
