@@ -727,17 +727,22 @@ function swingCell(m, side, cell) {
 }
 // the best point of this setup so far, against how far its winners usually ran at best (research/runup_done_test.py)
 const runShare = (lv, rc) => lv && lv.best != null && rc.win_mfe ? Math.round(100 * lv.best / rc.win_mfe) : null;
-function bestCell(lv, rc, cell, pc) {
+// where the market's winning COT setups usually END (the move-done yardstick), as a share of that
+const endShare = (lv, m) => { const u = m && m.done && m.done.cot && m.done.cot.usual; return lv && lv.best != null && u > 0 ? Math.round(100 * lv.best / u) : null; };
+function bestCell(lv, rc, cell, pc, m) {
   if (!lv || lv.best == null || lv.best <= 0) return "";
-  const sh = runShare(lv, rc);
-  return cell(pc(lv.best), `best point so far, ${fmtD(lv.best_d)}${sh != null ? ` · ${sh}% of the usual best run of its winners (${pc(rc.win_mfe)})` : ""}`);
+  const sh = runShare(lv, rc), se = endShare(lv, m), u = m && m.done && m.done.cot && m.done.cot.usual;
+  return cell(pc(lv.best), `best point so far, ${fmtD(lv.best_d)}${se != null ? ` · ${se}% of where its winners usually end (${pc(u)})` : ""}${sh != null ? ` · ${sh}% of their usual best run (${pc(rc.win_mfe)})` : ""}`);
 }
-function runNote(lv, rc) {
-  // research/runup_done_test.py on the 2019-26 replay; rest of the verdict until its exit, in normal weeks
-  const sh = runShare(lv, rc); if (sh == null || sh < 50) return "";
+function runNote(lv, rc, m) {
+  // research/runup_live_test.py: 2019-26 walk-forward, measured from the board's own first close of the signal, checked
+  // daily; rest of the setup until its exit in normal weeks. Any week of a COT setup: +0.38
+  const sh = runShare(lv, rc), se = endShare(lv, m);
+  if (lv == null || lv.best == null || lv.best <= 0) return "";
   const gave = lv.move <= lv.best / 2;
-  if (gave) return `<p class="note keep runnote">This setup already ran ${pcx(lv.best)} and gave at least half of it back. That alone is no reason to drop it: in the 2019–26 test over all markets, verdicts that had run at least half of their winners' usual best and then given half of it back still made +0.56 normal weeks on average until their exit (94 cases, positive in both halves), about the same as from any week of a verdict (+0.34; the difference is not significant). By sector the cases are few (15–30 each) and currencies were negative in 2019–22. Read the pullback as a possible entry if the zone holds, not as a guarantee.</p>`;
-  if (sh >= 100) return `<p class="note keep runnote">This setup has already reached the usual best run of its winners and still holds most of it. In the 2019–26 test, verdicts in this spot made about nothing more until their exit (−0.02 normal weeks, 102 cases, both halves about zero), so a new entry here has little left to catch on average. Tested as a rule to drop the setup it did not hold up in 2019–22, so the board keeps the bias.</p>`;
+  if (gave && se != null && se >= 100) return `<p class="note keep runnote">This setup already ran ${pcx(lv.best)} at its best, as far as its winners usually end (${pcx(m.done.cot.usual)}), and has given at least half of it back. In the 2019–26 test, COT setups in this spot made little more until their exit: +0.12 normal weeks on average (64 cases, 52% won; 2019–22 +0.39, 2023–26 −0.12), against +0.38 from any week of a setup. In metals &amp; energy it was −0.23 (21 cases, 33% won). Dropping such setups would have cost in 2019–22, so the board keeps the bias, but a pullback entry here has had less to catch than a normal setup.</p>`;
+  if (gave && sh != null && sh >= 50) return `<p class="note keep runnote">This setup already ran ${pcx(lv.best)} at its best and gave at least half of it back. That alone is no reason to drop it: in the 2019–26 test, setups that had run at least half of their winners' usual best run and then given half of it back still made +0.27 normal weeks on average until their exit (130 cases, 54% won; both halves positive, +0.33 / +0.20), a little below any week of a setup (+0.38). By sector the cases are few; currencies were negative in 2019–22, indices and agriculture in 2023–26.</p>`;
+  if (!gave && sh != null && sh >= 100) return `<p class="note keep runnote">This setup has already reached the usual best run of its winners and still holds most of it. In the 2019–26 test, setups in this spot made about nothing more until their exit (+0.02 normal weeks, 123 cases; 2019–22 +0.08, 2023–26 −0.04), so a new entry here has little left to catch on average. Tested as a rule to drop the setup it did not hold up in 2019–22, so the board keeps the bias.</p>`;
   return "";
 }
 function cotStats(m) {
@@ -749,10 +754,10 @@ function cotStats(m) {
   const cell = (big, small) => `<div><b>${big}</b><span>${small}</span></div>`;
   return `<div class="wstats">
     ${cell(pc(raw(lv.move, sd)), `price so far, since ${fmtD(lv.entry)} (${lv.weeks.toFixed(1)} weeks${lv.held ? `; held until ${fmtD(lv.until)}` : ""})`)}
-    ${bestCell(lv, rc, cell, pc)}
+    ${bestCell(lv, rc, cell, pc, m)}
     ${swingCell(m, sd, cell)}
     ${cell(pc(bw[1]), `usually goes against first (worst point along the way, all ${rc.n} setups)`)}
-  </div>${runNote(lv, rc)}${holdNote(m, rc)}`;
+  </div>${runNote(lv, rc, m)}${holdNote(m, rc)}`;
 }
 function upcomingNote(m) {
   const U = m.seas.upcoming || []; if (!U.length) return "";

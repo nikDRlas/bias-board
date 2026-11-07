@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Run-up inside a running verdict (2026-11-04, user's natural-gas question): NG's COT setup since 8 Sep ran about +15%
+"""SUPERSEDED 2026-11-07 by research/runup_live_test.py (this one measures from the walk-forward entry with weekly
+checks, not from the board's own first close: the board note's +0.56 n94 became +0.27 n130 measured the board's way).
+Run-up inside a running verdict (2026-11-04, user's natural-gas question): NG's COT setup since 8 Sep ran about +15%
 on closes (+20% low to high) and gave it all back; the board's "move done" only looks at the move from the entry to
 today, so it still shows the setup as fully open. Should a big run made DURING the setup count as done?
 
