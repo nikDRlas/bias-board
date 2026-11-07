@@ -625,6 +625,9 @@ def cot_record(reader, p, side, k):
                     # given back is no reason to drop the setup; one that reached the winners' usual best and holds is)
                     "best": round(100 * float((sg * (p.iloc[a:] / p.iloc[a] - 1)).max()), 2),
                     "best_d": str((sg * (p.iloc[a:] / p.iloc[a] - 1)).idxmax().date()),
+                    # bottom to the following top on daily closes since the entry: the same measure as the winners'
+                    # swing (board_swings), so the two compare directly
+                    "swing": round(100 * _up_swing((p.iloc[a:] if sg > 0 else 1 / p.iloc[a:]).to_numpy(float))[0], 2),
                     "weeks": round(float((p.index[-1] - p.index[a]).days) / 7, 1)}
     return {"n": len(r), "w": int((r > 0).sum()), "avg": round(float(r.mean()), 2), "median": round(float(np.median(r)), 2),
             "mfe": round(float(np.mean([c["mfe"] for c in cases])), 2), "mae": round(float(np.mean([c["mae"] for c in cases])), 2),

@@ -723,7 +723,9 @@ function swingCell(m, side, cell) {
   // target guide for S/D-timed entries: the board's own winning verdicts 2019-26, bottom to the following top
   const sw = m.swing; if (!sw) return "";
   const where = sw.scope === "market" ? `${sw.n} winning ${esc(m.name)} verdicts` : `${sw.n} winning ${esc(sw.scope.toLowerCase())} verdicts (too few on ${esc(m.name)} alone)`;
-  return cell(pcx(raw(sw.med, side)), `winners' swing from the bottom to the top (median; 3 of 4 at least ${pcx(raw(sw.p25, side))}) · ${where}, 2019–26 · the bottom usually came ${pcx(raw(sw.dip, side))} from the entry`);
+  const lv = m.cot && m.cot.record && m.cot.record.live;
+  const now = lv && lv.swing != null && sw.med > 0 ? ` · this setup so far ${pcx(raw(lv.swing, side))}, ${Math.round(100 * lv.swing / sw.med)}% of it` : "";
+  return cell(pcx(raw(sw.med, side)), `winners' swing from the bottom to the top (median; 3 of 4 at least ${pcx(raw(sw.p25, side))}) · ${where}, 2019–26 · the bottom usually came ${pcx(raw(sw.dip, side))} from the entry${now} · on daily closes from the board's entry; a chart's wicks and the days before the entry make both bigger`);
 }
 // the best point of this setup so far, against how far its winners usually ran at best (research/runup_done_test.py)
 const runShare = (lv, rc) => lv && lv.best != null && rc.win_mfe ? Math.round(100 * lv.best / rc.win_mfe) : null;
