@@ -522,7 +522,9 @@ function roomCell(m, cell) {
   // how much of the usual move is still to go: a COT setup's swing so far against its winners' usual swing (wicks
   // included), a calendar setup against its window's move
   const sh = calLedM(m) ? null : swingShare(m);
-  if (sh != null) return sh >= 100 ? cell("Room left", "none", `winners' usual swing already made (${sh}%)`)
+  // at or past the usual swing the share is shown, not "none": reaching it is no sign the setup is over
+  // (research/swing_hl_test.py: such setups still made +0.43 normal weeks until their exit, both halves)
+  if (sh != null) return sh >= 100 ? cell("Swing made", `${sh}%`, "of the winners' usual swing · not a sign the setup is over")
     : cell("Room left", `${100 - sh}%`, `of the winners' usual swing (${sh}% made)`);
   const x = m.done && (calLedM(m) ? m.done.seas : (m.done.cot || m.done.seas)); if (!x || x.share == null) return "";
   if (x.state === "done" || x.share >= 100) return cell("Room left", "none", "usual move already made");
