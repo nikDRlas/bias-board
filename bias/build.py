@@ -334,10 +334,11 @@ def pair_block(fp, res, pair_test, min_n=5):
 
 def board_swings(min_n=5):
     """target guide for S/D-timed entries: on the board's own WINNING verdicts 2019-26 (walk-forward, verdict.json),
-    the biggest move from the bottom to the following top while held (shorts: top to the following bottom), on
-    daily closes. Per market when it has >= min_n winners, else its sector. Display only: the swing size is mostly
-    the market's volatility (random windows of the same length swing about as much, research/swing_yardstick_test.py),
-    so it never decides which setups count"""
+    the biggest move from a low to the following high while held (shorts: high to the following low), on daily
+    HIGHS/LOWS, wicks included, from the setup's start (COT: the report day of the first report of its lit run, the
+    board's "since"; calendar: the window start) to its exit. Per market when it has >= min_n winners, else its sector.
+    Display only: the swing size is mostly the market's volatility (research/swing_yardstick_test.py), and reaching it is
+    no sign the setup is done (research/swing_hl_test.py), so it never decides which setups count"""
     if not os.path.exists(VERDICT):
         return {}
     T = pd.DataFrame(json.load(open(VERDICT))["trades"])
@@ -347,25 +348,37 @@ def board_swings(min_n=5):
         if k not in M:
             continue
         p = R.load_px(k)
-        px = p.to_numpy(float)
+        H, L = (x.to_numpy(float) for x in R.load_hl(k))
+        rd = lit = None
         for _, r in g.iterrows():
-            a = p.index.searchsorted(pd.Timestamp(r.t) + pd.Timedelta(days=1))
-            b = min(p.index.searchsorted(pd.Timestamp(r.exit)), len(px) - 1)
+            a = p.index.searchsorted(pd.Timestamp(r.entry))
+            if str(r.basis).startswith("COT"):
+                if rd is None:
+                    rd = R.CotReader(k); lit = R.lit_sides(rd, R.speed_series(k))
+                q = rd.dates.searchsorted(pd.Timestamp(r.t) - pd.Timedelta(days=3), "right") - 1
+                while q >= 0 and lit[q] != r.v:
+                    q -= 1
+                if q >= 0:
+                    a = p.index.searchsorted(rd.dates[R.lit_start(lit, q)])
+            b = min(p.index.searchsorted(pd.Timestamp(r.exit)), len(p) - 1)
             if b - a < 3:
                 continue
-            seg = px[a:b + 1] if r.v == "BULLISH" else 1 / px[a:b + 1]
-            sw, i0 = _up_swing(seg)
-            rows.append({"m": k, "sector": r.sector, "swing": 100 * sw, "dip": 100 * float(seg[i0] / seg[0] - 1)})
+            sg = 1 if r.v == "BULLISH" else -1
+            sw, d_lo, d_hi = R.swing_points(sg, H[a:b + 1], L[a:b + 1], p.index[a:b + 1])
+            lo_px = (L if sg > 0 else H)[p.index.searchsorted(pd.Timestamp(d_lo))]
+            rows.append({"m": k, "sector": r.sector, "swing": sw, "dip": 100 * sg * float(lo_px / p.iloc[a] - 1)})
     S = pd.DataFrame(rows)
     if S.empty:
         return {}
     st = lambda g, scope: {"n": len(g), "med": round(float(g.swing.median()), 2), "p25": round(float(g.swing.quantile(.25)), 2),
-                           "dip": round(float(g.dip.median()), 2), "scope": scope}
+                           "dip": round(float(g.dip.median()), 2), "scope": scope, "wicks": True}
     sec = {s2: st(g, s2) for s2, g in S.groupby("sector")}
     out = {}
     for k in M:
         g = S[S.m == k]
         out[k] = st(g, "market") if len(g) >= min_n else sec.get(SECTOR_V(k))
+        if out[k] is not None and k in R.NO_HL:
+            out[k] = {**out[k], "wicks": False}
     return out
 SECTOR_V = lambda k: {"FX": "Currencies", "Indices": "Indices", "Agriculture": "Agriculture"}.get(M[k][3], "Metals & energy")
 MIN_CELL = 40
@@ -625,9 +638,10 @@ def cot_record(reader, p, side, k):
                     # given back is no reason to drop the setup; one that reached the winners' usual best and holds is)
                     "best": round(100 * float((sg * (p.iloc[a:] / p.iloc[a] - 1)).max()), 2),
                     "best_d": str((sg * (p.iloc[a:] / p.iloc[a] - 1)).idxmax().date()),
-                    # bottom to the following top on daily closes since the entry: the same measure as the winners'
-                    # swing (board_swings), so the two compare directly
-                    "swing": round(100 * _up_swing((p.iloc[a:] if sg > 0 else 1 / p.iloc[a:]).to_numpy(float))[0], 2),
+                    # low to the following high since the report day, wicks included: the same measure as the
+                    # winners' swing (board_swings), so the two compare directly
+                    **dict(zip(("swing", "swing_lo", "swing_hi"), R.swing_points(sg, *(x.to_numpy(float)[p.index.searchsorted(reader.dates[j]):]
+                                                                                       for x in R.load_hl(k)), p.index[p.index.searchsorted(reader.dates[j]):]))),
                     "weeks": round(float((p.index[-1] - p.index[a]).days) / 7, 1)}
     return {"n": len(r), "w": int((r > 0).sum()), "avg": round(float(r.mean()), 2), "median": round(float(np.median(r)), 2),
             "mfe": round(float(np.mean([c["mfe"] for c in cases])), 2), "mae": round(float(np.mean([c["mae"] for c in cases])), 2),

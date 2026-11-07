@@ -189,6 +189,63 @@ def _load_cot_legacy(k):
     return x[x.index <= ASOF]
 
 
+# ---------------------------------------------------------------- full-range swing (wicks included)
+# the move a setup made, measured on daily highs/lows: price did the move even if it did not close there (user 2026-11-07,
+# research/swing_hl_test.py). Markets without a high/low history use closes.
+NO_HL = {"DX", "KC", "LE"}
+
+
+WICK_CAP = 3.0     # a wick may reach at most this many usual daily ranges beyond the day's or the previous day's close
+
+
+def load_hl(k):
+    """daily high and low on load_px's index, in the board's direction convention (inverted FX: 1/low, 1/high).
+    The LSE feed has bad prints (corn high 18.66 on a 4.50 day, 13 Mar 2026; currency wicks of 15-25%; a few closes that
+    jump 10-27% for one day and snap back, e.g. 6C 20 Dec 2024). Cleaned: a one-day close spike (> 6 daily sigmas, fully
+    reversed the next day) counts as the previous close; a wick is capped at WICK_CAP x the median daily range of the
+    60 days before, beyond the higher/lower of the day's and the previous day's close."""
+    p = load_px(k)
+    if k in NO_HL or k in EURO:
+        return p, p
+    d = pd.read_csv(os.path.join(LIVE, f"{k}.csv"), parse_dates=["ts"]).set_index("ts")
+    d = d[~d.index.duplicated()].reindex(p.index)
+    ok = d.high >= d.low
+    h, l, c = d.high.where(ok), d.low.where(ok), d.close.where(ok).fillna(d.close)
+    r = np.log(c).diff()
+    vol = 1.4826 * r.abs().rolling(60, min_periods=20).median().shift(1)    # robust: one bad day cannot inflate it
+    spike = (r.abs() > 6 * vol) & (r.shift(-1).abs() > 6 * vol) & (np.sign(r) != np.sign(r.shift(-1)))
+    c = c.where(~spike).ffill()
+    h, l = h.where(~spike, c), l.where(~spike, c)
+    rng = (h - l).rolling(60, min_periods=20).median().shift(1)
+    top, bot = np.maximum(c, c.shift()), np.minimum(c, c.shift())
+    h = h.where(~(h > top + WICK_CAP * rng), top + WICK_CAP * rng)
+    l = l.where(~(l < bot - WICK_CAP * rng), bot - WICK_CAP * rng)
+    if M[k][2]:
+        h, l, c = 1 / l, 1 / h, 1 / c
+    c = c.reindex(p.index).fillna(p)
+    return h.fillna(c).clip(lower=c), l.fillna(c).clip(upper=c)
+
+
+def swing_path(sg, H, L):
+    """per day: the biggest rise from a low to a later high so far (shorts: high to a later low), in %"""
+    H, L = np.asarray(H, float), np.asarray(L, float)
+    r = H / np.minimum.accumulate(L) - 1 if sg > 0 else np.maximum.accumulate(H) / L - 1
+    return 100 * np.maximum.accumulate(r)
+
+
+def swing_points(sg, H, L, idx):
+    """the swing so far as (size %, date of its low, date of its top) - shorts: top first, then the low"""
+    sw = swing_path(sg, H, L)
+    H, L = np.asarray(H, float), np.asarray(L, float)
+    if sg > 0:
+        r = H / np.minimum.accumulate(L) - 1
+        j = int(np.argmax(r)); i = int(np.argmin(L[:j + 1]))
+    else:
+        r = np.maximum.accumulate(H) / L - 1
+        j = int(np.argmax(r)); i = int(np.argmax(H[:j + 1]))
+    return round(float(sw[-1]), 2), str(idx[i].date()), str(idx[j].date())
+
+
 def pctile(s, L):
     """share of the last L weekly nets (current included) strictly below the current one"""
     return s.rolling(L).apply(lambda w: (w[:-1] < w[-1]).sum() / L * 100.0, raw=True)

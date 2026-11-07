@@ -519,7 +519,11 @@ function trackSlim(m) {
   return `<div class="wstats"><div><b>${o.w} of ${o.n}</b><span>times this exact picture (${esc(r.label)}, ${r.lb}) went the commercials' way, held while it lasted</span></div><div><b>${pcx(raw(o.avg, r.dir))}</b><span>average price move</span></div></div>`;
 }
 function roomCell(m, cell) {
-  // how much of the usual move is still to go: COT against its usual winning move, the calendar against its window's move
+  // how much of the usual move is still to go: a COT setup's swing so far against its winners' usual swing (wicks
+  // included), a calendar setup against its window's move
+  const sh = calLedM(m) ? null : swingShare(m);
+  if (sh != null) return sh >= 100 ? cell("Room left", "none", `winners' usual swing already made (${sh}%)`)
+    : cell("Room left", `${100 - sh}%`, `of the winners' usual swing (${sh}% made)`);
   const x = m.done && (calLedM(m) ? m.done.seas : (m.done.cot || m.done.seas)); if (!x || x.share == null) return "";
   if (x.state === "done" || x.share >= 100) return cell("Room left", "none", "usual move already made");
   if (x.share < 0) return cell("Room left", "all", "price is against the setup so far");
@@ -530,7 +534,7 @@ function metrics(m) {
   const st = setupStats(m), side = m.verdict, rc = m.cot.record, d = m.seas.driver;
   const sw = m.swing;
   const cell = (lab, big, sm) => `<div class="mc"><span>${lab}</span><b>${big}${sm ? `<small>${sm}</small>` : ""}</b></div>`;
-  return `<div class="mcs">${st ? cell("This setup won", `${Math.round(100 * st.w / st.n)}%`, `${st.w} of ${st.n}`) : ""}${roomCell(m, cell)}${sw ? cell("Winners' swing", pcx(raw(sw.med, side)), `bottom → top · 3 of 4 at least ${pcx(raw(sw.p25, side))}`) : ""}</div>`;
+  return `<div class="mcs">${st ? cell("This setup won", `${Math.round(100 * st.w / st.n)}%`, `${st.w} of ${st.n}`) : ""}${roomCell(m, cell)}${sw ? cell("Winners' swing", pcx(raw(sw.med, side)), `${side === "BEARISH" ? "high → low" : "low → high"}${sw.wicks ? ", wicks included" : ""} · 3 of 4 at least ${pcx(raw(sw.p25, side))}`) : ""}</div>`;
 }
 function evBadge(m) {
   if (!m.events) return "";
@@ -719,33 +723,20 @@ function holdNote(m, rc) {
       <div><span>${u.startsWith("at least") ? "Hold at least until" : u === "while COT is lit" || !u ? "Hold" : "Hold until"}</span><b>${esc(u.startsWith("at least") ? u.replace("at least ", "") : u === "while COT is lit" ? "while COT is lit" : u || "–")}</b><small>${holdSmall(m, u)}</small></div></div>
     <p class="note">The weekly swing is how far ${esc(m.name)} moves in a normal week (past year). Your stop comes from the 4h structure; a stop much tighter than this swing relies on your entry timing, because the bias works on a weekly scale. Tested on all ${m.sector === "FX" ? "currency" : "non-currency"} COT verdicts 2019–26 with a stop one normal week from the entry: a target of 1 normal week made ${R(t["1"].R)} per trade, 2 weeks ${R(t["2"].R)}, 3 weeks ${R(t["3"].R)}, 4 weeks ${R(t["4"].R)} (positive in 2019–22 and 2023–26). Bigger targets are rarely hit (${t["3"].hit}% for 3 weeks); the gain comes from staying in until the verdict ends (${holdTxt(m)}; usually about ${Math.round(H.hold_weeks)} weeks). Measured from the verdict's own entry; a 4h entry comes at another time and price, so read it as a guide.</p>`;
 }
+// winners' swing vs this setup's swing so far: low to the following high, wicks included, from the setup's start
+// (COT: the report day of its first report; calendar: the window start). research/swing_hl_test.py
+const liveSwing = m => { const lv = m.cot && m.cot.record && m.cot.record.live; return lv && lv.swing != null ? lv : null; };
+const swingShare = m => { const lv = liveSwing(m), sw = m.swing; return lv && sw && sw.med > 0 ? Math.round(100 * lv.swing / sw.med) : null; };
 function swingCell(m, side, cell) {
-  // target guide for S/D-timed entries: the board's own winning verdicts 2019-26, bottom to the following top
   const sw = m.swing; if (!sw) return "";
-  const where = sw.scope === "market" ? `${sw.n} winning ${esc(m.name)} verdicts` : `${sw.n} winning ${esc(sw.scope.toLowerCase())} verdicts (too few on ${esc(m.name)} alone)`;
-  const lv = m.cot && m.cot.record && m.cot.record.live;
-  const now = lv && lv.swing != null && sw.med > 0 ? ` · this setup so far ${pcx(raw(lv.swing, side))}, ${Math.round(100 * lv.swing / sw.med)}% of it` : "";
-  return cell(pcx(raw(sw.med, side)), `winners' swing from the bottom to the top (median; 3 of 4 at least ${pcx(raw(sw.p25, side))}) · ${where}, 2019–26 · the bottom usually came ${pcx(raw(sw.dip, side))} from the entry${now} · on daily closes from the board's entry; a chart's wicks and the days before the entry make both bigger`);
+  const where = sw.scope === "market" ? `${sw.n} winning ${esc(m.name)} setups` : `${sw.n} winning ${esc(sw.scope.toLowerCase())} setups (too few on ${esc(m.name)} alone)`;
+  const lv = liveSwing(m), sh = swingShare(m);
+  const now = lv && !calLedM(m) ? ` · <b>this setup so far ${pcx(raw(lv.swing, side))}</b> (${fmtD(lv.swing_lo)} → ${fmtD(lv.swing_hi)}), ${sh}% of it` : "";
+  return cell(pcx(raw(sw.med, side)), `winners' swing ${side === "BEARISH" ? "from the high to the low" : "from the low to the high"}${sw.wicks ? ", wicks included" : " (daily closes; no high/low history for this market)"} (median; 3 of 4 at least ${pcx(raw(sw.p25, side))}) · ${where}, 2019–26${now}`);
 }
-// the best point of this setup so far, against how far its winners usually ran at best (research/runup_done_test.py)
-const runShare = (lv, rc) => lv && lv.best != null && rc.win_mfe ? Math.round(100 * lv.best / rc.win_mfe) : null;
-// where the market's winning COT setups usually END (the move-done yardstick), as a share of that
-const endShare = (lv, m) => { const u = m && m.done && m.done.cot && m.done.cot.usual; return lv && lv.best != null && u > 0 ? Math.round(100 * lv.best / u) : null; };
-function bestCell(lv, rc, cell, pc, m) {
-  if (!lv || lv.best == null || lv.best <= 0) return "";
-  const sh = runShare(lv, rc), se = endShare(lv, m), u = m && m.done && m.done.cot && m.done.cot.usual;
-  return cell(pc(lv.best), `best point so far, ${fmtD(lv.best_d)}${se != null ? ` · ${se}% of where its winners usually end (${pc(u)})` : ""}${sh != null ? ` · ${sh}% of their usual best run (${pc(rc.win_mfe)})` : ""}`);
-}
-function runNote(lv, rc, m) {
-  // research/runup_live_test.py: 2019-26 walk-forward, measured from the board's own first close of the signal, checked
-  // daily; rest of the setup until its exit in normal weeks. Any week of a COT setup: +0.38
-  const sh = runShare(lv, rc), se = endShare(lv, m);
-  if (lv == null || lv.best == null || lv.best <= 0) return "";
-  const gave = lv.move <= lv.best / 2;
-  if (gave && se != null && se >= 100) return `<p class="note keep runnote">This setup already ran ${pcx(lv.best)} at its best, as far as its winners usually end (${pcx(m.done.cot.usual)}), and has given at least half of it back. In the 2019–26 test, COT setups in this spot made little more until their exit: +0.12 normal weeks on average (64 cases, 52% won; 2019–22 +0.39, 2023–26 −0.12), against +0.38 from any week of a setup. In metals &amp; energy it was −0.23 (21 cases, 33% won). Dropping such setups would have cost in 2019–22, so the board keeps the bias, but a pullback entry here has had less to catch than a normal setup.</p>`;
-  if (gave && sh != null && sh >= 50) return `<p class="note keep runnote">This setup already ran ${pcx(lv.best)} at its best and gave at least half of it back. That alone is no reason to drop it: in the 2019–26 test, setups that had run at least half of their winners' usual best run and then given half of it back still made +0.27 normal weeks on average until their exit (130 cases, 54% won; both halves positive, +0.33 / +0.20), a little below any week of a setup (+0.38). By sector the cases are few; currencies were negative in 2019–22, indices and agriculture in 2023–26.</p>`;
-  if (!gave && sh != null && sh >= 100) return `<p class="note keep runnote">This setup has already reached the usual best run of its winners and still holds most of it. In the 2019–26 test, setups in this spot made about nothing more until their exit (+0.02 normal weeks, 123 cases; 2019–22 +0.08, 2023–26 −0.04), so a new entry here has little left to catch on average. Tested as a rule to drop the setup it did not hold up in 2019–22, so the board keeps the bias.</p>`;
-  return "";
+function swingNote(m) {
+  const sh = swingShare(m); if (sh == null || sh < 100 || calLedM(m)) return "";
+  return `<p class="note keep runnote">This setup has already made its winners' usual swing (${pcx(liveSwing(m).swing)} of ${pcx(m.swing.med)}). That is no sign it is done: in the 2019–26 test, setups at this point still made +0.43 normal weeks on average until their exit (106 cases, 64% won, positive in both halves), about the same as from any week of a setup (+0.38). Only in metals &amp; energy it was about zero (37 cases).</p>`;
 }
 function cotStats(m) {
   // three numbers for the live COT signal: where price is, how far winners usually run (and how much of it is made),
@@ -756,10 +747,9 @@ function cotStats(m) {
   const cell = (big, small) => `<div><b>${big}</b><span>${small}</span></div>`;
   return `<div class="wstats">
     ${cell(pc(raw(lv.move, sd)), `price so far, since ${fmtD(lv.entry)} (${lv.weeks.toFixed(1)} weeks${lv.held ? `; held until ${fmtD(lv.until)}` : ""})`)}
-    ${bestCell(lv, rc, cell, pc, m)}
     ${swingCell(m, sd, cell)}
     ${cell(pc(bw[1]), `usually goes against first (worst point along the way, all ${rc.n} setups)`)}
-  </div>${runNote(lv, rc, m)}${holdNote(m, rc)}`;
+  </div>${swingNote(m)}${holdNote(m, rc)}`;
 }
 function upcomingNote(m) {
   const U = m.seas.upcoming || []; if (!U.length) return "";
@@ -1172,7 +1162,7 @@ function renderPair(fp) {
   const room = !lv || lv.share == null ? "" : lv.share >= 100 ? cell("Room left", "none", "usual winning move already made")
     : lv.share < 0 ? cell("Room left", "all", "price is against the pair so far") : cell("Room left", `${100 - lv.share}%`, `of the usual winning move (${lv.share}% made)`);
   const scopeTxt = sw ? (sw.scope === "cross" ? `${sw.n} winning ${esc(fp.pair)} trades` : `${sw.n} winning pair trades, all crosses (too few on ${esc(fp.pair)} alone)`) : "";
-  const metricsP = `<div class="mcs">${rec ? cell("This cross won", `${Math.round(100 * rec.w / rec.n)}%`, `${rec.w} of ${rec.n} pair trades`) : cell("This cross won", "–", "no past pair trade")}${room}${sw ? cell("Winners' swing", pcx(raw(sw.med, side)), `bottom → top · 3 of 4 at least ${pcx(raw(sw.p25, side))}`) : ""}</div>`;
+  const metricsP = `<div class="mcs">${rec ? cell("This cross won", `${Math.round(100 * rec.w / rec.n)}%`, `${rec.w} of ${rec.n} pair trades`) : cell("This cross won", "–", "no past pair trade")}${room}${sw ? cell("Winners' swing", pcx(raw(sw.med, side)), `${side === "BEARISH" ? "high → low" : "low → high"}${sw.wicks ? ", wicks included" : ""} · 3 of 4 at least ${pcx(raw(sw.p25, side))}`) : ""}</div>`;
   const check = `<ul class="check">${legs.map(([l, dir]) => `<li><span class="ck y">✓</span><span><b>${esc(l.cur)}</b> ${dir === "up" ? "bullish" : "bearish"}: ${esc(l.basis)} (<a href="#${l.k}" data-mk="${l.k}">${esc(M[l.k].name)}</a>)</span></li>`).join("")}
     <li><span class="ck ${rec && rec.avg > 0 ? "y" : "o"}">${rec && rec.avg > 0 ? "✓" : "–"}</span><span><b>This cross</b>: ${rec ? `${rec.w} of ${rec.n} past pair trades won, ${sgn(rec.avg)}% on average` : "no past pair trade in the 2019–26 replay"}${rec && rec.n < 10 ? " (few cases)" : ""}</span></li></ul>`;
   const pc = v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
